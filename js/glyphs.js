@@ -21,6 +21,7 @@ export const GLYPHS = {
   mcp: '<path d="M8.5 2v5M15.5 2v5"/><path d="M5.5 7h13v4a6.5 6.5 0 0 1-13 0z"/><path d="M12 17.5V22"/>',
   orchestrator: '<circle cx="12" cy="12" r="3"/><circle cx="4" cy="4.5" r="2"/><circle cx="20" cy="4.5" r="2"/><circle cx="4" cy="19.5" r="2"/><circle cx="20" cy="19.5" r="2"/><path d="M9.8 9.8 5.4 6M14.2 9.8 18.6 6M9.8 14.2 5.4 18M14.2 14.2 18.6 18"/>',
   agent: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4.5V8M9 13.5v1.5M15 13.5v1.5"/><circle cx="12" cy="3.5" r="1.2"/><path d="M2 13v3M22 13v3"/>',
+  websocket: '<path d="M3 8h14M13.5 4.5 17 8l-3.5 3.5"/><path d="M21 16H7M10.5 12.5 7 16l3.5 3.5"/><circle cx="20.5" cy="8" r="1.5"/><circle cx="3.5" cy="16" r="1.5"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
   browser: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20M5.5 6.5h.01M8 6.5h.01"/>',

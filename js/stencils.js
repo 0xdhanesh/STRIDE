@@ -27,7 +27,7 @@ export const STENCILS = {
       'Generic Process', 'Web Application', 'Web API / Service', 'Browser Client (SPA)', 'Mobile App',
       'Desktop / Thick Client', 'Microservice', 'Serverless Function', 'Background Worker', 'Container / Pod',
       'Kubernetes Pod', 'Kubernetes Control Plane', 'Orchestrator (Workflow / Agents)', 'MCP Server', 'AI Agent / LLM App',
-      'IVR System', 'Genesys Contact Center', 'Kafka Broker', 'Virtual Machine', 'Identity Provider', 'API Gateway',
+      'IVR System', 'Genesys Contact Center', 'Kafka Broker', 'WebSocket Server / Gateway', 'Virtual Machine', 'Identity Provider', 'API Gateway',
       'Message Broker', 'Multiple Processes',
     ],
     subtypeDefaults: { 'Kubernetes Pod': { isolation: 'Container' }, 'Container / Pod': { isolation: 'Container' } },
@@ -85,12 +85,13 @@ export const STENCILS = {
     label: 'Data Flow',
     hint: 'Data moving between elements. Threats are generated per flow.',
     subtypes: [
-      'Generic Data Flow', 'HTTP', 'HTTPS', 'gRPC', 'WebSocket', 'SQL / DB Protocol', 'Message (AMQP / MQTT / Kafka)',
+      'Generic Data Flow', 'HTTP', 'HTTPS', 'gRPC', 'WebSocket Secure (wss://)', 'WebSocket (ws://)', 'WebSocket', 'SQL / DB Protocol', 'Message (AMQP / MQTT / Kafka)',
       'Kafka Produce / Consume', 'MCP (JSON-RPC)', 'SIP / RTP (Voice)', 'File Transfer (SFTP / SMB)', 'IPC / Named Pipe',
       'RPC / DCOM', 'SSH', 'Email (SMTP)', 'Binary / Custom',
     ],
     subtypeDefaults: {
       HTTPS: { encrypted: 'Yes' }, SSH: { encrypted: 'Yes' }, HTTP: { encrypted: 'No' },
+      'WebSocket Secure (wss://)': { encrypted: 'Yes' }, 'WebSocket (ws://)': { encrypted: 'No' },
     },
     props: [
       { key: 'encrypted', label: 'Encrypted in transit', options: YN },
@@ -146,7 +147,7 @@ export const SUBTYPE_GLYPH = {
   'Web Application': 'browser', 'Browser Client (SPA)': 'browser', 'Mobile App': 'phone', 'Serverless Function': 'function',
   'Container / Pod': 'container', 'Kubernetes Pod': 'kubernetes', 'Kubernetes Control Plane': 'kubernetes',
   'Orchestrator (Workflow / Agents)': 'orchestrator', 'MCP Server': 'mcp', 'AI Agent / LLM App': 'agent',
-  'IVR System': 'ivr', 'Genesys Contact Center': 'headset', 'Kafka Broker': 'eventlog', 'Virtual Machine': 'vm',
+  'IVR System': 'ivr', 'Genesys Contact Center': 'headset', 'Kafka Broker': 'eventlog', 'WebSocket Server / Gateway': 'websocket', 'Virtual Machine': 'vm',
   'Identity Provider': 'idp', 'API Gateway': 'gateway', 'Message Broker': 'queue',
   'Human User': 'user', Administrator: 'user', Browser: 'browser', 'Mobile Device': 'phone', 'IoT Device': 'iot',
   'Cloud Provider Service': 'cloud', 'Third-Party Service': 'cloud', 'Phone Caller (PSTN)': 'ivr',
@@ -170,5 +171,6 @@ export const LIBRARY = [
   { group: 'Platform', items: [['process', 'Kubernetes Pod'], ['process', 'Container / Pod'], ['process', 'Kubernetes Control Plane'], ['process', 'Orchestrator (Workflow / Agents)'], ['process', 'Kafka Broker'], ['process', 'API Gateway'], ['process', 'Serverless Function'], ['boundary', 'Kubernetes Cluster']] },
   { group: 'AI & MCP', items: [['process', 'MCP Server'], ['external', 'MCP Client / AI Assistant'], ['process', 'AI Agent / LLM App'], ['external', 'LLM Provider API']] },
   { group: 'Contact center', items: [['process', 'IVR System'], ['process', 'Genesys Contact Center'], ['external', 'Genesys Cloud (SaaS)'], ['external', 'Phone Caller (PSTN)'], ['store', 'Call Recording Store']] },
+  { group: 'Realtime', items: [['process', 'WebSocket Server / Gateway'], ['process', 'Browser Client (SPA)'], ['process', 'Message Broker'], ['external', 'Browser']] },
   { group: 'Apps & people', items: [['process', 'Web Application'], ['process', 'Web API / Service'], ['process', 'Identity Provider'], ['external', 'Human User'], ['external', 'Browser'], ['external', 'Third-Party Service']] },
 ];

@@ -19,6 +19,9 @@
 // Paths: source.type, source.subtype, source.props.<key>, target.*, flow.subtype,
 // flow.props.<key>, flow.crossesBoundary (boolean), element.*
 
+// Any WebSocket flow (plain, secure or unspecified).
+const WS = ['flow.subtype', 'in', ['WebSocket', 'WebSocket (ws://)', 'WebSocket Secure (wss://)']];
+
 export const DEFAULT_RULES = [
   /* ------------------------------------------------------------ Spoofing */
   {
@@ -307,6 +310,50 @@ export const DEFAULT_RULES = [
     description: 'Malicious or malformed events written by {source.name} to {target.name} are trusted and processed by every downstream consumer.',
     mitigation: 'Validate events against a schema registry, sign sensitive events, route invalid messages to a dead-letter topic and make consumers idempotent.',
     when: [['target.subtype', 'in', ['Kafka Topic / Event Log', 'Kafka Broker']]],
+  },
+
+  /* ------------------------------------------------------------ WebSockets */
+  {
+    id: 'W01', scope: 'interaction', category: 'S', priority: 'High', focus: 'target',
+    title: 'Cross-Site WebSocket Hijacking against {target.name}',
+    description: 'Browsers attach cookies to WebSocket handshakes from any origin. If {target.name} authenticates "{flow.name}" with cookies but does not check the Origin header, a malicious site visited by the user can open a socket as that user and read or send messages.',
+    mitigation: 'Validate the Origin header against an allow-list during the handshake, use SameSite cookies, and authenticate with a short-lived token (sent after connect or as a subprotocol) instead of relying on cookies alone.',
+    when: [WS, ['target.type', 'eq', 'process'], ['source.type', 'in', ['external', 'process']], { any: [['source.type', 'eq', 'external'], ['source.subtype', 'in', ['Browser Client (SPA)', 'Web Application']]] }],
+  },
+  {
+    id: 'W02', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow',
+    title: 'Unencrypted WebSocket (ws://) on {flow.name}',
+    description: '"{flow.name}" uses a WebSocket connection that is not declared as encrypted. Messages, session tokens and the handshake cookies can be read or modified by anyone on the network path.',
+    mitigation: 'Use wss:// (TLS 1.2+) only, reject ws:// connections and mixed content, and enable HSTS on the host serving the socket.',
+    when: [WS, ['flow.props.encrypted', 'ne', 'Yes']],
+  },
+  {
+    id: 'W03', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
+    title: 'Unauthenticated WebSocket Handshake to {target.name}',
+    description: 'The upgrade request for "{flow.name}" does not declare an authentication mechanism, so anyone who can reach {target.name} may open a socket and subscribe to or publish messages.',
+    mitigation: 'Authenticate during the handshake (token in a subprotocol / first message, or a validated session) and close connections that fail to authenticate within a short timeout.',
+    when: [WS, ['flow.props.authentication', 'in', ['Not Selected', 'None']]],
+  },
+  {
+    id: 'W04', scope: 'interaction', category: 'E', priority: 'Medium', focus: 'target',
+    title: 'Stale Authorization on Long-Lived WebSocket to {target.name}',
+    description: 'A socket from {source.name} can stay open for hours. If {target.name} only authorizes at connect time, revoked sessions, expired tokens or removed permissions keep working, and per-message actions (joining channels, subscribing to topics) may not be authorized at all.',
+    mitigation: 'Authorize every message / subscription server-side, re-validate tokens periodically, enforce maximum connection lifetimes and disconnect sockets when a session is revoked.',
+    when: [WS, ['target.type', 'eq', 'process'], ['target.props.authorizesRequests', 'ne', 'Yes']],
+  },
+  {
+    id: 'W05', scope: 'interaction', category: 'T', priority: 'Medium', focus: 'target',
+    title: 'Malicious WebSocket Message Injection into {target.name}',
+    description: 'Messages over "{flow.name}" bypass the HTTP-layer defences (WAF rules, request validation middleware). Crafted frames from {source.name} may inject commands, tamper with shared state or trigger stored XSS when broadcast to other clients.',
+    mitigation: 'Validate every message against a schema, treat client-supplied state as untrusted, encode data before broadcasting it to other clients, and enforce message size limits.',
+    when: [WS, ['target.type', 'eq', 'process']],
+  },
+  {
+    id: 'W06', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'target',
+    title: 'WebSocket Connection / Message Flooding of {target.name}',
+    description: 'Each open socket holds memory and file descriptors on {target.name}. An attacker can open many idle connections or flood messages over "{flow.name}" to exhaust resources.',
+    mitigation: 'Limit connections per user / IP, rate-limit messages, cap frame and message size, time out idle sockets, and apply back-pressure on slow consumers.',
+    when: [WS, ['target.type', 'eq', 'process'], ['flow.props.rateLimited', 'ne', 'Yes']],
   },
 
   /* ------------------------------------------ Contact center / IVR / voice */

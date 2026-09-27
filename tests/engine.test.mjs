@@ -77,3 +77,21 @@ console.log(`OK – ${list.length} threats in sample`);
   assert.ok(g.s.x > 129 && g.t.x < 301, 'ends sit on the shape outlines');
   console.log('OK – technology rules & orthogonal anchors');
 }
+
+// WebSocket rules.
+{
+  const { defaultProps } = await import('../js/stencils.js');
+  const { applySubtype } = await import('../js/ops.js');
+  const node = (id, type, subtype, x) => ({ id, type, name: id, subtype, x, y: 0, w: 130, h: 130, props: defaultProps(type), style: {} });
+  const flow = (subtype) => { const f = { id: 'ws', type: 'flow', name: 'socket', subtype: 'Generic Data Flow', sourceId: 'b', targetId: 's', bend: 0, props: defaultProps('flow'), style: {} }; applySubtype(f, subtype); return f; };
+  const run = (f) => new Set(generateThreats({ diagrams: [{ id: 'd', elements: [node('b', 'external', 'Browser', 0), node('s', 'process', 'WebSocket Server / Gateway', 300), f] }], threats: {} }).map((g) => g.ruleId));
+  const plain = run(flow('WebSocket (ws://)'));
+  for (const r of ['W01', 'W02', 'W03', 'W04', 'W05', 'W06']) assert.ok(plain.has(r), `ws:// fires ${r}`);
+  const secure = flow('WebSocket Secure (wss://)');
+  secure.props.authentication = 'Token (OAuth / JWT)';
+  secure.props.rateLimited = 'Yes';
+  const sec = run(secure);
+  assert.ok(!sec.has('W02') && !sec.has('W03') && !sec.has('W06'), 'wss:// with auth + rate limiting suppresses W02/W03/W06');
+  assert.ok(sec.has('W01') && sec.has('W05'), 'CSWSH and message injection still apply');
+  console.log('OK – WebSocket rules');
+}
