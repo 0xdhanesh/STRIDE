@@ -30,6 +30,7 @@
           <button class="btn" data-action="open">Open file…</button>
           <button class="btn" data-action="help">Shortcuts</button>
         </div>
+        <p class="small">Tip: press <kbd>/</kbd> to search every tool and symbol.</p>
         <p class="muted small">Everything stays in your browser. It's autosaved locally, so use <b>Save</b> to keep a file.</p>
       </div>
     </section>
@@ -70,7 +71,7 @@
     <button class="tool" data-tool="boundary" title="Trust boundary box (B or 6)"><i data-icon="boundary"></i><span class="key">6</span></button>
     <button class="tool" data-tool="boundaryLine" title="Trust boundary line (L or 7)"><i data-icon="boundaryLine"></i><span class="key">7</span></button>
     <button class="tool" data-tool="note" title="Note (T or 8)"><i data-icon="text"></i><span class="key">8</span></button>
-    <button class="tool" data-action="library" title="Symbol library: databases, Kafka, IVR, Genesys, Kubernetes, MCP, orchestrators (Y)"><i data-icon="library"></i></button>
+    <button class="tool" data-action="library" title="Symbol library (Y) · press / to search tools and symbols"><i data-icon="library"></i></button>
     <span class="sep"></span>
     <button class="tool" data-tool="eraser" title="Eraser (X or 0)"><i data-icon="eraser"></i><span class="key">0</span></button>
   </div>
@@ -79,6 +80,12 @@
     <div class="row between"><h2>Library</h2><span class="muted small">Click to add · drag onto the canvas</span></div>
     <input type="search" id="lib-search" placeholder="Search symbols…" aria-label="Search symbols">
     <div id="lib-items"></div>
+  </div>
+
+  <div id="palette" class="island palette" hidden role="dialog" aria-label="Quick search">
+    <input type="search" id="palette-input" placeholder="Search tools and symbols…" autocomplete="off" aria-label="Search tools and symbols" aria-controls="palette-list">
+    <div id="palette-list" class="palette-list" role="listbox"></div>
+    <div class="palette-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> navigate</span><span><kbd>Enter</kbd> use</span><span><kbd>Esc</kbd> close</span></div>
   </div>
 
   <div class="top-right">
@@ -193,6 +200,7 @@
             <dt><kbd>X</kbd> <kbd>0</kbd></dt><dd>Eraser</dd>
             <dt><kbd>Q</kbd></dt><dd>Keep tool active</dd>
             <dt><kbd>Y</kbd></dt><dd>Symbol library</dd>
+            <dt><kbd>/</kbd></dt><dd>Quick search tools &amp; symbols</dd>
           </dl>
         </section>
         <section>

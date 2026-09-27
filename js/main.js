@@ -86,8 +86,93 @@ function placeFromLibrary(type, sub, at) {
   store.ui.tool = 'select';
   store.select([el.id]);
   store.commit();
+  toggleLibrary(false);
 }
 $('#lib-search').addEventListener('input', renderLibrary);
+
+/* --------------------------------------------------- quick search ("/") */
+
+const PALETTE_TOOLS = [
+  ['select', 'Select', 'pointer', 'V'], ['hand', 'Hand (pan)', 'hand', 'H'], ['process', 'Process', 'process', 'P'],
+  ['external', 'External Entity', 'external', 'E'], ['store', 'Data Store', 'store', 'D'], ['flow', 'Data Flow', 'flow', 'A'],
+  ['boundary', 'Trust Boundary', 'boundary', 'B'], ['boundaryLine', 'Trust Boundary (line)', 'boundaryLine', 'L'],
+  ['note', 'Note / Text', 'text', 'T'], ['eraser', 'Eraser', 'eraser', 'X'],
+];
+
+// Everything searchable: drawing tools, library presets, then every other stencil subtype.
+function paletteEntries() {
+  const out = PALETTE_TOOLS.map(([tool, label, ic, key]) => ({ kind: 'tool', tool, label, sub: 'Tool', icon: icon(ic, 20), key }));
+  const seen = new Set();
+  for (const { group, items } of LIBRARY) {
+    for (const [type, sub] of items) {
+      seen.add(`${type}|${sub}`);
+      out.push({ kind: 'symbol', type, subtype: sub, label: sub, sub: `${group} · ${STENCILS[type].label}`, icon: glyphIcon(SUBTYPE_GLYPH[sub] || TYPE_GLYPH[type], 20) });
+    }
+  }
+  for (const type of ['process', 'external', 'store', 'boundary']) {
+    for (const sub of STENCILS[type].subtypes) {
+      if (seen.has(`${type}|${sub}`)) continue;
+      out.push({ kind: 'symbol', type, subtype: sub, label: sub, sub: STENCILS[type].label, icon: SUBTYPE_GLYPH[sub] ? glyphIcon(SUBTYPE_GLYPH[sub], 20) : icon(type, 20) });
+    }
+  }
+  return out;
+}
+
+const palette = { items: [], index: 0 };
+function renderPalette() {
+  const q = $('#palette-input').value.trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  const scored = paletteEntries()
+    .map((it) => {
+      const hay = `${it.label} ${it.sub} ${it.kind}`.toLowerCase();
+      if (!words.every((w) => hay.includes(w))) return null;
+      const l = it.label.toLowerCase();
+      return { it, score: !q ? 0 : l === q ? 3 : l.startsWith(q) ? 2 : l.split(/[\s/()-]+/).some((w) => w.startsWith(words[0])) ? 1 : 0 };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score);
+  palette.items = scored.map((x) => x.it);
+  palette.index = Math.min(palette.index, Math.max(0, palette.items.length - 1));
+  $('#palette-list').innerHTML = palette.items.length
+    ? palette.items.map((it, i) =>
+      `<div class="pal-item${i === palette.index ? ' active' : ''}" role="option" aria-selected="${i === palette.index}" data-i="${i}">` +
+      `${it.icon}<span class="pal-label">${esc(it.label)}</span><span class="pal-sub">${esc(it.sub)}</span>${it.key ? `<kbd>${it.key}</kbd>` : ''}</div>`).join('')
+    : '<div class="muted" style="padding:14px">Nothing found.</div>';
+  $('#palette-list .pal-item.active')?.scrollIntoView({ block: 'nearest' });
+}
+function openPalette() {
+  toggleLibrary(false);
+  $('#palette').hidden = false;
+  $('#palette-input').value = '';
+  palette.index = 0;
+  renderPalette();
+  $('#palette-input').focus();
+}
+function closePalette() { $('#palette').hidden = true; }
+function choosePalette(i) {
+  const it = palette.items[i];
+  if (!it) return;
+  closePalette();
+  if (it.kind === 'tool') setTool(it.tool);
+  else placeFromLibrary(it.type, it.subtype, canvas.lastPointer || null);
+}
+$('#palette-input').addEventListener('input', () => { palette.index = 0; renderPalette(); });
+$('#palette-input').addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const n = palette.items.length;
+    if (n) palette.index = (palette.index + (e.key === 'ArrowDown' ? 1 : n - 1)) % n;
+    renderPalette();
+  } else if (e.key === 'Enter') { e.preventDefault(); choosePalette(palette.index); }
+  else if (e.key === 'Escape') { e.preventDefault(); closePalette(); }
+});
+$('#palette-input').addEventListener('blur', () => setTimeout(() => { if (!$('#palette').contains(document.activeElement)) closePalette(); }, 150));
+$('#palette-list').addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus in the input
+$('#palette-list').addEventListener('click', (e) => { const r = e.target.closest('.pal-item'); if (r) choosePalette(+r.dataset.i); });
+$('#palette-list').addEventListener('pointermove', (e) => {
+  const r = e.target.closest('.pal-item');
+  if (r && +r.dataset.i !== palette.index) { palette.index = +r.dataset.i; renderPalette(); }
+});
 $('#lib-search').addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleLibrary(false); });
 $('#lib-items').addEventListener('click', (e) => {
   const b = e.target.closest('.lib-item');
@@ -557,6 +642,7 @@ window.addEventListener('keydown', (e) => {
   if (e.shiftKey && e.code === 'Digit0') return canvas.resetZoom();
   if (e.shiftKey && e.code === 'KeyA') return setAnalysis(!store.ui.analysis);
   if (e.key === '?') return runAction('help');
+  if (e.key === '/') { e.preventDefault(); return openPalette(); }
 
   switch (e.key) {
     case 'Delete': case 'Backspace': e.preventDefault(); return doDelete();
