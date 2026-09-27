@@ -1,0 +1,10 @@
+{
+  "name": "stride-threat-modeler",
+  "private": true,
+  "type": "module",
+  "description": "Client-side STRIDE threat modeling tool with an Excalidraw-like canvas",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node tests/engine.test.mjs"
+  }
+}

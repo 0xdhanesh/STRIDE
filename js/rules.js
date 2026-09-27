@@ -1,0 +1,315 @@
+// Default threat template ("STRIDE-per-interaction", modelled on the Microsoft
+// Threat Modeling Tool SDL template, extended with modern web/cloud threats).
+//
+// Rule shape (also the format for custom templates imported by users):
+// {
+//   id:        unique string
+//   scope:     'interaction' (evaluated for every connected data flow, context: source, target, flow)
+//              | 'element'   (evaluated for every node, context: element)
+//   category:  one of S T R I D E
+//   priority:  High | Medium | Low
+//   focus:     which context object the threat is "about"; when that element is
+//              marked out-of-scope the threat is not generated
+//   title, description, mitigation: text; {source.name}, {target.name}, {flow.name},
+//              {element.name}, {flow.boundaries} … are interpolated
+//   when:      conditions; an array is AND, {any:[…]} is OR, {not: cond} negates,
+//              a clause is [path, op, value] with op in eq ne in nin exists
+// }
+//
+// Paths: source.type, source.subtype, source.props.<key>, target.*, flow.subtype,
+// flow.props.<key>, flow.crossesBoundary (boolean), element.*
+
+export const DEFAULT_RULES = [
+  /* ------------------------------------------------------------ Spoofing */
+  {
+    id: 'S01', scope: 'interaction', category: 'S', priority: 'High', focus: 'source',
+    title: 'Spoofing the {source.name} External Entity',
+    description: '{source.name} may be spoofed by an attacker and this may lead to unauthorized access to {target.name}. Consider using a standard authentication mechanism to identify the external entity.',
+    mitigation: 'Authenticate the entity with a strong, standard mechanism (OpenID Connect / OAuth 2.0, mTLS, signed tokens). Require MFA for human users and protect credential recovery flows.',
+    when: [['source.type', 'eq', 'external']],
+  },
+  {
+    id: 'S02', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'target',
+    title: 'Spoofing the {target.name} Process',
+    description: '{target.name} may be spoofed by an attacker and this may lead to information disclosure by {source.name}. Consider using a standard authentication mechanism to identify the destination process.',
+    mitigation: 'Use server authentication (TLS with validated certificates, mTLS or signed service identities). Validate host names and consider certificate pinning for high-value clients.',
+    when: [['target.type', 'eq', 'process']],
+  },
+  {
+    id: 'S03', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'source',
+    title: 'Spoofing the {source.name} Process',
+    description: '{source.name} may be spoofed by an attacker and this may lead to unauthorized access to {target.name}. The flow "{flow.name}" does not declare a caller authentication mechanism.',
+    mitigation: 'Authenticate the calling process (workload identity, mTLS, signed tokens, Kerberos). Avoid network-location based trust.',
+    when: [['source.type', 'eq', 'process'], ['flow.props.authentication', 'in', ['Not Selected', 'None']]],
+  },
+  {
+    id: 'S04', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'target',
+    title: 'Spoofing of Destination Data Store {target.name}',
+    description: '{target.name} may be spoofed by an attacker and this may lead to data being written to the attacker\'s target instead of {target.name}. Consider using a standard authentication mechanism to identify the destination data store.',
+    mitigation: 'Connect to the data store over an authenticated channel (TLS with certificate validation, managed identity). Pin connection strings in protected configuration.',
+    when: [['target.type', 'eq', 'store']],
+  },
+  {
+    id: 'S05', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'source',
+    title: 'Spoofing of Source Data Store {source.name}',
+    description: '{source.name} may be spoofed by an attacker and this may lead to incorrect data delivered to {target.name}. Consider using a standard authentication mechanism to identify the source data store.',
+    mitigation: 'Authenticate the data store endpoint (TLS certificate validation, private endpoints) and verify integrity of data read from it.',
+    when: [['source.type', 'eq', 'store']],
+  },
+  {
+    id: 'S06', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'target',
+    title: 'Spoofing of the {target.name} External Destination Entity',
+    description: '{target.name} may be spoofed by an attacker and this may lead to data being sent to the attacker\'s target instead of {target.name}. Consider using a standard authentication mechanism to identify the external entity.',
+    mitigation: 'Verify the identity of the destination (TLS certificate validation, allow-listed endpoints, signed webhooks).',
+    when: [['target.type', 'eq', 'external']],
+  },
+  {
+    id: 'S07', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
+    title: 'Weak or Missing Authentication on {flow.name}',
+    description: '"{flow.name}" crosses the trust boundary ({flow.boundaries}) but does not declare a strong authentication mechanism. An attacker on the other side of the boundary may be able to impersonate {source.name}.',
+    mitigation: 'Require authentication for every request crossing the boundary. Prefer token-based (OAuth 2.0 / OIDC) or certificate-based (mTLS) authentication over passwords or static API keys.',
+    when: [['flow.crossesBoundary', 'eq', true], ['flow.props.authentication', 'in', ['Not Selected', 'None', 'Password', 'API key']]],
+  },
+
+  /* ----------------------------------------------------------- Tampering */
+  {
+    id: 'T01', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
+    title: 'Potential Lack of Input Validation for {target.name}',
+    description: 'Data flowing across {flow.name} may be tampered with by an attacker. This may lead to a denial of service attack against {target.name}, an elevation of privilege attack against {target.name} or an information disclosure by {target.name}. Failure to verify that input is as expected is a root cause of a very large number of exploitable issues. Consider all paths and the way they handle data.',
+    mitigation: 'Validate all input with an allow-list approach (type, length, format, range) at the trust boundary. Use schema validation for structured payloads and reject rather than sanitize where possible.',
+    when: [['target.type', 'eq', 'process'], ['target.props.validatesInput', 'ne', 'Yes']],
+  },
+  {
+    id: 'T02', scope: 'interaction', category: 'T', priority: 'High', focus: 'flow',
+    title: 'Data Flow {flow.name} Is Potentially Tampered',
+    description: 'Data flowing across "{flow.name}" crosses a trust boundary ({flow.boundaries}) without integrity protection, so it may be modified in transit by an attacker.',
+    mitigation: 'Protect the channel with TLS 1.2+ (authenticated encryption) or sign messages (HMAC, JWS). Verify integrity before processing.',
+    when: [['flow.crossesBoundary', 'eq', true], ['flow.props.integrity', 'ne', 'Yes'], ['flow.props.encrypted', 'ne', 'Yes']],
+  },
+  {
+    id: 'T03', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
+    title: 'Potential Injection Vulnerability for {target.name}',
+    description: 'Queries sent by {source.name} to {target.name} may include attacker-controlled data. Injection (SQL, NoSQL operator, command) can lead to data tampering, disclosure or full compromise of the data store.',
+    mitigation: 'Use parameterised queries / prepared statements or a safe ORM. Never concatenate untrusted input into queries. Run the data store account with least privilege.',
+    when: [['target.type', 'eq', 'store'], ['target.subtype', 'in', ['SQL Database', 'NoSQL Database']]],
+  },
+  {
+    id: 'T04', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
+    title: 'Cross Site Scripting in {target.name}',
+    description: 'The web application {target.name} may be subject to a cross-site scripting attack because it does not declare that it encodes or sanitizes untrusted output.',
+    mitigation: 'Context-aware output encoding, a strict Content-Security-Policy, templating engines that auto-escape, and sanitization of rich HTML input.',
+    when: [['target.subtype', 'in', ['Web Application', 'Browser Client (SPA)']], ['target.props.sanitizesOutput', 'ne', 'Yes']],
+  },
+  {
+    id: 'T05', scope: 'interaction', category: 'T', priority: 'Medium', focus: 'flow',
+    title: 'Replay Attacks against {target.name}',
+    description: 'Packets or messages sent over "{flow.name}" may be captured and replayed by an attacker to {target.name}, e.g. to repeat a transaction or re-use a token.',
+    mitigation: 'Use nonces, timestamps and short-lived tokens; make state-changing operations idempotent; rely on TLS which provides replay protection at the transport layer.',
+    when: [['flow.crossesBoundary', 'eq', true], ['flow.props.replayProtection', 'ne', 'Yes'], ['target.type', 'in', ['process', 'store']]],
+  },
+  {
+    id: 'T06', scope: 'interaction', category: 'T', priority: 'Medium', focus: 'target',
+    title: 'Tampering with Data in {target.name}',
+    description: 'Data written by {source.name} and stored in {target.name} may be modified by an attacker with access to the store, and later trusted by consumers.',
+    mitigation: 'Restrict write access with fine-grained ACLs, enable integrity protection (signing / checksums), and audit changes.',
+    when: [['target.type', 'eq', 'store'], ['target.props.integrity', 'ne', 'Yes']],
+  },
+
+  /* --------------------------------------------------------- Repudiation */
+  {
+    id: 'R01', scope: 'interaction', category: 'R', priority: 'Medium', focus: 'target',
+    title: 'Potential Data Repudiation by {target.name}',
+    description: '{target.name} claims that it did not receive data from a source outside the trust boundary. Consider using logging or auditing to record the source, time, and summary of the received data.',
+    mitigation: 'Log security-relevant events (who, what, when, from where) to an append-only store; synchronise clocks; include correlation IDs.',
+    when: [['target.type', 'eq', 'process'], ['target.props.logsSecurityEvents', 'ne', 'Yes']],
+  },
+  {
+    id: 'R02', scope: 'interaction', category: 'R', priority: 'Low', focus: 'target',
+    title: 'External Entity {target.name} Potentially Denies Receiving Data',
+    description: '{target.name} claims that it did not receive data from a process on the other side of the trust boundary. Consider using logging or auditing to record the source, time, and summary of the received data.',
+    mitigation: 'Record delivery receipts / acknowledgements and keep signed audit logs of outbound transmissions.',
+    when: [['target.type', 'eq', 'external']],
+  },
+  {
+    id: 'R03', scope: 'interaction', category: 'R', priority: 'Low', focus: 'target',
+    title: 'Data Store {target.name} Denies {source.name} Potentially Writing Data',
+    description: '{target.name} claims that it did not write data received from an entity on the other side of the trust boundary. Consider using logging or auditing to record the source, time, and summary of the received data.',
+    mitigation: 'Enable data store audit logging (who wrote what and when) and forward it to a central, tamper-resistant log.',
+    when: [['target.type', 'eq', 'store']],
+  },
+  {
+    id: 'R04', scope: 'interaction', category: 'R', priority: 'Medium', focus: 'target',
+    title: 'Lower Trusted Subject Updates Logs in {target.name}',
+    description: 'If a lower trusted subject such as {source.name} can update the log store {target.name}, it may be able to erase or forge evidence of its actions.',
+    mitigation: 'Make logs append-only (WORM storage), separate log writers from readers, and sign or hash-chain log entries.',
+    when: [{ any: [['target.props.storesLogs', 'eq', 'Yes'], ['target.subtype', 'eq', 'Log Store']] }],
+  },
+
+  /* ---------------------------------------------- Information disclosure */
+  {
+    id: 'I01', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow',
+    title: 'Data Flow Sniffing on {flow.name}',
+    description: 'Data flowing across "{flow.name}" may be sniffed by an attacker. Depending on what type of data an attacker can read, it may be used to attack other parts of the system or simply be a disclosure of information leading to compliance violations. Consider encrypting the data flow.',
+    mitigation: 'Encrypt the channel with TLS 1.2+ (HSTS for web), or encrypt the payload end-to-end. Disable legacy protocols and weak cipher suites.',
+    when: [['flow.crossesBoundary', 'eq', true], ['flow.props.encrypted', 'ne', 'Yes']],
+  },
+  {
+    id: 'I02', scope: 'interaction', category: 'I', priority: 'Medium', focus: 'source',
+    title: 'Weak Access Control for a Resource: {source.name}',
+    description: 'Improper data protection of {source.name} can allow an attacker to read information not intended for disclosure. Review authorization settings.',
+    mitigation: 'Apply least-privilege, fine-grained access control on the data store; use separate identities per consumer; deny by default.',
+    when: [['source.type', 'eq', 'store'], ['source.props.accessControl', 'ne', 'Fine-grained']],
+  },
+  {
+    id: 'I03', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow',
+    title: 'Credentials Exposed on {flow.name}',
+    description: '"{flow.name}" carries credentials or tokens but is not declared as encrypted. Captured credentials allow an attacker to impersonate {source.name}.',
+    mitigation: 'Only transmit credentials over encrypted, authenticated channels. Prefer short-lived, audience-restricted tokens over long-lived secrets.',
+    when: [['flow.props.carriesCredentials', 'eq', 'Yes'], ['flow.props.encrypted', 'ne', 'Yes']],
+  },
+  {
+    id: 'I04', scope: 'interaction', category: 'I', priority: 'Medium', focus: 'flow',
+    title: 'Sensitive Data Sent to External Entity {target.name}',
+    description: 'Sensitive data carried by "{flow.name}" leaves your control when it reaches {target.name}. Over-sharing may violate privacy or compliance requirements.',
+    mitigation: 'Minimise the data shared, tokenise or pseudonymise where possible, and ensure data-processing agreements cover the recipient.',
+    when: [['target.type', 'eq', 'external'], ['flow.props.carriesSensitiveData', 'eq', 'Yes']],
+  },
+  {
+    id: 'I05', scope: 'interaction', category: 'I', priority: 'Low', focus: 'target',
+    title: 'Information Disclosure Through Error Messages of {target.name}',
+    description: '{target.name} may return verbose error messages, stack traces or version banners to {source.name}, helping an attacker map the system.',
+    mitigation: 'Return generic error messages to callers, log details server-side, and remove version banners and debug endpoints in production.',
+    when: [['source.type', 'eq', 'external'], ['target.type', 'eq', 'process']],
+  },
+
+  /* --------------------------------------------------- Denial of service */
+  {
+    id: 'D01', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'target',
+    title: 'Potential Process Crash or Stop for {target.name}',
+    description: '{target.name} crashes, halts, stops or runs slowly; in all cases violating an availability metric.',
+    mitigation: 'Bound input sizes and processing time, handle errors defensively, run multiple instances behind health checks, and auto-restart failed processes.',
+    when: [['target.type', 'eq', 'process']],
+  },
+  {
+    id: 'D02', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'flow',
+    title: 'Data Flow {flow.name} Is Potentially Interrupted',
+    description: 'An external agent interrupts data flowing across a trust boundary ({flow.boundaries}) in either direction.',
+    mitigation: 'Design for retries with back-off, queues for asynchronous work, redundant network paths and DDoS protection at the edge.',
+    when: [['flow.crossesBoundary', 'eq', true]],
+  },
+  {
+    id: 'D03', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'flow',
+    title: 'Data Store Inaccessible',
+    description: 'An external agent prevents access to a data store ({source.name} → {target.name}) on the other side of the trust boundary.',
+    mitigation: 'Use replicated / highly-available storage, connection pooling with timeouts, and graceful degradation when the store is unavailable.',
+    when: [['flow.crossesBoundary', 'eq', true], { any: [['source.type', 'eq', 'store'], ['target.type', 'eq', 'store']] }],
+  },
+  {
+    id: 'D04', scope: 'interaction', category: 'D', priority: 'Low', focus: 'flow',
+    title: 'Potential Excessive Resource Consumption for {source.name} or {target.name}',
+    description: 'Does {source.name} or {target.name} take explicit steps to control resource consumption? Resource consumption attacks can be hard to deal with, and there are times that it makes sense to let the OS do the job. Be careful that your resource requests don\'t deadlock, and that they do time out.',
+    mitigation: 'Apply quotas, pagination, query timeouts and connection limits; monitor resource usage and alert on anomalies.',
+    when: [['source.type', 'eq', 'process'], ['target.type', 'eq', 'store']],
+  },
+  {
+    id: 'D05', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'target',
+    title: 'Missing Rate Limiting on {target.name}',
+    description: '{source.name} can send an unbounded number of requests to {target.name} over "{flow.name}", enabling brute force and resource exhaustion attacks.',
+    mitigation: 'Rate-limit and throttle per client / IP / token, add CAPTCHA or proof-of-work on sensitive endpoints, and use an API gateway or WAF.',
+    when: [['source.type', 'eq', 'external'], ['target.type', 'eq', 'process'], ['flow.props.rateLimited', 'ne', 'Yes']],
+  },
+
+  /* ---------------------------------------------- Elevation of privilege */
+  {
+    id: 'E01', scope: 'interaction', category: 'E', priority: 'Medium', focus: 'target',
+    title: 'Elevation Using Impersonation',
+    description: '{target.name} may be able to impersonate the context of {source.name} in order to gain additional privilege.',
+    mitigation: 'Avoid impersonation where possible; when required, constrain delegation, scope tokens to the minimum audience and permissions, and audit its use.',
+    when: [['target.type', 'eq', 'process'], ['source.type', 'in', ['process', 'external']]],
+  },
+  {
+    id: 'E02', scope: 'interaction', category: 'E', priority: 'High', focus: 'target',
+    title: '{target.name} May be Subject to Elevation of Privilege Using Remote Code Execution',
+    description: '{source.name} may be able to remotely execute code for {target.name}.',
+    mitigation: 'Keep dependencies patched, avoid dynamic code evaluation, run with least privilege in an isolated sandbox/container, and use memory-safe languages where possible.',
+    when: [['target.type', 'eq', 'process'], ['flow.crossesBoundary', 'eq', true]],
+  },
+  {
+    id: 'E03', scope: 'interaction', category: 'E', priority: 'Medium', focus: 'target',
+    title: 'Elevation by Changing the Execution Flow in {target.name}',
+    description: 'An attacker may pass data into {target.name} in order to change the flow of program execution within {target.name} to the attacker\'s choosing.',
+    mitigation: 'Validate input strictly, use safe parsers, compile with exploit mitigations (ASLR, DEP, CFG) and prefer memory-safe languages.',
+    when: [['target.type', 'eq', 'process'], ['target.props.validatesInput', 'ne', 'Yes']],
+  },
+  {
+    id: 'E04', scope: 'interaction', category: 'E', priority: 'Medium', focus: 'target',
+    title: 'Cross Site Request Forgery against {target.name}',
+    description: 'Cross-site request forgery (CSRF or XSRF) is a type of attack in which an attacker forces a user\'s browser to make a forged request to a vulnerable site by exploiting an existing trust relationship between the browser and {target.name}.',
+    mitigation: 'Use anti-forgery tokens, SameSite=Lax/Strict cookies, and verify Origin / Referer headers on state-changing requests.',
+    when: [['target.subtype', 'in', ['Web Application', 'Web API / Service']], ['source.type', 'eq', 'external']],
+  },
+  {
+    id: 'E05', scope: 'interaction', category: 'E', priority: 'High', focus: 'target',
+    title: 'Unsafe Deserialization in {target.name}',
+    description: '{target.name} receives serialized objects from {source.name} over a binary / RPC channel. Deserializing untrusted data can lead to remote code execution.',
+    mitigation: 'Do not deserialize untrusted data into arbitrary types; use data-only formats (JSON with schemas), type allow-lists and signed payloads.',
+    when: [['target.type', 'eq', 'process'], ['flow.subtype', 'in', ['Binary / Custom', 'RPC / DCOM']]],
+  },
+  {
+    id: 'E06', scope: 'interaction', category: 'E', priority: 'High', focus: 'target',
+    title: 'Missing Authorization in {target.name}',
+    description: '{target.name} may not verify that {source.name} is authorized to perform the requested operation (broken access control / IDOR).',
+    mitigation: 'Enforce authorization server-side for every request and object, deny by default, and centralise the policy (RBAC / ABAC).',
+    when: [['source.type', 'eq', 'external'], ['target.type', 'eq', 'process'], ['target.props.authorizesRequests', 'ne', 'Yes']],
+  },
+
+  /* ------------------------------------------------ Element-level threats */
+  {
+    id: 'X01', scope: 'element', category: 'I', priority: 'High', focus: 'element',
+    title: 'Sensitive Data Stored Unencrypted in {element.name}',
+    description: '{element.name} stores credentials or sensitive data but is not declared as encrypted at rest. Theft of the media, backups or snapshots would expose it.',
+    mitigation: 'Enable encryption at rest with managed keys; hash passwords with a slow KDF (Argon2id / bcrypt); keep secrets in a dedicated vault.',
+    when: [['element.type', 'eq', 'store'], { any: [['element.props.storesCredentials', 'eq', 'Yes'], ['element.props.storesPII', 'eq', 'Yes']] }, ['element.props.encryptedAtRest', 'ne', 'Yes']],
+  },
+  {
+    id: 'X02', scope: 'element', category: 'E', priority: 'Medium', focus: 'element',
+    title: '{element.name} Runs With Elevated Privileges',
+    description: '{element.name} runs as {element.props.runningAs}. Any vulnerability in it immediately grants the attacker these high privileges.',
+    mitigation: 'Run with the least privilege necessary, drop capabilities, and isolate the process in a container, VM or sandbox.',
+    when: [['element.type', 'eq', 'process'], ['element.props.runningAs', 'in', ['Kernel', 'System / root']]],
+  },
+  {
+    id: 'X03', scope: 'element', category: 'I', priority: 'Medium', focus: 'element',
+    title: 'Secrets Leakage from {element.name}',
+    description: '{element.name} handles secrets or keys that may leak through logs, crash dumps, environment variables or source control.',
+    mitigation: 'Load secrets at runtime from a vault, never log them, rotate regularly and scan repositories for leaked secrets.',
+    when: [['element.type', 'eq', 'process'], ['element.props.handlesSecrets', 'eq', 'Yes']],
+  },
+  {
+    id: 'X04', scope: 'element', category: 'D', priority: 'Low', focus: 'element',
+    title: 'Data Loss in {element.name}',
+    description: '{element.name} is not backed up. Ransomware, accidental deletion or corruption would cause permanent data loss.',
+    mitigation: 'Take regular, tested, immutable (off-site) backups and define RPO / RTO targets.',
+    when: [['element.type', 'eq', 'store'], ['element.props.backedUp', 'eq', 'No']],
+  },
+  {
+    id: 'X05', scope: 'element', category: 'E', priority: 'Medium', focus: 'element',
+    title: 'Memory Corruption in {element.name}',
+    description: '{element.name} is written in unmanaged code; buffer overflows and use-after-free bugs can lead to code execution.',
+    mitigation: 'Use memory-safe languages where possible, enable compiler hardening, fuzz input parsers and run static analysis.',
+    when: [['element.type', 'eq', 'process'], ['element.props.codeType', 'eq', 'Unmanaged (C/C++)']],
+  },
+];
+
+export function validateRules(rules) {
+  if (!Array.isArray(rules) || !rules.length) throw new Error('Template must be a non-empty array of rules.');
+  const ids = new Set();
+  for (const r of rules) {
+    if (!r || typeof r !== 'object') throw new Error('Every rule must be an object.');
+    for (const k of ['id', 'category', 'title', 'when']) if (r[k] == null) throw new Error(`Rule ${r.id || '?'} is missing "${k}".`);
+    if (!'STRIDE'.includes(r.category) || r.category.length !== 1) throw new Error(`Rule ${r.id}: category must be one of S,T,R,I,D,E.`);
+    if (ids.has(r.id)) throw new Error(`Duplicate rule id ${r.id}.`);
+    ids.add(r.id);
+  }
+  return rules;
+}

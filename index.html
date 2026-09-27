@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>STRIDE Threat Modeler</title>
+  <meta name="description" content="Draw data-flow diagrams and generate STRIDE threats in your browser. Nothing leaves your machine.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <main id="canvas-wrap" class="grid">
+    <svg id="canvas" aria-label="Diagram canvas" role="img"></svg>
+    <textarea id="inline-editor" hidden spellcheck="false" aria-label="Edit label"></textarea>
+    <section id="welcome" class="welcome" aria-label="Welcome">
+      <div class="welcome-card">
+        <div class="welcome-logo" data-icon="shield"></div>
+        <h1>STRIDE Threat Modeler</h1>
+        <p>Draw your system as a data-flow diagram, then switch to <b>Analysis</b> to get STRIDE threats per interaction.</p>
+        <ol>
+          <li>Add <b>Processes</b> <kbd>2</kbd>, <b>External entities</b> <kbd>3</kbd> and <b>Data stores</b> <kbd>4</kbd></li>
+          <li>Connect them with <b>Data flows</b> <kbd>5</kbd> by dragging from one shape to another</li>
+          <li>Draw <b>Trust boundaries</b> <kbd>6</kbd> around what you trust</li>
+        </ol>
+        <div class="welcome-actions">
+          <button class="btn primary" data-action="sample">Open the example</button>
+          <button class="btn" data-action="open">Open file…</button>
+          <button class="btn" data-action="help">Shortcuts</button>
+        </div>
+        <p class="muted small">Everything stays in your browser. It's autosaved locally, so use <b>Save</b> to keep a file.</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="top-left">
+    <button class="island icon-btn" id="menu-btn" data-icon="menu" title="Menu" aria-haspopup="true" aria-expanded="false"></button>
+    <div id="menu" class="island menu" hidden role="menu">
+      <button data-action="open" role="menuitem"><i data-icon="folder"></i>Open… <span class="kbd">Ctrl+O</span></button>
+      <button data-action="save" role="menuitem"><i data-icon="save"></i>Save to file <span class="kbd">Ctrl+S</span></button>
+      <button data-action="export-png" role="menuitem"><i data-icon="image"></i>Export diagram as PNG</button>
+      <button data-action="export-svg" role="menuitem"><i data-icon="image"></i>Export diagram as SVG</button>
+      <button data-action="report" role="menuitem"><i data-icon="report"></i>Generate report</button>
+      <button data-action="export-csv" role="menuitem"><i data-icon="table"></i>Export threats (CSV)</button>
+      <button data-action="share" role="menuitem"><i data-icon="share"></i>Copy share link</button>
+      <hr>
+      <button data-action="model-props" role="menuitem"><i data-icon="info"></i>Model properties…</button>
+      <button data-action="template" role="menuitem"><i data-icon="book"></i>Threat template…</button>
+      <button data-action="sample" role="menuitem"><i data-icon="sparkle"></i>Load example model</button>
+      <button data-action="new" role="menuitem" class="danger"><i data-icon="trash"></i>New model</button>
+      <hr>
+      <button data-action="toggle-sketchy" role="menuitemcheckbox"><i data-icon="pen"></i>Hand-drawn style <span class="check" data-pref="sketchy"></span></button>
+      <button data-action="toggle-grid" role="menuitemcheckbox"><i data-icon="grid"></i>Show grid <span class="check" data-pref="grid"></span></button>
+      <button data-action="toggle-theme" role="menuitem"><i data-icon="moon"></i>Dark mode <span class="check" data-pref="theme"></span></button>
+      <button data-action="help" role="menuitem"><i data-icon="help"></i>Help &amp; shortcuts <span class="kbd">?</span></button>
+    </div>
+  </div>
+
+  <div class="toolbar island" role="toolbar" aria-label="Tools">
+    <button data-action="tool-lock" data-icon="unlock" class="tool" title="Keep the tool active after drawing (Q)"></button>
+    <span class="sep"></span>
+    <button class="tool" data-tool="hand" title="Hand – pan the canvas (H)"><i data-icon="hand"></i></button>
+    <button class="tool" data-tool="select" title="Select (V or 1)"><i data-icon="pointer"></i><span class="key">1</span></button>
+    <button class="tool" data-tool="process" title="Process (P or 2)"><i data-icon="process"></i><span class="key">2</span></button>
+    <button class="tool" data-tool="external" title="External entity (E or 3)"><i data-icon="external"></i><span class="key">3</span></button>
+    <button class="tool" data-tool="store" title="Data store (D or 4)"><i data-icon="store"></i><span class="key">4</span></button>
+    <button class="tool" data-tool="flow" title="Data flow – drag from one shape to another (A or 5)"><i data-icon="flow"></i><span class="key">5</span></button>
+    <button class="tool" data-tool="boundary" title="Trust boundary box (B or 6)"><i data-icon="boundary"></i><span class="key">6</span></button>
+    <button class="tool" data-tool="boundaryLine" title="Trust boundary line (L or 7)"><i data-icon="boundaryLine"></i><span class="key">7</span></button>
+    <button class="tool" data-tool="note" title="Note (T or 8)"><i data-icon="text"></i><span class="key">8</span></button>
+    <span class="sep"></span>
+    <button class="tool" data-tool="eraser" title="Eraser (X or 0)"><i data-icon="eraser"></i><span class="key">0</span></button>
+  </div>
+
+  <div class="top-right">
+    <div class="island seg" role="tablist" aria-label="View">
+      <button data-view="design" role="tab">Design</button>
+      <button data-view="analysis" role="tab">Analysis <span class="pill" id="threat-count">0</span></button>
+    </div>
+  </div>
+
+  <aside id="props" class="island panel props" hidden aria-label="Element properties"></aside>
+
+  <aside id="threats" class="island panel threats" hidden aria-label="Threat list">
+    <header class="threats-head">
+      <div class="row between">
+        <h2>Threats</h2>
+        <div class="row gap">
+          <button class="btn small" data-action="add-threat" title="Add a custom threat to the selected element">+ Add</button>
+          <button class="icon-btn small" data-action="close-analysis" data-icon="x" title="Back to Design (Shift+A)"></button>
+        </div>
+      </div>
+      <div id="stride-chips" class="stride-chips"></div>
+      <div class="filters">
+        <input type="search" id="f-text" placeholder="Search threats…" aria-label="Search threats">
+        <select id="f-state" aria-label="Filter by state"></select>
+        <select id="f-priority" aria-label="Filter by priority"></select>
+        <label class="check-label" title="Only show threats for the selected element or flow"><input type="checkbox" id="f-scope"> Selection only</label>
+      </div>
+    </header>
+    <div id="threat-list" class="threat-list" role="list"></div>
+    <div id="threat-editor" class="threat-editor" hidden></div>
+  </aside>
+
+  <footer class="bottom-left">
+    <div class="island zoom">
+      <button id="zoom-out" title="Zoom out (Ctrl -)">−</button>
+      <button id="zoom-reset" title="Reset zoom (Shift+0) · double-click: fit (Shift+1)">100%</button>
+      <button id="zoom-in" title="Zoom in (Ctrl +)">+</button>
+    </div>
+    <div class="island undo">
+      <button id="undo" data-icon="undo" title="Undo (Ctrl+Z)"></button>
+      <button id="redo" data-icon="redo" title="Redo (Ctrl+Shift+Z)"></button>
+    </div>
+  </footer>
+
+  <nav id="tabs" class="bottom-center island tabs" aria-label="Diagrams"></nav>
+
+  <div class="bottom-right">
+    <button id="messages-btn" class="island btn" title="Validation messages"><i data-icon="warning"></i><span id="messages-count">0</span></button>
+    <button class="island icon-btn" data-action="help" data-icon="help" title="Help (?)"></button>
+    <div id="messages" class="island popover" hidden></div>
+  </div>
+
+  <div id="ctxmenu" class="island menu ctx" hidden role="menu"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <input type="file" id="file-input" hidden accept=".json,.tm7,application/json">
+
+  <dialog id="dlg-model" class="dialog">
+    <form method="dialog" id="model-form">
+      <h2>Model properties</h2>
+      <label>Title<input name="title" required></label>
+      <div class="grid2">
+        <label>Owner<input name="owner"></label>
+        <label>Reviewer<input name="reviewer"></label>
+      </div>
+      <label>Contributors<input name="contributors"></label>
+      <label>High-level system description<textarea name="description" rows="3"></textarea></label>
+      <label>Assumptions<textarea name="assumptions" rows="3"></textarea></label>
+      <label>External dependencies<textarea name="dependencies" rows="3"></textarea></label>
+      <div class="row end gap">
+        <button class="btn" value="cancel" formnovalidate>Cancel</button>
+        <button class="btn primary" value="ok">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-template" class="dialog wide">
+    <form method="dialog" id="template-form">
+      <h2>Threat template</h2>
+      <p class="muted small">Rules that generate threats. Each rule runs per data flow (<code>scope: "interaction"</code>) or per element (<code>scope: "element"</code>). Edit the JSON to adapt it to your organisation. The template is saved inside the model file. See <a href="README.md" target="_blank" rel="noopener">README</a> for the format.</p>
+      <div class="row gap wrap"><span id="template-status" class="pill"></span></div>
+      <textarea name="json" id="template-json" rows="18" spellcheck="false"></textarea>
+      <div class="row between wrap gap">
+        <div class="row gap wrap">
+          <button class="btn" type="button" data-action="template-export">Export</button>
+          <button class="btn" type="button" data-action="template-import">Import…</button>
+          <button class="btn" type="button" data-action="template-reset">Reset to built-in</button>
+        </div>
+        <div class="row gap">
+          <button class="btn" value="cancel" formnovalidate>Close</button>
+          <button class="btn primary" type="button" data-action="template-apply">Apply</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-help" class="dialog wide">
+    <form method="dialog">
+      <h2>Help &amp; keyboard shortcuts</h2>
+      <div class="help-grid">
+        <section>
+          <h3>Tools</h3>
+          <dl>
+            <dt><kbd>H</kbd></dt><dd>Hand / pan</dd>
+            <dt><kbd>V</kbd> <kbd>1</kbd></dt><dd>Select</dd>
+            <dt><kbd>P</kbd> <kbd>2</kbd></dt><dd>Process</dd>
+            <dt><kbd>E</kbd> <kbd>3</kbd></dt><dd>External entity</dd>
+            <dt><kbd>D</kbd> <kbd>4</kbd></dt><dd>Data store</dd>
+            <dt><kbd>A</kbd> <kbd>5</kbd></dt><dd>Data flow</dd>
+            <dt><kbd>B</kbd> <kbd>6</kbd></dt><dd>Trust boundary (box)</dd>
+            <dt><kbd>L</kbd> <kbd>7</kbd></dt><dd>Trust boundary (line)</dd>
+            <dt><kbd>T</kbd> <kbd>8</kbd></dt><dd>Note</dd>
+            <dt><kbd>X</kbd> <kbd>0</kbd></dt><dd>Eraser</dd>
+            <dt><kbd>Q</kbd></dt><dd>Keep tool active</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Editing</h3>
+          <dl>
+            <dt><kbd>Enter</kbd> / double-click</dt><dd>Rename selected</dd>
+            <dt><kbd>Del</kbd></dt><dd>Delete</dd>
+            <dt><kbd>Ctrl</kbd>+<kbd>D</kbd></dt><dd>Duplicate</dd>
+            <dt><kbd>Ctrl</kbd>+<kbd>C</kbd>/<kbd>X</kbd>/<kbd>V</kbd></dt><dd>Copy / cut / paste</dd>
+            <dt><kbd>Ctrl</kbd>+<kbd>A</kbd></dt><dd>Select all</dd>
+            <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></dt><dd>Undo / redo</dd>
+            <dt>Arrows (+<kbd>Shift</kbd>)</dt><dd>Nudge</dd>
+            <dt><kbd>Ctrl</kbd>+<kbd>]</kbd> / <kbd>[</kbd></dt><dd>Bring forward / send back</dd>
+            <dt><kbd>Shift</kbd> drag</dt><dd>Square shape / add to selection</dd>
+            <dt><kbd>Alt</kbd> drag boundary</dt><dd>Move boundary without its contents</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>View &amp; file</h3>
+          <dl>
+            <dt><kbd>Space</kbd> drag / wheel</dt><dd>Pan</dd>
+            <dt><kbd>Ctrl</kbd> wheel, <kbd>Ctrl</kbd> <kbd>+</kbd>/<kbd>−</kbd></dt><dd>Zoom</dd>
+            <dt><kbd>Shift</kbd>+<kbd>1</kbd></dt><dd>Zoom to fit</dd>
+            <dt><kbd>Shift</kbd>+<kbd>2</kbd></dt><dd>Zoom to selection</dd>
+            <dt><kbd>Shift</kbd>+<kbd>0</kbd></dt><dd>Reset zoom</dd>
+            <dt><kbd>Shift</kbd>+<kbd>A</kbd></dt><dd>Toggle Analysis view</dd>
+            <dt><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>O</kbd></dt><dd>Save / open</dd>
+          </dl>
+        </section>
+      </div>
+      <h3>How threat generation works</h3>
+      <p>Each data flow connected at both ends is an <em>interaction</em>. The threat template is evaluated for every interaction using the element types, subtypes and security properties you set in the left panel, plus whether the flow crosses a trust boundary (box or line). Threats keep their ID, state and justification when you change the diagram; if an interaction disappears, untouched threats are removed and edited ones are kept and marked <em>orphaned</em>.</p>
+      <p>Threat states: <b>Not Started</b>, <b>Needs Investigation</b>, <b>Not Applicable</b> (add a justification) and <b>Mitigated</b> (describe the mitigation). Open threats are counted in the badges shown on the diagram in Analysis view.</p>
+      <p class="muted small">Microsoft Threat Modeling Tool <code>.tm7</code> files can be opened (best effort: diagrams, elements, flows, boundaries and threats).</p>
+      <div class="row end"><button class="btn primary" value="ok">Got it</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

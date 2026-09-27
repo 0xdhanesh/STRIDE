@@ -1,0 +1,61 @@
+<ThreatModel xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.Model" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+<DrawingSurfaceList>
+<DrawingSurfaceModel xmlns:z="http://schemas.microsoft.com/2003/10/Serialization/" z:Id="i1">
+<GenericTypeId xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">DRAWINGSURFACE</GenericTypeId>
+<Guid xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">aaaaaaaa-0000-0000-0000-000000000001</Guid>
+<Borders xmlns:a="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
+<a:KeyValueOfguidanyType><a:Key>11111111-0000-0000-0000-000000000001</a:Key>
+<a:Value z:Id="i2" i:type="StencilRectangle">
+<GenericTypeId xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">GE.EI</GenericTypeId>
+<Guid xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">11111111-0000-0000-0000-000000000001</Guid>
+<Properties xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">
+<a:anyType xmlns:b="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase" i:type="b:HeaderDisplayAttribute"><b:DisplayName>Human User</b:DisplayName><b:Name/><b:Value i:nil="true"/></a:anyType>
+<a:anyType xmlns:b="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase" i:type="b:StringDisplayAttribute"><b:DisplayName>Name</b:DisplayName><b:Name/><b:Value xmlns:c="http://www.w3.org/2001/XMLSchema" i:type="c:string">Browser User</b:Value></a:anyType>
+<a:anyType xmlns:b="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase" i:type="b:BooleanDisplayAttribute"><b:DisplayName>Out Of Scope</b:DisplayName><b:Name>71f3d9aa-b8ef-4e54-8126-607a1d903103</b:Name><b:Value xmlns:c="http://www.w3.org/2001/XMLSchema" i:type="c:boolean">false</b:Value></a:anyType>
+</Properties>
+<TypeId xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">SE.EI.TMCore.Browser</TypeId>
+<Height xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">100</Height><Left xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">50</Left><Top xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">100</Top><Width xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">100</Width>
+</a:Value></a:KeyValueOfguidanyType>
+<a:KeyValueOfguidanyType><a:Key>22222222-0000-0000-0000-000000000002</a:Key>
+<a:Value z:Id="i3" i:type="StencilEllipse">
+<GenericTypeId xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">GE.P</GenericTypeId>
+<Guid xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">22222222-0000-0000-0000-000000000002</Guid>
+<Properties xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">
+<a:anyType xmlns:b="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase" i:type="b:HeaderDisplayAttribute"><b:DisplayName>Web Application</b:DisplayName><b:Name/><b:Value i:nil="true"/></a:anyType>
+<a:anyType xmlns:b="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase" i:type="b:StringDisplayAttribute"><b:DisplayName>Name</b:DisplayName><b:Name/><b:Value xmlns:c="http://www.w3.org/2001/XMLSchema" i:type="c:string">Portal</b:Value></a:anyType>
+</Properties>
+<TypeId xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">SE.P.TMCore.WebApp</TypeId>
+<Height xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">100</Height><Left xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">400</Left><Top xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">100</Top><Width xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">100</Width>
+</a:Value></a:KeyValueOfguidanyType>
+<a:KeyValueOfguidanyType><a:Key>33333333-0000-0000-0000-000000000003</a:Key>
+<a:Value z:Id="i4" i:type="BorderBoundary">
+<GenericTypeId xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">GE.TB.B</GenericTypeId>
+<Guid xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">33333333-0000-0000-0000-000000000003</Guid>
+<Properties xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">
+<a:anyType xmlns:b="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase" i:type="b:StringDisplayAttribute"><b:DisplayName>Name</b:DisplayName><b:Name/><b:Value xmlns:c="http://www.w3.org/2001/XMLSchema" i:type="c:string">Internet Boundary</b:Value></a:anyType>
+</Properties>
+<Height xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">250</Height><Left xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">330</Left><Top xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">40</Top><Width xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">260</Width>
+</a:Value></a:KeyValueOfguidanyType>
+</Borders>
+<Header xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">Main Diagram</Header>
+<Lines xmlns="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase" xmlns:a="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
+<a:KeyValueOfguidanyType><a:Key>44444444-0000-0000-0000-000000000004</a:Key>
+<a:Value z:Id="i5" i:type="Connector">
+<GenericTypeId>GE.DF</GenericTypeId><Guid>44444444-0000-0000-0000-000000000004</Guid>
+<Properties><a:anyType xmlns:b="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase" i:type="b:StringDisplayAttribute"><b:DisplayName>Name</b:DisplayName><b:Name/><b:Value xmlns:c="http://www.w3.org/2001/XMLSchema" i:type="c:string">HTTPS Request</b:Value></a:anyType></Properties>
+<TypeId>SE.DF.TMCore.HTTPS</TypeId>
+<HandleX>275</HandleX><HandleY>120</HandleY><SourceGuid>11111111-0000-0000-0000-000000000001</SourceGuid><SourceX>150</SourceX><SourceY>150</SourceY><TargetGuid>22222222-0000-0000-0000-000000000002</TargetGuid><TargetX>400</TargetX><TargetY>150</TargetY>
+</a:Value></a:KeyValueOfguidanyType>
+</Lines>
+</DrawingSurfaceModel>
+</DrawingSurfaceList>
+<MetaInformation><Assumptions>None</Assumptions><Contributors/><ExternalDependencies/><HighLevelSystemDescription>A portal</HighLevelSystemDescription><Owner>Alice</Owner><Reviewer/><ThreatModelName>Portal TM</ThreatModelName></MetaInformation>
+<ThreatInstances xmlns:a="http://schemas.microsoft.com/2003/10/Serialization/Arrays">
+<a:KeyValueOfstringThreatpc_P0_PhOB><a:Key>TH1</a:Key><a:Value xmlns:b="http://schemas.datacontract.org/2004/07/ThreatModeling.KnowledgeBase">
+<b:ChangedBy>alice</b:ChangedBy><b:DrawingSurfaceGuid>aaaaaaaa-0000-0000-0000-000000000001</b:DrawingSurfaceGuid><b:FlowGuid>44444444-0000-0000-0000-000000000004</b:FlowGuid><b:Id>1</b:Id>
+<b:Priority>High</b:Priority>
+<b:Properties><a:KeyValueOfstringstring><a:Key>Title</a:Key><a:Value>Spoofing the Browser User External Entity</a:Value></a:KeyValueOfstringstring><a:KeyValueOfstringstring><a:Key>UserThreatCategory</a:Key><a:Value>Spoofing</a:Value></a:KeyValueOfstringstring><a:KeyValueOfstringstring><a:Key>UserThreatDescription</a:Key><a:Value>Browser User may be spoofed.</a:Value></a:KeyValueOfstringstring><a:KeyValueOfstringstring><a:Key>StateInformation</a:Key><a:Value>We use Azure AD with MFA.</a:Value></a:KeyValueOfstringstring><a:KeyValueOfstringstring><a:Key>InteractionString</a:Key><a:Value>HTTPS Request</a:Value></a:KeyValueOfstringstring></b:Properties>
+<b:SourceGuid>11111111-0000-0000-0000-000000000001</b:SourceGuid><b:State>Mitigated</b:State><b:TargetGuid>22222222-0000-0000-0000-000000000002</b:TargetGuid><b:TypeId>TH1</b:TypeId>
+</a:Value></a:KeyValueOfstringThreatpc_P0_PhOB>
+</ThreatInstances>
+</ThreatModel>
