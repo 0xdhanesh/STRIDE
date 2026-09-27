@@ -38,6 +38,7 @@ const P = {
   back: '<rect x="4" y="4" width="12" height="12" rx="2"/><path d="M20 8v10a2 2 0 0 1-2 2H8"/>',
   swap: '<path d="M7 16V4M3 8l4-4 4 4M17 8v12M21 16l-4 4-4-4"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  library: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><circle cx="17.25" cy="6.75" r="3.75"/><path d="M6.75 13.5 10.5 21H3zM13.5 15h7.5M13.5 19h7.5"/>',
 };
 
 export function icon(name, size = 20) {

@@ -91,7 +91,7 @@ export const DEFAULT_RULES = [
     title: 'Potential Injection Vulnerability for {target.name}',
     description: 'Queries sent by {source.name} to {target.name} may include attacker-controlled data. Injection (SQL, NoSQL operator, command) can lead to data tampering, disclosure or full compromise of the data store.',
     mitigation: 'Use parameterised queries / prepared statements or a safe ORM. Never concatenate untrusted input into queries. Run the data store account with least privilege.',
-    when: [['target.type', 'eq', 'store'], ['target.subtype', 'in', ['SQL Database', 'NoSQL Database']]],
+    when: [['target.type', 'eq', 'store'], ['target.subtype', 'in', ['Database', 'SQL Database', 'NoSQL Database', 'Vector Database']]],
   },
   {
     id: 'T04', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
@@ -263,6 +263,91 @@ export const DEFAULT_RULES = [
     when: [['source.type', 'eq', 'external'], ['target.type', 'eq', 'process'], ['target.props.authorizesRequests', 'ne', 'Yes']],
   },
 
+  /* ------------------------------------------------- AI agents & MCP */
+  {
+    id: 'M01', scope: 'interaction', category: 'T', priority: 'High', focus: 'source',
+    title: 'Tool Poisoning / Indirect Prompt Injection from {source.name}',
+    description: 'Tool descriptions or tool results returned by the MCP server {source.name} may contain hidden instructions that manipulate the model in {target.name} into leaking data or invoking other tools on the attacker\'s behalf.',
+    mitigation: 'Only connect to allow-listed MCP servers, pin and review tool definitions (detect changes / "rug pulls"), treat tool output as untrusted data, and require human confirmation for sensitive actions.',
+    when: [['source.subtype', 'eq', 'MCP Server']],
+  },
+  {
+    id: 'M02', scope: 'interaction', category: 'E', priority: 'High', focus: 'target',
+    title: 'Excessive Agency: Over-privileged Tools in {target.name}',
+    description: 'The MCP server {target.name} exposes tools that act with broad credentials. A manipulated or malicious client ({source.name}) can invoke destructive or data-exfiltrating operations.',
+    mitigation: 'Scope each tool to least privilege with per-user, short-lived credentials; separate read and write tools; require confirmation for destructive actions; log every tool call.',
+    when: [['target.subtype', 'eq', 'MCP Server']],
+  },
+  {
+    id: 'M03', scope: 'interaction', category: 'S', priority: 'High', focus: 'target',
+    title: 'Token Passthrough / Confused Deputy at {target.name}',
+    description: '{target.name} may accept tokens not issued for it or forward the client\'s token to downstream APIs, letting {source.name} act with privileges it was never granted.',
+    mitigation: 'Follow the MCP authorization spec: validate token audience and issuer, never pass client tokens through, obtain separate downstream tokens, and obtain user consent per client.',
+    when: [['target.subtype', 'eq', 'MCP Server']],
+  },
+  {
+    id: 'M04', scope: 'interaction', category: 'I', priority: 'Medium', focus: 'flow',
+    title: 'Sensitive Data Sent to LLM Provider {target.name}',
+    description: 'Prompts and context sent by {source.name} to {target.name} may contain personal or confidential data that the provider could log, retain or use for training.',
+    mitigation: 'Minimise and redact data before sending, use enterprise agreements with zero data retention, and classify which data may reach external models.',
+    when: [['target.subtype', 'eq', 'LLM Provider API']],
+  },
+
+  /* ------------------------------------------------ Kafka / event streams */
+  {
+    id: 'K01', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
+    title: 'Unauthenticated Producer Writes to {target.name}',
+    description: '"{flow.name}" does not declare client authentication, so any network peer could produce events to {target.name} while impersonating {source.name}.',
+    mitigation: 'Require SASL (SCRAM / OAUTHBEARER) or mTLS client authentication and enforce per-topic ACLs for producers.',
+    when: [['target.subtype', 'in', ['Kafka Topic / Event Log', 'Kafka Broker']], ['flow.props.authentication', 'in', ['Not Selected', 'None']]],
+  },
+  {
+    id: 'K02', scope: 'interaction', category: 'T', priority: 'Medium', focus: 'target',
+    title: 'Event Injection / Poisoned Messages in {target.name}',
+    description: 'Malicious or malformed events written by {source.name} to {target.name} are trusted and processed by every downstream consumer.',
+    mitigation: 'Validate events against a schema registry, sign sensitive events, route invalid messages to a dead-letter topic and make consumers idempotent.',
+    when: [['target.subtype', 'in', ['Kafka Topic / Event Log', 'Kafka Broker']]],
+  },
+
+  /* ------------------------------------------ Contact center / IVR / voice */
+  {
+    id: 'V01', scope: 'interaction', category: 'S', priority: 'High', focus: 'source',
+    title: 'Caller ID Spoofing against {target.name}',
+    description: 'Caller ID (ANI) presented by {source.name} is trivially spoofed. If {target.name} uses it to identify or authenticate callers, an attacker can impersonate customers.',
+    mitigation: 'Never use ANI as an authenticator; use STIR/SHAKEN attestation as a signal only, and step up with OTP or app-based verification (voice biometrics only with liveness detection).',
+    when: [['target.subtype', 'in', ['IVR System', 'Genesys Contact Center', 'Genesys Cloud (SaaS)']], ['source.type', 'eq', 'external']],
+  },
+  {
+    id: 'V02', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow',
+    title: 'Sensitive Data Captured in Call Recordings / Transcripts',
+    description: 'Card numbers, PINs or personal data carried by "{flow.name}" may end up in call recordings, transcripts or analytics in {target.name}.',
+    mitigation: 'Use DTMF masking or pause-and-resume for payments (PCI DSS de-scoping), redact transcripts, encrypt recordings and enforce retention limits.',
+    when: [['target.subtype', 'in', ['IVR System', 'Genesys Contact Center', 'Genesys Cloud (SaaS)', 'Call Recording Store']], ['flow.props.carriesSensitiveData', 'eq', 'Yes']],
+  },
+  {
+    id: 'V03', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'target',
+    title: 'Telephony DoS / Toll Fraud on {target.name}',
+    description: 'Automated calls from {source.name} can flood {target.name}, exhaust trunk capacity or abuse outbound dialing for toll fraud.',
+    mitigation: 'Rate-limit per caller and number range, deploy a SIP firewall / fraud detection, restrict outbound destinations and monitor trunk utilisation.',
+    when: [['target.subtype', 'in', ['IVR System', 'Genesys Contact Center']], ['source.type', 'eq', 'external']],
+  },
+  {
+    id: 'V04', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'target',
+    title: 'Social Engineering of Contact-Center Agents via {target.name}',
+    description: 'An attacker calling through {target.name} may convince human agents to reset credentials, change contact details or disclose data (account takeover).',
+    mitigation: 'Enforce scripted verification with strong factors, avoid knowledge-based questions, require call-back or in-app approval for sensitive changes, and train agents.',
+    when: [['target.subtype', 'in', ['Genesys Contact Center', 'Genesys Cloud (SaaS)']]],
+  },
+
+  /* ------------------------------------------- Orchestrators & Kubernetes */
+  {
+    id: 'O01', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
+    title: 'Workflow / Task Injection into {target.name}',
+    description: '{source.name} may submit or alter workflow definitions, jobs or agent plans in the orchestrator {target.name}, causing it to run attacker-controlled steps with the orchestrator\'s privileges.',
+    mitigation: 'Authenticate and authorize every trigger, validate parameters, keep workflow definitions in signed / reviewed source control and disallow dynamic code in tasks.',
+    when: [['target.subtype', 'eq', 'Orchestrator (Workflow / Agents)']],
+  },
+
   /* ------------------------------------------------ Element-level threats */
   {
     id: 'X01', scope: 'element', category: 'I', priority: 'High', focus: 'element',
@@ -298,6 +383,27 @@ export const DEFAULT_RULES = [
     description: '{element.name} is written in unmanaged code; buffer overflows and use-after-free bugs can lead to code execution.',
     mitigation: 'Use memory-safe languages where possible, enable compiler hardening, fuzz input parsers and run static analysis.',
     when: [['element.type', 'eq', 'process'], ['element.props.codeType', 'eq', 'Unmanaged (C/C++)']],
+  },
+  {
+    id: 'C01', scope: 'element', category: 'E', priority: 'High', focus: 'element',
+    title: 'Container Escape from {element.name}',
+    description: '{element.name} runs as a container. Running as root, privileged mode, host mounts or missing seccomp profiles let a compromised container break out to the node and the rest of the cluster.',
+    mitigation: 'Run as non-root with a read-only root filesystem, drop Linux capabilities, apply seccomp/AppArmor, enforce the "restricted" Pod Security Standard and avoid hostPath / privileged pods.',
+    when: [['element.subtype', 'in', ['Kubernetes Pod', 'Container / Pod']], ['element.props.runningAs', 'ne', 'Low privilege / sandboxed']],
+  },
+  {
+    id: 'C02', scope: 'element', category: 'E', priority: 'High', focus: 'element',
+    title: 'Kubernetes Control Plane Compromise via {element.name}',
+    description: 'Access to the Kubernetes API server, etcd or over-permissive service accounts grants control over every workload and secret in the cluster.',
+    mitigation: 'Keep the API server private, apply least-privilege RBAC, disable automounted service-account tokens, encrypt etcd secrets, enable audit logs and admission control.',
+    when: [['element.subtype', 'eq', 'Kubernetes Control Plane']],
+  },
+  {
+    id: 'C03', scope: 'element', category: 'E', priority: 'High', focus: 'element',
+    title: 'High-Value Orchestration Target: {element.name}',
+    description: '{element.name} dispatches work to many workers or agents and typically holds their credentials. Its compromise enables lateral movement to everything it orchestrates.',
+    mitigation: 'Isolate the orchestrator, issue per-task scoped and short-lived credentials, sign workflow definitions and audit every dispatched action.',
+    when: [['element.subtype', 'eq', 'Orchestrator (Workflow / Agents)']],
   },
 ];
 

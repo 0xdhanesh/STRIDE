@@ -128,6 +128,23 @@ a { color: var(--accent); }
 .tool.active { background: var(--accent-soft); color: var(--accent-text); }
 .tool .key { position: absolute; right: 3px; bottom: 1px; font-size: 9px; color: var(--muted); font-weight: 600; }
 
+/* ---------------------------------------------------------------- library */
+.library {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 21; width: 560px; max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 150px); overflow: auto; padding: 12px 14px;
+}
+.library h2 { margin: 0; font-size: 15px; }
+.library input { margin: 8px 0 4px; }
+.library h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 12px 0 6px; }
+.lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+.lib-item {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: transparent; color: var(--text); font-size: 11.5px; text-align: center; line-height: 1.2; cursor: grab;
+}
+.lib-item:hover { background: var(--hover); border-color: var(--accent); }
+.lib-item .icon { width: 26px; height: 26px; color: var(--accent); }
+.lib-item small { color: var(--muted); font-size: 10px; }
+
 /* ------------------------------------------------------------------- menu */
 .menu {
   position: absolute; top: 46px; left: 0; min-width: 260px; padding: 6px; z-index: 30;

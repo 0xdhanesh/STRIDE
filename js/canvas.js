@@ -5,7 +5,7 @@ import { store } from './store.js';
 import { renderElements, orderedElements, diagramBounds, FONTS } from './render.js';
 import { threatBadges } from './engine.js';
 import {
-  clamp, center, isLine, lineGeom, quadPolyline, distToSeg, pointInRect, elementBounds, unionBounds, measureText,
+  clamp, center, isLine, lineGeom, quadPolyline, distToSeg, pointInRect, elementBounds, unionBounds, measureText, distToShape,
 } from './util.js';
 import { makeElement, deleteElements, autoBend, containedIn, fitNote } from './ops.js';
 
@@ -32,6 +32,7 @@ export class Canvas {
     window.addEventListener('pointermove', (e) => this.onMove(e));
     window.addEventListener('pointerup', (e) => this.onUp(e));
     window.addEventListener('pointercancel', (e) => this.onUp(e));
+    this.svg.addEventListener('pointerleave', () => { if (this.hoverNode && !this.state) { this.hoverNode = null; this.schedule(); } });
     this.svg.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
     this.svg.addEventListener('dblclick', (e) => this.onDblClick(e));
     this.svg.addEventListener('contextmenu', (e) => this.onContextMenu(e));
@@ -153,6 +154,12 @@ export class Canvas {
           : `<circle cx="${h.x}" cy="${h.y}" r="${r * (h.kind === 'bend' ? 1 : 1.2)}" fill="${h.kind === 'bend' ? ACCENT : '#fff'}" stroke="${ACCENT}" stroke-width="${sw}"/>`;
       }
     }
+    const hn = !this.state && ['select', 'flow'].includes(store.ui.tool) && this.hoverNode && byId.get(this.hoverNode.id);
+    if (hn) {
+      for (const d of this.connectDots(hn)) {
+        out += `<circle cx="${d.x}" cy="${d.y}" r="${4.5 / z}" fill="#fff" stroke="${ACCENT}" stroke-width="${sw}"/>`;
+      }
+    }
     const hover = this.state?.hover;
     if (hover) {
       out += `<rect x="${hover.x - 6}" y="${hover.y - 6}" width="${hover.w + 12}" height="${hover.h + 12}" rx="${hover.type === 'process' ? Math.min(hover.w, hover.h) / 2 : 8}" fill="${ACCENT}" fill-opacity=".08" stroke="${ACCENT}" stroke-width="${2 / z}"/>`;
@@ -208,7 +215,7 @@ export class Canvas {
     if (el.type === 'boundary') {
       const outer = { x: el.x - tol, y: el.y - tol, w: el.w + tol * 2, h: el.h + tol * 2 };
       const inner = { x: el.x + tol, y: el.y + tol, w: el.w - tol * 2, h: el.h - tol * 2 };
-      const label = { x: el.x, y: el.y, w: Math.min(el.w, measureText(el.name, 15).w + 24), h: 32 };
+      const label = { x: el.x, y: el.y, w: Math.min(el.w, measureText(el.name, 15).w + 50), h: 32 };
       return (pointInRect(p, outer) && !pointInRect(p, inner)) || pointInRect(p, label);
     }
     return pointInRect(p, { x: el.x - tol, y: el.y - tol, w: el.w + tol * 2, h: el.h + tol * 2 });
@@ -221,11 +228,54 @@ export class Canvas {
     return els.find((el) => this.hitElement(el, p, byId, tol)) || null;
   }
 
-  hitConnectable(p, excludeId = null) {
+  // Shape a connector end should attach to: the shape under the pointer, or
+  // (magnetic) the nearest shape outline within `snap` screen pixels.
+  hitConnectable(p, excludeId = null, snap = 28) {
     const byId = store.byId();
-    const tol = 10 / this.zoom;
-    const els = orderedElements(store.diagram).reverse();
-    return els.find((el) => CONNECTABLE.includes(el.type) && el.id !== excludeId && this.hitElement(el, p, byId, tol)) || null;
+    const z = this.zoom;
+    const els = orderedElements(store.diagram).reverse().filter((el) => CONNECTABLE.includes(el.type) && el.id !== excludeId);
+    const direct = els.find((el) => this.hitElement(el, p, byId, 4 / z));
+    if (direct) return direct;
+    let best = null, bestD = snap / z;
+    for (const el of els) {
+      const d = distToShape(el, p);
+      if (d < bestD) { bestD = d; best = el; }
+    }
+    return best;
+  }
+
+  // Connection points shown around a hovered shape; dragging one starts a data flow.
+  connectDots(el) {
+    const o = 14 / this.zoom;
+    const c = center(el);
+    return [{ x: c.x, y: el.y - o }, { x: el.x + el.w + o, y: c.y }, { x: c.x, y: el.y + el.h + o }, { x: el.x - o, y: c.y }];
+  }
+
+  hitConnectDot(p) {
+    const el = this.hoverNode && store.diagram.elements.find((e) => e.id === this.hoverNode.id);
+    if (!el) return null;
+    return this.connectDots(el).some((d) => Math.hypot(d.x - p.x, d.y - p.y) <= 10 / this.zoom) ? el : null;
+  }
+
+  // Attach loose flow ends that now lie on a shape (e.g. after moving the shape onto them).
+  attachLooseEnds() {
+    const d = store.diagram;
+    const at = (pt, exclude) => d.elements.find((n) => CONNECTABLE.includes(n.type) && n.id !== exclude && distToShape(n, pt) === 0);
+    for (const f of d.elements) {
+      if (f.type !== 'flow') continue;
+      if (!f.sourceId) { const n = at({ x: f.x1, y: f.y1 }, f.targetId); if (n) f.sourceId = n.id; }
+      if (!f.targetId) { const n = at({ x: f.x2, y: f.y2 }, f.sourceId); if (n) f.targetId = n.id; }
+    }
+  }
+
+  startFlow(src, p) {
+    const el = makeElement(store.model, 'flow', src ? center(src) : p);
+    if (src) el.sourceId = src.id;
+    el.x2 = p.x; el.y2 = p.y;
+    store.diagram.elements.push(el);
+    store.ui.selection = new Set([el.id]);
+    this.hoverNode = null;
+    this.state = { mode: 'create-line', el, start: p, moved: false, hover: null };
   }
 
   /* ---------------------------------------------------------- interactions */
@@ -255,6 +305,8 @@ export class Canvas {
         this.state = { mode: h.kind, el: h.el, corner: h.corner, orig: { x: h.el.x, y: h.el.y, w: h.el.w, h: h.el.h }, start: p };
         return;
       }
+      const dotNode = this.hitConnectDot(p);
+      if (dotNode) { this.startFlow(dotNode, p); return; }
       const hit = this.hitTest(p);
       if (hit) {
         const sel = new Set(store.ui.selection);
@@ -280,11 +332,9 @@ export class Canvas {
       return;
     }
 
-    if (tool === 'flow' || tool === 'boundaryLine') {
-      const src = tool === 'flow' ? this.hitConnectable(p) : null;
-      const el = makeElement(store.model, tool, src ? center(src) : p);
-      if (src) el.sourceId = src.id;
-      el.x2 = p.x; el.y2 = p.y;
+    if (tool === 'flow') { this.startFlow(this.hitConnectDot(p) || this.hitConnectable(p), p); return; }
+    if (tool === 'boundaryLine') {
+      const el = makeElement(store.model, tool, p);
       d.elements.push(el);
       store.ui.selection = new Set([el.id]);
       this.state = { mode: 'create-line', el, start: p, moved: false, hover: null };
@@ -364,8 +414,8 @@ export class Canvas {
       case 'end': {
         const el = s.el;
         const isStart = s.mode === 'start';
-        if (isStart) { el.sourceId = null; el.x1 = p.x; el.y1 = p.y; } else { el.targetId = null; el.x2 = p.x; el.y2 = p.y; }
         s.hover = el.type === 'flow' ? this.hitConnectable(p, isStart ? el.targetId : el.sourceId) : null;
+        if (isStart) { el.sourceId = s.hover?.id ?? null; el.x1 = p.x; el.y1 = p.y; } else { el.targetId = s.hover?.id ?? null; el.x2 = p.x; el.y2 = p.y; }
         break;
       }
       case 'bend': {
@@ -393,7 +443,8 @@ export class Canvas {
         const el = s.el;
         el.x2 = p.x; el.y2 = p.y;
         if (Math.hypot(p.x - s.start.x, p.y - s.start.y) * this.zoom > 6) s.moved = true;
-        s.hover = el.type === 'flow' ? this.hitConnectable(p, el.sourceId) : null;
+        s.hover = el.type === 'flow' && s.moved ? this.hitConnectable(p, el.sourceId) : null;
+        if (el.type === 'flow') el.targetId = s.hover?.id ?? null; // preview the attached arrow
         break;
       }
       case 'create-node': {
@@ -429,12 +480,11 @@ export class Canvas {
     const keepTool = store.ui.toolLock;
 
     switch (s.mode) {
-      case 'move': if (s.moved) store.commit('move'); break;
-      case 'resize': case 'bend': store.commit(s.mode); break;
+      case 'move': if (s.moved) { this.attachLooseEnds(); store.commit('move'); } break;
+      case 'resize': this.attachLooseEnds(); store.commit('resize'); break;
+      case 'bend': store.commit('bend'); break;
       case 'start': case 'end': {
-        if (s.hover) {
-          if (s.mode === 'start') s.el.sourceId = s.hover.id; else s.el.targetId = s.hover.id;
-        }
+        if (s.hover && !s.el.bend) autoBend(d, s.el);
         store.commit('connect');
         break;
       }
@@ -446,7 +496,7 @@ export class Canvas {
           store.select([]);
           break;
         }
-        if (s.hover) { el.targetId = s.hover.id; autoBend(d, el); }
+        if (el.targetId) autoBend(d, el);
         store.select([el.id]);
         store.commit('create');
         if (!keepTool) store.setUI({ tool: 'select' });
@@ -459,6 +509,7 @@ export class Canvas {
           d.elements.push(el);
         }
         store.select([el.id]);
+        this.attachLooseEnds();
         store.commit('create');
         if (!keepTool) store.setUI({ tool: 'select' });
         break;
@@ -477,13 +528,17 @@ export class Canvas {
   }
 
   updateCursor(e) {
-    if (store.ui.tool !== 'select' || this.spaceDown) { this.svg.style.cursor = ''; return; }
     const p = this.toWorld(e);
+    const tool = store.ui.tool;
+    const hn = ['select', 'flow'].includes(tool) && !this.spaceDown ? this.hitConnectable(p, null, 26) : null;
+    if ((hn?.id || null) !== (this.hoverNode?.id || null)) { this.hoverNode = hn; this.schedule(); }
+    if (tool !== 'select' || this.spaceDown) { this.svg.style.cursor = ''; return; }
     const h = this.hitHandle(p);
     if (h) {
       this.svg.style.cursor = h.kind === 'resize' ? (h.corner === 'nw' || h.corner === 'se' ? 'nwse-resize' : 'nesw-resize') : 'grab';
       return;
     }
+    if (this.hitConnectDot(p)) { this.svg.style.cursor = 'crosshair'; return; }
     this.svg.style.cursor = this.hitTest(p) ? 'move' : '';
   }
 

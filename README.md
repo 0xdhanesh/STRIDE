@@ -13,8 +13,10 @@ to `localStorage` and can be saved and opened as files.
 | --- | --- |
 | **Canvas** | Infinite canvas, pan (space/wheel/hand), zoom, marquee select, move, resize, bend flows, copy/paste, duplicate, z-order, undo/redo, eraser, notes, hand-drawn or clean style, dark mode, touch pinch-zoom |
 | **DFD stencils** | Process (incl. *Multiple Processes*), External Entity, Data Store, Data Flow, Trust Boundary box, Trust Boundary line, each with subtypes (Web App, API, SQL DB, Key Vault, HTTPS, gRPC…) |
+| **Symbol library** | `Y` / toolbar: Database (cylinder), SQL / NoSQL / Vector DB, Kafka topic / event log, Kafka broker, IVR, Genesys contact center & Genesys Cloud, phone caller, Kubernetes pod / control plane / cluster, containers, MCP server & client, AI agent, LLM provider, orchestrators and more. Click to add, or drag onto the canvas |
+| **Connectors** | Hover a shape to get connection dots and drag one to create a data flow. Ends snap magnetically to the nearest shape (no pixel-perfect aim needed) and preview the attachment while dragging. Aligned shapes get straight horizontal/vertical connectors; request/response pairs curve apart; loose ends attach when a shape is dropped on them |
 | **Properties** | Per-element security properties (encrypted, authenticated, validates input, runs as root…) that drive threat generation; out-of-scope with justification; notes |
-| **Threat engine** | STRIDE-per-interaction plus element-level rules (38 built-in rules modelled on the TMT SDL template, extended with injection, XSS, CSRF, deserialization, replay, rate limiting…). Boundary-crossing detection for boxes *and* curved lines |
+| **Threat engine** | STRIDE-per-interaction plus element-level rules (52 built-in rules modelled on the TMT SDL template, extended with injection, XSS, CSRF, deserialization, replay, rate limiting, and technology-specific threats for MCP / AI agents, Kafka, IVR / contact centers, Kubernetes and orchestrators). Boundary-crossing detection for boxes *and* curved lines |
 | **Analysis view** | Threat list with STRIDE chips, search, state/priority filters, selection filter; editor for title, category, priority, state, description, justification and mitigation, with suggested mitigations; custom threats; open-threat badges on the diagram |
 | **Stable threats** | IDs, states and justifications survive diagram edits. When an interaction disappears, untouched threats are removed and edited ones are kept as *orphaned* |
 | **Validation** | Messages for unconnected flows, invalid DFD links (store→store, entity→store), duplicate names, missing boundaries, unjustified out-of-scope |
@@ -52,7 +54,7 @@ a sub-path.
 ## Keyboard shortcuts
 
 `H` hand · `V`/`1` select · `P`/`2` process · `E`/`3` external entity · `D`/`4` data store · `A`/`5` data flow ·
-`B`/`6` boundary · `L`/`7` boundary line · `T`/`8` note · `X`/`0` eraser · `Q` keep tool ·
+`B`/`6` boundary · `L`/`7` boundary line · `T`/`8` note · `X`/`0` eraser · `Y` symbol library · `Q` keep tool ·
 `Enter` rename · `Del` delete · `Ctrl+D` duplicate · `Ctrl+Z`/`Ctrl+Shift+Z` undo/redo ·
 `Shift+1` fit · `Shift+A` toggle Analysis · `Ctrl+S` save · `?` help.
 
@@ -103,7 +105,8 @@ js/stencils.js    Element types, subtypes, properties
 js/panels.js      Properties panel and threat panel
 js/io.js          Save/open, PNG/SVG/CSV, report, share link, .tm7 import
 js/ops.js         Element operations (create, delete, paste, bend…)
-js/util.js        Geometry and hand-drawn path generation
+js/util.js        Geometry, connector anchoring and hand-drawn path generation
+js/glyphs.js      Technology symbols (database, Kafka, IVR, Kubernetes, MCP…)
 ```
 
 ## Privacy

@@ -27,6 +27,22 @@ export function makeElement(model, type, at, size = null) {
   return el;
 }
 
+const PRESET_SIZE = {
+  'Kafka Topic / Event Log': { w: 190, h: 70 }, Database: { w: 140, h: 100 }, 'SQL Database': { w: 140, h: 100 },
+  'NoSQL Database': { w: 140, h: 100 }, 'Vector Database': { w: 140, h: 100 },
+};
+
+// Create an element from a library preset (type + subtype), named after the subtype.
+export function makeFromLibrary(model, type, subtype, at) {
+  const size = PRESET_SIZE[subtype];
+  const el = makeElement(model, type, size ? { x: at.x - size.w / 2, y: at.y - size.h / 2 } : at, size || null);
+  applySubtype(el, subtype);
+  const base = subtype.replace(/\s*\(.*\)$/, '').split(' / ')[0];
+  const used = new Set(model.diagrams.flatMap((d) => d.elements.map((e) => e.name)));
+  el.name = used.has(base) ? Array.from({ length: 999 }, (_, i) => `${base} ${i + 2}`).find((n) => !used.has(n)) : base;
+  return el;
+}
+
 export function fitNote(el) {
   const m = measureText(el.name || ' ', 18);
   el.w = m.w;

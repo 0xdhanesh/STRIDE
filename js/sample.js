@@ -26,7 +26,7 @@ export function sampleModel() {
         node('e_customer', 'external', 'Customer', 'Human User', 40, 235, 160, 80, { authenticatesItself: 'Yes', trustLevel: 'Untrusted' }),
         node('p_web', 'process', 'Web Frontend', 'Web Application', 360, 210, 130, 130, { validatesInput: 'Yes', logsSecurityEvents: 'Yes', internetFacing: 'Yes', codeType: 'Managed' }, { style: { fill: '#a5d8ff' } }),
         node('p_api', 'process', 'Orders API', 'Web API / Service', 620, 210, 130, 130, { codeType: 'Managed', handlesSecrets: 'Yes' }, { style: { fill: '#b2f2bb' } }),
-        node('s_db', 'store', 'Orders DB', 'SQL Database', 870, 240, 160, 70, { storesPII: 'Yes', encryptedAtRest: 'Yes', backedUp: 'Yes' }),
+        node('s_db', 'store', 'Orders DB', 'SQL Database', 880, 225, 140, 100, { storesPII: 'Yes', encryptedAtRest: 'Yes', backedUp: 'Yes' }),
         node('s_logs', 'store', 'Audit Logs', 'Log Store', 605, 460, 160, 70, { storesLogs: 'Yes' }),
         node('e_psp', 'external', 'Payment Provider', 'Third-Party Service', 600, -60, 170, 80, { trustLevel: 'Partially trusted' }),
         flow('f_1', 'Checkout request', 'HTTPS', 'e_customer', 'p_web', { encrypted: 'Yes', authentication: 'Password', carriesCredentials: 'Yes' }, 30),

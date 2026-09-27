@@ -5,7 +5,8 @@ import {
   esc, hashStr, lineGeom, wrapText, roughEllipse, roughRect, roughLine, roughQuad,
   cleanEllipse, cleanQuad, unionBounds, elementBounds,
 } from './util.js';
-import { BOUNDARY_COLOR } from './stencils.js';
+import { BOUNDARY_COLOR, SUBTYPE_GLYPH, SUBTYPE_SHAPE } from './stencils.js';
+import { glyphSVG } from './glyphs.js';
 
 export const FONTS = {
   sketchy: "Kalam, 'Comic Sans MS', 'Segoe Print', cursive",
@@ -55,6 +56,16 @@ function renderNode(el, o) {
   const strokeAttrs = `fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"${dash}`;
   let body = '';
 
+  const glyph = SUBTYPE_GLYPH[el.subtype];
+  const shape = el.type === 'store' ? SUBTYPE_SHAPE[el.subtype] : null;
+  // Symbol on the left of a label that is centred in the remaining space.
+  const sideGlyph = (left, right) => {
+    const gs = Math.min(24, h * 0.42, (right - left) * 0.25);
+    if (!glyph || gs < 12) return centeredText(el.name, (left + right) / 2, cy, right - left - 12, o, stroke);
+    const gx = left + 8;
+    return glyphSVG(glyph, gx, cy - gs / 2, gs, stroke) + centeredText(el.name, (gx + gs + 4 + right) / 2, cy, right - gx - gs - 12, o, stroke);
+  };
+
   if (el.type === 'process') {
     const rx = w / 2, ry = h / 2;
     if (fill !== 'none') body += `<path d="${cleanEllipse(cx, cy, rx, ry)}" fill="${fill}" stroke="none"/>`;
@@ -63,22 +74,47 @@ function renderNode(el, o) {
       const k = 8;
       body += `<path d="${o.sketchy ? roughEllipse(seed + 7, cx, cy, rx - k, ry - k) : cleanEllipse(cx, cy, rx - k, ry - k)}" ${strokeAttrs}/>`;
     }
-    body += centeredText(el.name, cx, cy, w * 0.72, o, stroke);
+    const gs = Math.min(28, h * 0.22, w * 0.22);
+    if (glyph && gs >= 12) {
+      const gy = cy - h * 0.1 - gs;
+      const n = wrapText(el.name, w * 0.76, 16).length;
+      // Keep multi-line labels clear of the symbol above them.
+      const ly = Math.max(cy + h * 0.12, gy + gs + 6 + (n * 20) / 2);
+      body += glyphSVG(glyph, cx - gs / 2, gy - Math.max(0, ly + (n * 20) / 2 - (y + h * 0.9)), gs, stroke);
+      body += centeredText(el.name, cx, Math.min(ly, y + h * 0.9 - (n * 20) / 2), w * 0.76, o, stroke);
+    } else body += centeredText(el.name, cx, cy, w * 0.72, o, stroke);
   } else if (el.type === 'external') {
     if (fill !== 'none') body += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`;
     body += o.sketchy ? `<path d="${roughRect(seed, x, y, w, h)}" ${strokeAttrs}/>` : `<rect x="${x}" y="${y}" width="${w}" height="${h}" ${strokeAttrs}/>`;
-    body += centeredText(el.name, cx, cy, w - 16, o, stroke);
+    body += sideGlyph(x, x + w);
+  } else if (el.type === 'store' && shape === 'cylinder') {
+    const ry = Math.min(14, h * 0.16), rx = w / 2;
+    const side = `M${x} ${y + ry}V${y + h - ry}A${rx} ${ry} 0 0 0 ${x + w} ${y + h - ry}V${y + ry}`;
+    if (fill !== 'none') body += `<path d="${side}A${rx} ${ry} 0 0 0 ${x} ${y + ry}Z" fill="${fill}"/>`;
+    body += `<path d="${o.sketchy ? roughEllipse(seed, cx, y + ry, rx, ry, 0.6) : cleanEllipse(cx, y + ry, rx, ry)}" ${strokeAttrs}/>`;
+    body += `<path d="${o.sketchy ? roughLine(seed + 1, x, y + ry, x, y + h - ry) + ' ' + roughLine(seed + 2, x + w, y + ry, x + w, y + h - ry) + ` M${x} ${y + h - ry}A${rx} ${ry} 0 0 0 ${x + w} ${y + h - ry}` : side}" ${strokeAttrs}/>`;
+    body += centeredText(el.name, cx, cy + ry / 2, w - 12, o, stroke);
+  } else if (el.type === 'store' && shape === 'log') {
+    const seg = Math.min(16, w * 0.09);
+    if (fill !== 'none') body += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${fill}"/>`;
+    body += o.sketchy ? `<path d="${roughRect(seed, x, y, w, h)}" ${strokeAttrs}/>` : `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" ${strokeAttrs}/>`;
+    let segs = '';
+    for (let k = 1; k <= 4; k++) segs += o.sketchy ? roughLine(seed + 10 + k, x + w - k * seg, y, x + w - k * seg, y + h, 0.5) + ' ' : `M${x + w - k * seg} ${y}V${y + h}`;
+    body += `<path d="${segs}" ${strokeAttrs}/>`;
+    body += sideGlyph(x, x + w - 4 * seg);
   } else if (el.type === 'store') {
     if (fill !== 'none') body += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`;
     const lines = o.sketchy
       ? roughLine(seed, x, y, x + w, y) + ' ' + roughLine(seed + 1, x, y + h, x + w, y + h)
       : `M${x} ${y}H${x + w}M${x} ${y + h}H${x + w}`;
     body += `<path d="${lines}" ${strokeAttrs}/>`;
-    body += centeredText(el.name, cx, cy, w - 12, o, stroke);
+    body += sideGlyph(x, x + w);
   } else if (el.type === 'boundary') {
     if (fill !== 'none') body += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" fill-opacity="0.35"/>`;
     body += o.sketchy ? `<path d="${roughRect(seed, x, y, w, h, 0.6)}" ${strokeAttrs}/>` : `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" ${strokeAttrs}/>`;
-    body += textBlock(wrapText(el.name, w - 16, 15), x + 10, y + 22, { size: 15, font: o.font, fill: stroke, anchor: 'start', weight: 600 });
+    const off = glyph ? 26 : 0;
+    if (glyph) body += glyphSVG(glyph, x + 9, y + 8, 18, stroke);
+    body += textBlock(wrapText(el.name, w - 16 - off, 15), x + 10 + off, y + 22, { size: 15, font: o.font, fill: stroke, anchor: 'start', weight: 600 });
   } else if (el.type === 'note') {
     const lines = String(el.name || '').split('\n');
     body += textBlock(lines, x, y + 18 * 0.95, { size: 18, font: o.font, fill: el.style.stroke || o.ink, anchor: 'start' });

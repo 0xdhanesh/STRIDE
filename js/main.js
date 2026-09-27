@@ -9,7 +9,9 @@ import { esc, uid, isLine, isNode, download, slug, elementBounds, unionBounds } 
 import { validate, threatList, isOpen, activeRules } from './engine.js';
 import { validateRules } from './rules.js';
 import { sampleModel } from './sample.js';
-import { deleteElements, duplicateElements, copyPayload, pastePayload, reorder } from './ops.js';
+import { deleteElements, duplicateElements, copyPayload, pastePayload, reorder, makeFromLibrary } from './ops.js';
+import { LIBRARY, STENCILS, SUBTYPE_GLYPH } from './stencils.js';
+import { glyphIcon } from './glyphs.js';
 import {
   saveModelFile, readModelFile, exportPNG, exportSVG, exportCSV, openReport, shareLink, modelFromHash,
 } from './io.js';
@@ -50,6 +52,62 @@ $('.toolbar').addEventListener('click', (e) => {
   if (!b) return;
   if (b.dataset.tool) setTool(b.dataset.tool);
   if (b.dataset.action === 'tool-lock') store.setUI({ toolLock: !store.ui.toolLock }, 'tool');
+  if (b.dataset.action === 'library') toggleLibrary();
+});
+
+/* ----------------------------------------------------------- symbol library */
+
+const TYPE_GLYPH = { process: 'orchestrator', external: 'user', store: 'database', boundary: 'kubernetes' };
+function renderLibrary() {
+  const q = $('#lib-search').value.trim().toLowerCase();
+  $('#lib-items').innerHTML = LIBRARY.map(({ group, items }) => {
+    const shown = items.filter(([type, sub]) => !q || `${group} ${sub} ${STENCILS[type].label}`.toLowerCase().includes(q));
+    if (!shown.length) return '';
+    return `<h3>${esc(group)}</h3><div class="lib-grid">${shown.map(([type, sub]) =>
+      `<button class="lib-item" draggable="true" data-type="${type}" data-sub="${esc(sub)}" title="${esc(STENCILS[type].label)}: ${esc(sub)}">` +
+      `${glyphIcon(SUBTYPE_GLYPH[sub] || TYPE_GLYPH[type], 26)}<span>${esc(sub)}</span><small>${esc(STENCILS[type].label)}</small></button>`).join('')}</div>`;
+  }).join('') || '<p class="muted">No symbols match.</p>';
+}
+function toggleLibrary(force) {
+  const lib = $('#library');
+  lib.hidden = force === undefined ? !lib.hidden : !force;
+  $('.toolbar [data-action="library"]').classList.toggle('active', !lib.hidden);
+  if (!lib.hidden) { renderLibrary(); $('#lib-search').focus(); }
+}
+let libPlaced = 0;
+function placeFromLibrary(type, sub, at) {
+  if (!at) {
+    const c = canvas.viewportCenter();
+    at = { x: c.x + (libPlaced % 5) * 24, y: c.y + (libPlaced % 5) * 24 };
+    libPlaced++;
+  }
+  const el = makeFromLibrary(store.model, type, sub, at);
+  store.diagram.elements.push(el);
+  store.ui.tool = 'select';
+  store.select([el.id]);
+  store.commit();
+}
+$('#lib-search').addEventListener('input', renderLibrary);
+$('#lib-search').addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleLibrary(false); });
+$('#lib-items').addEventListener('click', (e) => {
+  const b = e.target.closest('.lib-item');
+  if (b) placeFromLibrary(b.dataset.type, b.dataset.sub);
+});
+$('#lib-items').addEventListener('dragstart', (e) => {
+  const b = e.target.closest('.lib-item');
+  if (!b) return;
+  e.dataTransfer.setData('application/x-stride-symbol', JSON.stringify([b.dataset.type, b.dataset.sub]));
+  e.dataTransfer.effectAllowed = 'copy';
+});
+$('#canvas-wrap').addEventListener('dragover', (e) => {
+  if (e.dataTransfer.types.includes('application/x-stride-symbol')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+});
+$('#canvas-wrap').addEventListener('drop', (e) => {
+  const data = e.dataTransfer.getData('application/x-stride-symbol');
+  if (!data) return;
+  e.preventDefault();
+  const [type, sub] = JSON.parse(data);
+  placeFromLibrary(type, sub, canvas.toWorld(e));
 });
 
 function syncChrome() {
@@ -504,6 +562,7 @@ window.addEventListener('keydown', (e) => {
     case 'Delete': case 'Backspace': e.preventDefault(); return doDelete();
     case 'Escape':
       if (!$('#menu').hidden || !$('#ctxmenu').hidden) { $('#menu').hidden = $('#ctxmenu').hidden = true; return; }
+      if (!$('#library').hidden) return toggleLibrary(false);
       if (store.ui.activeThreat) return store.setUI({ activeThreat: null }, 'threat');
       if (store.ui.selection.size) return store.select([]);
       return setTool('select');
@@ -521,6 +580,7 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.shiftKey) return;
   if (k === 'q') return store.setUI({ toolLock: !store.ui.toolLock }, 'tool');
+  if (k === 'y') { e.preventDefault(); return toggleLibrary(); }
   if (TOOL_KEYS[k]) setTool(TOOL_KEYS[k]);
 });
 window.addEventListener('keyup', (e) => {

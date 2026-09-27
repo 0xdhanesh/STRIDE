@@ -26,8 +26,11 @@ export const STENCILS = {
     subtypes: [
       'Generic Process', 'Web Application', 'Web API / Service', 'Browser Client (SPA)', 'Mobile App',
       'Desktop / Thick Client', 'Microservice', 'Serverless Function', 'Background Worker', 'Container / Pod',
-      'Virtual Machine', 'Identity Provider', 'API Gateway', 'Message Broker', 'Multiple Processes',
+      'Kubernetes Pod', 'Kubernetes Control Plane', 'Orchestrator (Workflow / Agents)', 'MCP Server', 'AI Agent / LLM App',
+      'IVR System', 'Genesys Contact Center', 'Kafka Broker', 'Virtual Machine', 'Identity Provider', 'API Gateway',
+      'Message Broker', 'Multiple Processes',
     ],
+    subtypeDefaults: { 'Kubernetes Pod': { isolation: 'Container' }, 'Container / Pod': { isolation: 'Container' } },
     props: [
       { key: 'codeType', label: 'Code type', options: ['Not Selected', 'Managed', 'Unmanaged (C/C++)', 'Interpreted / Script'] },
       { key: 'runningAs', label: 'Running as', options: ['Not Selected', 'Kernel', 'System / root', 'Standard user', 'Low privilege / sandboxed'] },
@@ -47,7 +50,8 @@ export const STENCILS = {
     size: { w: 160, h: 80 },
     subtypes: [
       'Generic External Entity', 'Human User', 'Administrator', 'Browser', 'Third-Party Service', 'Mobile Device',
-      'IoT Device', 'Partner System', 'Cloud Provider Service', 'Attacker',
+      'IoT Device', 'Partner System', 'Cloud Provider Service', 'Phone Caller (PSTN)', 'Genesys Cloud (SaaS)',
+      'MCP Client / AI Assistant', 'LLM Provider API', 'Attacker',
     ],
     props: [
       { key: 'authenticatesItself', label: 'Authenticates itself', options: YN },
@@ -59,10 +63,14 @@ export const STENCILS = {
     hint: 'Where data rests: databases, files, caches, queues, secrets.',
     size: { w: 160, h: 70 },
     subtypes: [
-      'Generic Data Store', 'SQL Database', 'NoSQL Database', 'File System', 'Blob / Object Storage', 'Cache',
-      'Key Vault / Secret Store', 'Message Queue', 'Log Store', 'Browser Storage', 'Configuration / Registry', 'Backup',
+      'Generic Data Store', 'Database', 'SQL Database', 'NoSQL Database', 'Kafka Topic / Event Log', 'File System',
+      'Blob / Object Storage', 'Cache', 'Key Vault / Secret Store', 'Message Queue', 'Log Store', 'Call Recording Store',
+      'Vector Database', 'Browser Storage', 'Configuration / Registry', 'Backup',
     ],
-    subtypeDefaults: { 'Log Store': { storesLogs: 'Yes' }, 'Key Vault / Secret Store': { storesCredentials: 'Yes' } },
+    subtypeDefaults: {
+      'Log Store': { storesLogs: 'Yes' }, 'Kafka Topic / Event Log': { storesLogs: 'Yes' },
+      'Key Vault / Secret Store': { storesCredentials: 'Yes' }, 'Call Recording Store': { storesPII: 'Yes' },
+    },
     props: [
       { key: 'encryptedAtRest', label: 'Encrypted at rest', options: YN },
       { key: 'integrity', label: 'Integrity protected (signed)', options: YN },
@@ -78,7 +86,8 @@ export const STENCILS = {
     hint: 'Data moving between elements. Threats are generated per flow.',
     subtypes: [
       'Generic Data Flow', 'HTTP', 'HTTPS', 'gRPC', 'WebSocket', 'SQL / DB Protocol', 'Message (AMQP / MQTT / Kafka)',
-      'File Transfer (SFTP / SMB)', 'IPC / Named Pipe', 'RPC / DCOM', 'SSH', 'Email (SMTP)', 'Binary / Custom',
+      'Kafka Produce / Consume', 'MCP (JSON-RPC)', 'SIP / RTP (Voice)', 'File Transfer (SFTP / SMB)', 'IPC / Named Pipe',
+      'RPC / DCOM', 'SSH', 'Email (SMTP)', 'Binary / Custom',
     ],
     subtypeDefaults: {
       HTTPS: { encrypted: 'Yes' }, SSH: { encrypted: 'Yes' }, HTTP: { encrypted: 'No' },
@@ -99,7 +108,7 @@ export const STENCILS = {
     size: { w: 380, h: 280 },
     subtypes: [
       'Generic Trust Boundary', 'Internet Boundary', 'Machine Boundary', 'Corporate Network', 'DMZ', 'Cloud VPC / VNet',
-      'Kubernetes Cluster', 'Container Boundary', 'Sandbox', 'Browser Sandbox', 'Kernel / User Mode',
+      'Kubernetes Cluster', 'Kubernetes Namespace', 'Container Boundary', 'Sandbox', 'Browser Sandbox', 'Kernel / User Mode',
     ],
     props: [],
   },
@@ -131,3 +140,35 @@ export function defaultProps(type) {
 export const STROKES = ['#1e1e1e', '#e03131', '#2f9e44', '#1971c2', '#f08c00', '#9c36b5'];
 export const FILLS = [null, '#ffc9c9', '#b2f2bb', '#a5d8ff', '#ffec99', '#eebefa'];
 export const BOUNDARY_COLOR = '#e03131';
+
+// Symbol drawn inside a shape for a given subtype (see glyphs.js).
+export const SUBTYPE_GLYPH = {
+  'Web Application': 'browser', 'Browser Client (SPA)': 'browser', 'Mobile App': 'phone', 'Serverless Function': 'function',
+  'Container / Pod': 'container', 'Kubernetes Pod': 'kubernetes', 'Kubernetes Control Plane': 'kubernetes',
+  'Orchestrator (Workflow / Agents)': 'orchestrator', 'MCP Server': 'mcp', 'AI Agent / LLM App': 'agent',
+  'IVR System': 'ivr', 'Genesys Contact Center': 'headset', 'Kafka Broker': 'eventlog', 'Virtual Machine': 'vm',
+  'Identity Provider': 'idp', 'API Gateway': 'gateway', 'Message Broker': 'queue',
+  'Human User': 'user', Administrator: 'user', Browser: 'browser', 'Mobile Device': 'phone', 'IoT Device': 'iot',
+  'Cloud Provider Service': 'cloud', 'Third-Party Service': 'cloud', 'Phone Caller (PSTN)': 'ivr',
+  'Genesys Cloud (SaaS)': 'headset', 'MCP Client / AI Assistant': 'agent', 'LLM Provider API': 'agent', Attacker: 'attacker',
+  Database: 'database', 'SQL Database': 'database', 'NoSQL Database': 'database', 'Vector Database': 'database',
+  'Kafka Topic / Event Log': 'eventlog', 'File System': 'file', 'Blob / Object Storage': 'cloud', Cache: 'cache',
+  'Key Vault / Secret Store': 'key', 'Message Queue': 'queue', 'Log Store': 'log', 'Call Recording Store': 'headset',
+  'Kubernetes Cluster': 'kubernetes', 'Kubernetes Namespace': 'kubernetes', 'Container Boundary': 'container',
+  'Cloud VPC / VNet': 'cloud',
+};
+
+// Data-store subtypes drawn with a dedicated outline instead of the DFD "two lines".
+export const SUBTYPE_SHAPE = {
+  Database: 'cylinder', 'SQL Database': 'cylinder', 'NoSQL Database': 'cylinder', 'Vector Database': 'cylinder',
+  'Kafka Topic / Event Log': 'log',
+};
+
+// Entries of the stencil library (toolbar "Library" button): type + subtype presets.
+export const LIBRARY = [
+  { group: 'Data', items: [['store', 'Database'], ['store', 'SQL Database'], ['store', 'Kafka Topic / Event Log'], ['store', 'Cache'], ['store', 'Key Vault / Secret Store'], ['store', 'Blob / Object Storage'], ['store', 'Vector Database'], ['store', 'Log Store']] },
+  { group: 'Platform', items: [['process', 'Kubernetes Pod'], ['process', 'Container / Pod'], ['process', 'Kubernetes Control Plane'], ['process', 'Orchestrator (Workflow / Agents)'], ['process', 'Kafka Broker'], ['process', 'API Gateway'], ['process', 'Serverless Function'], ['boundary', 'Kubernetes Cluster']] },
+  { group: 'AI & MCP', items: [['process', 'MCP Server'], ['external', 'MCP Client / AI Assistant'], ['process', 'AI Agent / LLM App'], ['external', 'LLM Provider API']] },
+  { group: 'Contact center', items: [['process', 'IVR System'], ['process', 'Genesys Contact Center'], ['external', 'Genesys Cloud (SaaS)'], ['external', 'Phone Caller (PSTN)'], ['store', 'Call Recording Store']] },
+  { group: 'Apps & people', items: [['process', 'Web Application'], ['process', 'Web API / Service'], ['process', 'Identity Provider'], ['external', 'Human User'], ['external', 'Browser'], ['external', 'Third-Party Service']] },
+];

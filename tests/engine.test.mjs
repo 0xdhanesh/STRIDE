@@ -54,3 +54,26 @@ console.log(`OK – ${list.length} threats in sample`);
   assert.ok(!keys.some((k) => k.endsWith('|f_3|D02')), 'flow not crossing the line is not');
   console.log('OK – boundary line crossing');
 }
+
+// Technology-specific rules and orthogonal anchoring.
+{
+  const { lineGeom } = await import('../js/util.js');
+  const { defaultProps } = await import('../js/stencils.js');
+  const n = (id, type, subtype, x, y, w = 130, h = 130) => ({ id, type, name: id, subtype, x, y, w, h, props: defaultProps(type), style: {} });
+  const f = (id, s, t) => ({ id, type: 'flow', name: id, subtype: 'MCP (JSON-RPC)', sourceId: s, targetId: t, bend: 0, props: defaultProps('flow'), style: {} });
+  const m = { diagrams: [{ id: 'd', elements: [
+    n('mcp', 'process', 'MCP Server', 0, 0), n('agent', 'process', 'AI Agent / LLM App', 300, 40),
+    n('kafka', 'store', 'Kafka Topic / Event Log', 300, 400, 190, 70), n('caller', 'external', 'Phone Caller (PSTN)', -400, 0, 160, 80),
+    n('ivr', 'process', 'IVR System', -200, 0), n('pod', 'process', 'Kubernetes Pod', 600, 0),
+    f('f1', 'mcp', 'agent'), f('f2', 'agent', 'mcp'), f('f3', 'agent', 'kafka'), f('f4', 'caller', 'ivr'),
+  ] }], threats: {} };
+  const rules = new Set(generateThreats(m).map((g) => g.ruleId));
+  for (const r of ['M01', 'M02', 'M03', 'K01', 'K02', 'V01', 'V03', 'C01']) assert.ok(rules.has(r), `rule ${r} fires`);
+
+  // Shapes overlapping vertically → horizontal connector (same y at both ends).
+  const byId = new Map(m.diagrams[0].elements.map((e) => [e.id, e]));
+  const g = lineGeom(byId.get('f1'), byId);
+  assert.ok(Math.abs(g.s.y - g.t.y) < 0.01, 'horizontal connector');
+  assert.ok(g.s.x > 129 && g.t.x < 301, 'ends sit on the shape outlines');
+  console.log('OK – technology rules & orthogonal anchors');
+}

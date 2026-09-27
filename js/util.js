@@ -130,12 +130,62 @@ export function lineGeom(el, byId) {
   const len = Math.hypot(dx, dy) || 1;
   const n = { x: -dy / len, y: dx / len };
   const roughCtrl = { x: (p0.x + p2.x) / 2 + n.x * bend * 2, y: (p0.y + p2.y) / 2 + n.y * bend * 2 };
-  const s = a ? clipToShape(a, roughCtrl) : p0;
-  const t = b ? clipToShape(b, roughCtrl, 4) : p2;
+  const ortho = !bend && a && b ? orthogonalEnds(a, b) : null;
+  const s = ortho ? ortho.s : a ? clipToShape(a, roughCtrl) : p0;
+  const t = ortho ? ortho.t : b ? clipToShape(b, roughCtrl, 4) : p2;
   const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
   const mid = { x: mx + n.x * bend, y: my + n.y * bend };
   const c = { x: mx + n.x * bend * 2, y: my + n.y * bend * 2 };
   return { s, t, c, mid, n, p0, p2 };
+}
+
+// Point on the outline of `el` at a given y (side = +1 right, -1 left) or x (side = +1 bottom, -1 top).
+function outlineAt(el, axis, v, side, gap) {
+  const c = center(el);
+  if (el.type === 'process') {
+    const rx = el.w / 2, ry = el.h / 2;
+    if (axis === 'y') { const k = Math.sqrt(Math.max(0, 1 - ((v - c.y) / ry) ** 2)); return { x: c.x + side * (rx * k + gap), y: v }; }
+    const k = Math.sqrt(Math.max(0, 1 - ((v - c.x) / rx) ** 2));
+    return { x: v, y: c.y + side * (ry * k + gap) };
+  }
+  return axis === 'y' ? { x: side > 0 ? el.x + el.w + gap : el.x - gap, y: v } : { x: v, y: side > 0 ? el.y + el.h + gap : el.y - gap };
+}
+
+// When two shapes overlap enough on one axis, connect them with a straight
+// horizontal / vertical segment through the middle of the overlap.
+function orthogonalEnds(a, b) {
+  const ov = (a0, a1, b0, b1) => [Math.max(a0, b0), Math.min(a1, b1)];
+  const [y0, y1] = ov(a.y, a.y + a.h, b.y, b.y + b.h);
+  const [x0, x1] = ov(a.x, a.x + a.w, b.x, b.x + b.w);
+  const inset = (el, axis) => (el.type === 'process' ? (axis === 'y' ? el.h : el.w) * 0.2 : 0);
+  if (y1 - y0 >= 0.3 * Math.min(a.h, b.h) && (a.x + a.w < b.x || b.x + b.w < a.x)) {
+    const lo = Math.max(y0, a.y + inset(a, 'y'), b.y + inset(b, 'y')), hi = Math.min(y1, a.y + a.h - inset(a, 'y'), b.y + b.h - inset(b, 'y'));
+    if (hi >= lo) {
+      const y = (lo + hi) / 2, dir = a.x < b.x ? 1 : -1;
+      return { s: outlineAt(a, 'y', y, dir, 3), t: outlineAt(b, 'y', y, -dir, 4) };
+    }
+  }
+  if (x1 - x0 >= 0.3 * Math.min(a.w, b.w) && (a.y + a.h < b.y || b.y + b.h < a.y)) {
+    const lo = Math.max(x0, a.x + inset(a, 'x'), b.x + inset(b, 'x')), hi = Math.min(x1, a.x + a.w - inset(a, 'x'), b.x + b.w - inset(b, 'x'));
+    if (hi >= lo) {
+      const x = (lo + hi) / 2, dir = a.y < b.y ? 1 : -1;
+      return { s: outlineAt(a, 'x', x, dir, 3), t: outlineAt(b, 'x', x, -dir, 4) };
+    }
+  }
+  return null;
+}
+
+// Approximate distance from p to the outline of a node (0 when inside).
+export function distToShape(el, p) {
+  if (el.type === 'process') {
+    const c = center(el);
+    const dx = p.x - c.x, dy = p.y - c.y;
+    const r = Math.sqrt((dx / (el.w / 2)) ** 2 + (dy / (el.h / 2)) ** 2);
+    return r <= 1 ? 0 : (Math.hypot(dx, dy) * (r - 1)) / r;
+  }
+  const dx = Math.max(el.x - p.x, 0, p.x - (el.x + el.w));
+  const dy = Math.max(el.y - p.y, 0, p.y - (el.y + el.h));
+  return Math.hypot(dx, dy);
 }
 
 export function nodeBounds(el) {
@@ -244,7 +294,9 @@ export function wrapText(text, maxWidth, fontSize) {
       if (!line) line = word;
       else if ((line + ' ' + word).length <= maxChars) line += ' ' + word;
       else { out.push(line); line = word; }
-      while (line.length > maxChars) { out.push(line.slice(0, maxChars)); line = line.slice(maxChars); }
+      // Only break a single long word when it clearly doesn't fit.
+      const hard = Math.ceil(maxChars * 1.4);
+      while (line.length > hard) { out.push(line.slice(0, hard)); line = line.slice(hard); }
     }
     out.push(line);
   }

@@ -70,8 +70,15 @@
     <button class="tool" data-tool="boundary" title="Trust boundary box (B or 6)"><i data-icon="boundary"></i><span class="key">6</span></button>
     <button class="tool" data-tool="boundaryLine" title="Trust boundary line (L or 7)"><i data-icon="boundaryLine"></i><span class="key">7</span></button>
     <button class="tool" data-tool="note" title="Note (T or 8)"><i data-icon="text"></i><span class="key">8</span></button>
+    <button class="tool" data-action="library" title="Symbol library: databases, Kafka, IVR, Genesys, Kubernetes, MCP, orchestrators (Y)"><i data-icon="library"></i></button>
     <span class="sep"></span>
     <button class="tool" data-tool="eraser" title="Eraser (X or 0)"><i data-icon="eraser"></i><span class="key">0</span></button>
+  </div>
+
+  <div id="library" class="island library" hidden aria-label="Symbol library">
+    <div class="row between"><h2>Library</h2><span class="muted small">Click to add · drag onto the canvas</span></div>
+    <input type="search" id="lib-search" placeholder="Search symbols…" aria-label="Search symbols">
+    <div id="lib-items"></div>
   </div>
 
   <div class="top-right">
@@ -185,11 +192,13 @@
             <dt><kbd>T</kbd> <kbd>8</kbd></dt><dd>Note</dd>
             <dt><kbd>X</kbd> <kbd>0</kbd></dt><dd>Eraser</dd>
             <dt><kbd>Q</kbd></dt><dd>Keep tool active</dd>
+            <dt><kbd>Y</kbd></dt><dd>Symbol library</dd>
           </dl>
         </section>
         <section>
           <h3>Editing</h3>
           <dl>
+            <dt>Drag a shape's <b>●</b> dot</dt><dd>Connect with a data flow</dd>
             <dt><kbd>Enter</kbd> / double-click</dt><dd>Rename selected</dd>
             <dt><kbd>Del</kbd></dt><dd>Delete</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>D</kbd></dt><dd>Duplicate</dd>
