@@ -24,11 +24,18 @@ export const STENCILS = {
     hint: 'Code that runs: a service, app, function or component.',
     size: { w: 130, h: 130 },
     subtypes: [
-      'Generic Process', 'Web Application', 'Web API / Service', 'Browser Client (SPA)', 'Mobile App',
-      'Desktop / Thick Client', 'Microservice', 'Serverless Function', 'Background Worker', 'Container / Pod',
-      'Kubernetes Pod', 'Kubernetes Control Plane', 'Orchestrator (Workflow / Agents)', 'MCP Server', 'AI Agent / LLM App',
-      'IVR System', 'Genesys Contact Center', 'Kafka Broker', 'WebSocket Server / Gateway', 'Virtual Machine', 'Identity Provider', 'API Gateway',
-      'Message Broker', 'Multiple Processes',
+      'Generic Process', 'Web Application', 'Web API / Service', 'GraphQL API', 'Browser Client (SPA)', 'Mobile App',
+      'Desktop / Thick Client', 'Browser Extension', 'Microservice', 'Serverless Function', 'Background Worker',
+      'Scheduled Job / Cron', 'ETL / Data Pipeline', 'Container / Pod', 'Kubernetes Pod', 'Kubernetes Control Plane',
+      'Service Mesh / Sidecar', 'Orchestrator (Workflow / Agents)', 'MCP Server', 'AI Agent / LLM App', 'ML Model Serving',
+      'IVR System', 'Genesys Contact Center', 'Kafka Broker', 'WebSocket Server / Gateway', 'Message Broker',
+      'API Gateway', 'Load Balancer', 'Reverse Proxy', 'CDN / Edge', 'Web Application Firewall', 'Network Firewall',
+      'VPN Gateway', 'Bastion / Jump Host', 'DNS Server', 'Mail Server', 'File Transfer Server',
+      'Identity Provider', 'Authentication Service', 'Authorization / Policy Engine', 'Active Directory Domain Controller',
+      'Certificate Authority / PKI', 'Secrets Manager', 'Payment Service',
+      'CI/CD Pipeline', 'Build Agent / Runner', 'SIEM / Log Collector', 'EDR / Security Agent', 'Vulnerability Scanner',
+      'Admin Console / Management Plane', 'Virtual Machine', 'Mainframe / Legacy System', 'Kernel Driver / Service',
+      'IoT Gateway', 'PLC / Controller', 'SCADA / HMI', 'Multiple Processes',
     ],
     subtypeDefaults: { 'Kubernetes Pod': { isolation: 'Container' }, 'Container / Pod': { isolation: 'Container' } },
     props: [
@@ -49,9 +56,11 @@ export const STENCILS = {
     hint: 'People or systems outside your control that interact with it.',
     size: { w: 160, h: 80 },
     subtypes: [
-      'Generic External Entity', 'Human User', 'Administrator', 'Browser', 'Third-Party Service', 'Mobile Device',
-      'IoT Device', 'Partner System', 'Cloud Provider Service', 'Phone Caller (PSTN)', 'Genesys Cloud (SaaS)',
-      'MCP Client / AI Assistant', 'LLM Provider API', 'Attacker',
+      'Generic External Entity', 'Human User', 'Anonymous User', 'Authenticated User', 'Administrator', 'Privileged Insider',
+      'Browser', 'Third-Party Service', 'SaaS Application', 'Payment Gateway', 'OAuth / Social Login Provider',
+      'Mobile Device', 'IoT Device', 'Partner System', 'Supplier / Vendor', 'Cloud Provider Service', 'Email Recipient',
+      'Phone Caller (PSTN)', 'Genesys Cloud (SaaS)', 'MCP Client / AI Assistant', 'LLM Provider API',
+      'Open-Source Dependency', 'External Attacker (Internet)', 'Malicious Insider', 'Compromised Supply Chain', 'Attacker',
     ],
     props: [
       { key: 'authenticatesItself', label: 'Authenticates itself', options: YN },
@@ -63,13 +72,19 @@ export const STENCILS = {
     hint: 'Where data rests: databases, files, caches, queues, secrets.',
     size: { w: 160, h: 70 },
     subtypes: [
-      'Generic Data Store', 'Database', 'SQL Database', 'NoSQL Database', 'Kafka Topic / Event Log', 'File System',
-      'Blob / Object Storage', 'Cache', 'Key Vault / Secret Store', 'Message Queue', 'Log Store', 'Call Recording Store',
-      'Vector Database', 'Browser Storage', 'Configuration / Registry', 'Backup',
+      'Generic Data Store', 'Database', 'SQL Database', 'NoSQL Database', 'Vector Database', 'Data Warehouse / Lake',
+      'Search Index', 'Time-Series Database', 'Kafka Topic / Event Log', 'File System', 'File Share (SMB / NFS)',
+      'Blob / Object Storage', 'Cache', 'Session Store', 'Key Vault / Secret Store', 'HSM / Key Management',
+      'Certificate Store', 'Directory (LDAP / AD)', 'Message Queue', 'Log Store', 'Audit Trail', 'Call Recording Store',
+      'Source Code Repository', 'Container Registry', 'Package / Artifact Registry', 'ML Model / Training Data',
+      'Email Mailbox', 'Ledger / Blockchain', 'Browser Storage', 'Mobile Device Storage', 'Configuration / Registry',
+      'Cloud Instance Metadata', 'Backup',
     ],
     subtypeDefaults: {
       'Log Store': { storesLogs: 'Yes' }, 'Kafka Topic / Event Log': { storesLogs: 'Yes' },
       'Key Vault / Secret Store': { storesCredentials: 'Yes' }, 'Call Recording Store': { storesPII: 'Yes' },
+      'HSM / Key Management': { storesCredentials: 'Yes' }, 'Directory (LDAP / AD)': { storesCredentials: 'Yes' },
+      'Session Store': { storesCredentials: 'Yes' }, 'Audit Trail': { storesLogs: 'Yes' }, 'Certificate Store': { storesCredentials: 'Yes' },
     },
     props: [
       { key: 'encryptedAtRest', label: 'Encrypted at rest', options: YN },
@@ -85,13 +100,22 @@ export const STENCILS = {
     label: 'Data Flow',
     hint: 'Data moving between elements. Threats are generated per flow.',
     subtypes: [
-      'Generic Data Flow', 'HTTP', 'HTTPS', 'gRPC', 'WebSocket Secure (wss://)', 'WebSocket (ws://)', 'WebSocket', 'SQL / DB Protocol', 'Message (AMQP / MQTT / Kafka)',
-      'Kafka Produce / Consume', 'MCP (JSON-RPC)', 'SIP / RTP (Voice)', 'File Transfer (SFTP / SMB)', 'IPC / Named Pipe',
-      'RPC / DCOM', 'SSH', 'Email (SMTP)', 'Binary / Custom',
+      'Generic Data Flow', 'HTTP', 'HTTPS', 'REST / JSON', 'GraphQL', 'SOAP / XML', 'gRPC', 'WebSocket Secure (wss://)',
+      'WebSocket (ws://)', 'WebSocket', 'Webhook Callback', 'SQL / DB Protocol', 'Message (AMQP / MQTT / Kafka)',
+      'Kafka Produce / Consume', 'MCP (JSON-RPC)', 'SIP / RTP (Voice)', 'OAuth 2.0 / OIDC', 'SAML', 'Kerberos', 'NTLM',
+      'LDAP', 'LDAPS', 'RADIUS', 'DNS', 'DNS over HTTPS / TLS', 'NTP', 'Syslog', 'SNMP', 'SMTP', 'Email (SMTP)',
+      'File Transfer (SFTP / SMB)', 'SMB', 'NFS', 'FTP', 'FTPS', 'TFTP', 'SSH', 'Telnet', 'RDP', 'VNC',
+      'IPC / Named Pipe', 'RPC / DCOM', 'WinRM / PowerShell Remoting', 'VPN / IPsec', 'Bluetooth / BLE', 'NFC', 'Wi-Fi',
+      'USB / Physical Media', 'Modbus', 'DNP3', 'OPC UA', 'CAN Bus', 'Binary / Custom',
     ],
     subtypeDefaults: {
       HTTPS: { encrypted: 'Yes' }, SSH: { encrypted: 'Yes' }, HTTP: { encrypted: 'No' },
       'WebSocket Secure (wss://)': { encrypted: 'Yes' }, 'WebSocket (ws://)': { encrypted: 'No' },
+      LDAPS: { encrypted: 'Yes' }, FTPS: { encrypted: 'Yes' }, 'DNS over HTTPS / TLS': { encrypted: 'Yes' }, 'VPN / IPsec': { encrypted: 'Yes' },
+      'File Transfer (SFTP / SMB)': {}, Telnet: { encrypted: 'No', authentication: 'Password' }, FTP: { encrypted: 'No' }, TFTP: { encrypted: 'No', authentication: 'None' },
+      LDAP: { encrypted: 'No' }, SNMP: { encrypted: 'No' }, DNS: { encrypted: 'No' }, Modbus: { encrypted: 'No', authentication: 'None' },
+      DNP3: { encrypted: 'No' }, 'CAN Bus': { encrypted: 'No', authentication: 'None' }, 'OAuth 2.0 / OIDC': { authentication: 'Token (OAuth / JWT)' },
+      Kerberos: { authentication: 'Kerberos / Windows' }, NTLM: { authentication: 'Kerberos / Windows' },
     },
     props: [
       { key: 'encrypted', label: 'Encrypted in transit', options: YN },
@@ -108,15 +132,17 @@ export const STENCILS = {
     hint: 'A zone where the level of trust changes (network, machine, process).',
     size: { w: 380, h: 280 },
     subtypes: [
-      'Generic Trust Boundary', 'Internet Boundary', 'Machine Boundary', 'Corporate Network', 'DMZ', 'Cloud VPC / VNet',
-      'Kubernetes Cluster', 'Kubernetes Namespace', 'Container Boundary', 'Sandbox', 'Browser Sandbox', 'Kernel / User Mode',
+      'Generic Trust Boundary', 'Internet Boundary', 'Machine Boundary', 'Process Boundary', 'Corporate Network', 'DMZ',
+      'Cloud VPC / VNet', 'Cloud Account / Subscription', 'Tenant Boundary', 'Kubernetes Cluster', 'Kubernetes Namespace',
+      'Container Boundary', 'Sandbox', 'Browser Sandbox', 'Kernel / User Mode', 'Management Network', 'PCI Zone (CDE)',
+      'Partner Network', 'Remote Access / VPN', 'Wireless Network', 'OT / ICS Network', 'Physical Boundary', 'Endpoint / Device',
     ],
     props: [],
   },
   boundaryLine: {
     label: 'Trust Boundary (line)',
     hint: 'A curved boundary line; flows that cross it are boundary-crossing.',
-    subtypes: ['Generic Trust Boundary', 'Internet Boundary', 'Machine Boundary', 'Corporate Network', 'DMZ', 'Kernel / User Mode'],
+    subtypes: ['Generic Trust Boundary', 'Internet Boundary', 'Machine Boundary', 'Process Boundary', 'Corporate Network', 'DMZ', 'Management Network', 'PCI Zone (CDE)', 'OT / ICS Network', 'Wireless Network', 'Kernel / User Mode'],
     props: [],
   },
   note: {
@@ -157,20 +183,55 @@ export const SUBTYPE_GLYPH = {
   'Key Vault / Secret Store': 'key', 'Message Queue': 'queue', 'Log Store': 'log', 'Call Recording Store': 'headset',
   'Kubernetes Cluster': 'kubernetes', 'Kubernetes Namespace': 'kubernetes', 'Container Boundary': 'container',
   'Cloud VPC / VNet': 'cloud',
+  // Web, API & edge
+  'Web API / Service': 'server', 'GraphQL API': 'graph', 'Desktop / Thick Client': 'vm', 'Browser Extension': 'puzzle',
+  Microservice: 'mesh', 'Background Worker': 'cpu', 'Scheduled Job / Cron': 'clock', 'ETL / Data Pipeline': 'pipeline',
+  'Service Mesh / Sidecar': 'mesh', 'ML Model Serving': 'brain', 'Load Balancer': 'loadbalancer', 'Reverse Proxy': 'proxy',
+  'CDN / Edge': 'globe', 'Web Application Firewall': 'firewall', 'Network Firewall': 'firewall', 'VPN Gateway': 'vpn',
+  'Bastion / Jump Host': 'terminal', 'DNS Server': 'globe', 'Mail Server': 'mail', 'File Transfer Server': 'file',
+  // Identity & crypto
+  'Authentication Service': 'lock', 'Authorization / Policy Engine': 'policy', 'Active Directory Domain Controller': 'directory',
+  'Certificate Authority / PKI': 'cert', 'Secrets Manager': 'key', 'Payment Service': 'card',
+  // DevOps & security operations
+  'CI/CD Pipeline': 'pipeline', 'Build Agent / Runner': 'cpu', 'SIEM / Log Collector': 'eye', 'EDR / Security Agent': 'shield',
+  'Vulnerability Scanner': 'radar', 'Admin Console / Management Plane': 'terminal', 'Mainframe / Legacy System': 'server',
+  'Kernel Driver / Service': 'chip', 'IoT Gateway': 'iot', 'PLC / Controller': 'factory', 'SCADA / HMI': 'gauge',
+  // External entities
+  'Anonymous User': 'user', 'Authenticated User': 'user', 'Privileged Insider': 'insider', 'SaaS Application': 'cloud',
+  'Payment Gateway': 'card', 'OAuth / Social Login Provider': 'idp', 'Supplier / Vendor': 'cloud', 'Email Recipient': 'mail',
+  'Open-Source Dependency': 'registry', 'External Attacker (Internet)': 'attacker', 'Malicious Insider': 'insider',
+  'Compromised Supply Chain': 'registry', 'Partner System': 'server',
+  // Data stores
+  'Data Warehouse / Lake': 'warehouse', 'Search Index': 'search', 'Time-Series Database': 'database',
+  'File Share (SMB / NFS)': 'file', 'Session Store': 'cache', 'HSM / Key Management': 'chip', 'Certificate Store': 'cert',
+  'Directory (LDAP / AD)': 'directory', 'Audit Trail': 'log', 'Source Code Repository': 'branch', 'Container Registry': 'registry',
+  'Package / Artifact Registry': 'registry', 'ML Model / Training Data': 'brain', 'Email Mailbox': 'mail', 'Ledger / Blockchain': 'chain',
+  'Browser Storage': 'browser', 'Mobile Device Storage': 'phone', 'Configuration / Registry': 'file', 'Cloud Instance Metadata': 'cloud', Backup: 'file',
+  // Trust zones
+  'Cloud Account / Subscription': 'cloud', 'Tenant Boundary': 'directory', 'Management Network': 'terminal', 'PCI Zone (CDE)': 'card',
+  'Partner Network': 'server', 'Remote Access / VPN': 'vpn', 'Wireless Network': 'wifi', 'OT / ICS Network': 'factory',
+  'Physical Boundary': 'lock', 'Endpoint / Device': 'vm', 'Internet Boundary': 'globe', DMZ: 'firewall',
 };
 
 // Data-store subtypes drawn with a dedicated outline instead of the DFD "two lines".
 export const SUBTYPE_SHAPE = {
   Database: 'cylinder', 'SQL Database': 'cylinder', 'NoSQL Database': 'cylinder', 'Vector Database': 'cylinder',
-  'Kafka Topic / Event Log': 'log',
+  'Kafka Topic / Event Log': 'log', 'Data Warehouse / Lake': 'cylinder', 'Time-Series Database': 'cylinder',
 };
 
 // Entries of the stencil library (toolbar "Library" button): type + subtype presets.
 export const LIBRARY = [
-  { group: 'Data', items: [['store', 'Database'], ['store', 'SQL Database'], ['store', 'Kafka Topic / Event Log'], ['store', 'Cache'], ['store', 'Key Vault / Secret Store'], ['store', 'Blob / Object Storage'], ['store', 'Vector Database'], ['store', 'Log Store']] },
-  { group: 'Platform', items: [['process', 'Kubernetes Pod'], ['process', 'Container / Pod'], ['process', 'Kubernetes Control Plane'], ['process', 'Orchestrator (Workflow / Agents)'], ['process', 'Kafka Broker'], ['process', 'API Gateway'], ['process', 'Serverless Function'], ['boundary', 'Kubernetes Cluster']] },
-  { group: 'AI & MCP', items: [['process', 'MCP Server'], ['external', 'MCP Client / AI Assistant'], ['process', 'AI Agent / LLM App'], ['external', 'LLM Provider API']] },
+  { group: 'Data', items: [['store', 'Database'], ['store', 'SQL Database'], ['store', 'NoSQL Database'], ['store', 'Data Warehouse / Lake'], ['store', 'Kafka Topic / Event Log'], ['store', 'Cache'], ['store', 'Session Store'], ['store', 'Search Index'], ['store', 'Blob / Object Storage'], ['store', 'File Share (SMB / NFS)'], ['store', 'Vector Database'], ['store', 'Log Store'], ['store', 'Audit Trail'], ['store', 'Backup']] },
+  { group: 'Network & edge', items: [['process', 'Load Balancer'], ['process', 'Reverse Proxy'], ['process', 'CDN / Edge'], ['process', 'Web Application Firewall'], ['process', 'Network Firewall'], ['process', 'API Gateway'], ['process', 'VPN Gateway'], ['process', 'Bastion / Jump Host'], ['process', 'DNS Server'], ['process', 'Mail Server'], ['process', 'File Transfer Server']] },
+  { group: 'Identity & secrets', items: [['process', 'Identity Provider'], ['process', 'Authentication Service'], ['process', 'Authorization / Policy Engine'], ['process', 'Active Directory Domain Controller'], ['store', 'Directory (LDAP / AD)'], ['process', 'Certificate Authority / PKI'], ['process', 'Secrets Manager'], ['store', 'Key Vault / Secret Store'], ['store', 'HSM / Key Management'], ['external', 'OAuth / Social Login Provider']] },
+  { group: 'Platform', items: [['process', 'Kubernetes Pod'], ['process', 'Container / Pod'], ['process', 'Kubernetes Control Plane'], ['process', 'Service Mesh / Sidecar'], ['process', 'Orchestrator (Workflow / Agents)'], ['process', 'Kafka Broker'], ['process', 'Serverless Function'], ['process', 'Scheduled Job / Cron'], ['process', 'Virtual Machine'], ['process', 'Mainframe / Legacy System'], ['store', 'Cloud Instance Metadata'], ['boundary', 'Kubernetes Cluster']] },
+  { group: 'Apps & APIs', items: [['process', 'Web Application'], ['process', 'Web API / Service'], ['process', 'GraphQL API'], ['process', 'Microservice'], ['process', 'Browser Client (SPA)'], ['process', 'Mobile App'], ['process', 'Desktop / Thick Client'], ['process', 'Browser Extension'], ['process', 'Payment Service'], ['process', 'Admin Console / Management Plane']] },
+  { group: 'Realtime', items: [['process', 'WebSocket Server / Gateway'], ['process', 'Message Broker'], ['store', 'Message Queue']] },
+  { group: 'AI & MCP', items: [['process', 'MCP Server'], ['external', 'MCP Client / AI Assistant'], ['process', 'AI Agent / LLM App'], ['process', 'ML Model Serving'], ['store', 'ML Model / Training Data'], ['external', 'LLM Provider API']] },
+  { group: 'DevOps & supply chain', items: [['process', 'CI/CD Pipeline'], ['process', 'Build Agent / Runner'], ['store', 'Source Code Repository'], ['store', 'Container Registry'], ['store', 'Package / Artifact Registry'], ['external', 'Open-Source Dependency'], ['external', 'Compromised Supply Chain']] },
+  { group: 'Security operations', items: [['process', 'SIEM / Log Collector'], ['process', 'EDR / Security Agent'], ['process', 'Vulnerability Scanner']] },
   { group: 'Contact center', items: [['process', 'IVR System'], ['process', 'Genesys Contact Center'], ['external', 'Genesys Cloud (SaaS)'], ['external', 'Phone Caller (PSTN)'], ['store', 'Call Recording Store']] },
-  { group: 'Realtime', items: [['process', 'WebSocket Server / Gateway'], ['process', 'Browser Client (SPA)'], ['process', 'Message Broker'], ['external', 'Browser']] },
-  { group: 'Apps & people', items: [['process', 'Web Application'], ['process', 'Web API / Service'], ['process', 'Identity Provider'], ['external', 'Human User'], ['external', 'Browser'], ['external', 'Third-Party Service']] },
+  { group: 'OT / IoT & endpoints', items: [['process', 'PLC / Controller'], ['process', 'SCADA / HMI'], ['process', 'IoT Gateway'], ['external', 'IoT Device'], ['process', 'Kernel Driver / Service'], ['store', 'Mobile Device Storage'], ['store', 'Browser Storage']] },
+  { group: 'People & threat actors', items: [['external', 'Anonymous User'], ['external', 'Authenticated User'], ['external', 'Administrator'], ['external', 'Privileged Insider'], ['external', 'External Attacker (Internet)'], ['external', 'Malicious Insider'], ['external', 'Third-Party Service'], ['external', 'SaaS Application'], ['external', 'Payment Gateway'], ['external', 'Partner System']] },
+  { group: 'Trust zones', items: [['boundary', 'Internet Boundary'], ['boundary', 'DMZ'], ['boundary', 'Corporate Network'], ['boundary', 'Management Network'], ['boundary', 'Cloud VPC / VNet'], ['boundary', 'Cloud Account / Subscription'], ['boundary', 'Tenant Boundary'], ['boundary', 'PCI Zone (CDE)'], ['boundary', 'OT / ICS Network'], ['boundary', 'Wireless Network'], ['boundary', 'Remote Access / VPN'], ['boundary', 'Physical Boundary']] },
 ];

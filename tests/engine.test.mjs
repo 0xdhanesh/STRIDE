@@ -95,3 +95,49 @@ console.log(`OK – ${list.length} threats in sample`);
   assert.ok(sec.has('W01') && sec.has('W05'), 'CSWSH and message injection still apply');
   console.log('OK – WebSocket rules');
 }
+
+// Penetration-testing rules: each fires in a matching scenario.
+{
+  const { defaultProps } = await import('../js/stencils.js');
+  const { applySubtype } = await import('../js/ops.js');
+  let k = 0;
+  const node = (type, subtype, props = {}, x = 0) => { const e = { id: `n${k++}`, type, name: subtype, subtype: 'x', x, y: 0, w: 130, h: 130, props: defaultProps(type), style: {} }; applySubtype(e, subtype); Object.assign(e.props, props); return e; };
+  const fired = (els) => new Set(generateThreats({ diagrams: [{ id: 'd', elements: els }], threats: {} }).map((g) => g.ruleId));
+  const pair = (a, b, subtype, flowProps = {}, boundary = false) => {
+    const f = { id: `f${k++}`, type: 'flow', name: 'f', subtype: 'x', sourceId: a.id, targetId: b.id, bend: 0, props: defaultProps('flow'), style: {} };
+    applySubtype(f, subtype); Object.assign(f.props, flowProps);
+    b.x = 400;
+    const els = [a, b, f];
+    if (boundary) els.push({ id: `b${k++}`, type: 'boundary', name: 'Zone', subtype: 'DMZ', x: 350, y: -50, w: 300, h: 250, props: {}, style: {} });
+    return fired(els);
+  };
+  const expect = (id, set) => assert.ok(set.has(id), `${id} should fire`);
+  expect('P01', pair(node('external', 'Administrator'), node('process', 'Generic Process'), 'Telnet'));
+  expect('P02', pair(node('external', 'Administrator'), node('process', 'Virtual Machine'), 'RDP', {}, true));
+  expect('P03', pair(node('process', 'Generic Process'), node('process', 'File Transfer Server'), 'NTLM'));
+  expect('P04', pair(node('process', 'Generic Process'), node('process', 'Active Directory Domain Controller'), 'Kerberos'));
+  expect('P05', pair(node('external', 'OAuth / Social Login Provider'), node('process', 'Web Application'), 'SAML'));
+  expect('P06', pair(node('process', 'Generic Process'), node('process', 'DNS Server'), 'DNS'));
+  expect('P07', pair(node('external', 'Payment Gateway'), node('process', 'Web API / Service'), 'Webhook Callback'));
+  expect('P08', pair(node('external', 'Browser'), node('process', 'GraphQL API'), 'GraphQL'));
+  expect('P09', pair(node('process', 'Load Balancer'), node('process', 'Web Application'), 'HTTPS'));
+  expect('P10', pair(node('process', 'Web API / Service'), node('store', 'Cloud Instance Metadata'), 'HTTP'));
+  expect('P11', pair(node('store', 'Container Registry'), node('process', 'Kubernetes Pod'), 'HTTPS'));
+  expect('P12', pair(node('process', 'Mail Server'), node('external', 'Email Recipient'), 'SMTP'));
+  expect('P13', pair(node('process', 'SCADA / HMI'), node('process', 'PLC / Controller'), 'Modbus'));
+  expect('P14', pair(node('external', 'IoT Device'), node('process', 'IoT Gateway'), 'Bluetooth / BLE'));
+  expect('P15', pair(node('external', 'Privileged Insider'), node('process', 'Desktop / Thick Client'), 'USB / Physical Media'));
+  expect('P16', pair(node('external', 'Malicious Insider'), node('process', 'Admin Console / Management Plane'), 'HTTPS'));
+  expect('P17', pair(node('external', 'External Attacker (Internet)'), node('process', 'CDN / Edge'), 'HTTPS'));
+  expect('P18', pair(node('process', 'Web API / Service'), node('process', 'SIEM / Log Collector'), 'Syslog'));
+  expect('P19', fired([node('process', 'Web Application', { internetFacing: 'Yes' })]));
+  expect('P20', fired([node('process', 'CI/CD Pipeline')]));
+  expect('P21', fired([node('store', 'Source Code Repository')]));
+  expect('P22', fired([node('process', 'Bastion / Jump Host')]));
+  expect('P23', fired([node('store', 'Browser Storage', { storesCredentials: 'Yes' })]));
+  expect('P24', fired([node('store', 'Mobile Device Storage')]));
+  // Secure variants suppress protocol threats.
+  assert.ok(!pair(node('external', 'Administrator'), node('process', 'Generic Process'), 'SSH').has('P01'), 'SSH is not a cleartext legacy protocol');
+  assert.ok(!pair(node('process', 'Generic Process'), node('process', 'DNS Server'), 'DNS over HTTPS / TLS').has('P06'), 'DoH suppresses DNS spoofing');
+  console.log('OK – penetration-testing rules (P01–P24)');
+}

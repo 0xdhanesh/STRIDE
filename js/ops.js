@@ -30,14 +30,24 @@ export function makeElement(model, type, at, size = null) {
 const PRESET_SIZE = {
   'Kafka Topic / Event Log': { w: 190, h: 70 }, Database: { w: 140, h: 100 }, 'SQL Database': { w: 140, h: 100 },
   'NoSQL Database': { w: 140, h: 100 }, 'Vector Database': { w: 140, h: 100 },
+  'Data Warehouse / Lake': { w: 160, h: 100 }, 'Time-Series Database': { w: 150, h: 100 },
 };
+const PRESET_NAME = { 'Active Directory Domain Controller': 'Domain Controller', 'Admin Console / Management Plane': 'Admin Console' };
+
+// "Bastion / Jump Host" -> "Bastion", but keep short prefixes whole ("OT / ICS Network").
+function presetName(subtype) {
+  if (PRESET_NAME[subtype]) return PRESET_NAME[subtype];
+  const bare = subtype.replace(/\s*\(.*\)$/, '');
+  const first = bare.split(' / ')[0];
+  return first.length >= 4 ? first : bare;
+}
 
 // Create an element from a library preset (type + subtype), named after the subtype.
 export function makeFromLibrary(model, type, subtype, at) {
   const size = PRESET_SIZE[subtype];
   const el = makeElement(model, type, size ? { x: at.x - size.w / 2, y: at.y - size.h / 2 } : at, size || null);
   applySubtype(el, subtype);
-  const base = subtype.replace(/\s*\(.*\)$/, '').split(' / ')[0];
+  const base = presetName(subtype);
   const used = new Set(model.diagrams.flatMap((d) => d.elements.map((e) => e.name)));
   el.name = used.has(base) ? Array.from({ length: 999 }, (_, i) => `${base} ${i + 2}`).find((n) => !used.has(n)) : base;
   return el;

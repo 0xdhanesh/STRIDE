@@ -19,6 +19,13 @@
 // Paths: source.type, source.subtype, source.props.<key>, target.*, flow.subtype,
 // flow.props.<key>, flow.crossesBoundary (boolean), element.*
 
+// Protocol / subtype groups used by the penetration-testing rules.
+const LEGACY = ['Telnet', 'FTP', 'TFTP', 'HTTP', 'LDAP', 'SNMP', 'NTLM'];
+const REMOTE_ADMIN = ['RDP', 'VNC', 'SSH', 'Telnet', 'WinRM / PowerShell Remoting'];
+const EDGE = ['Load Balancer', 'Reverse Proxy', 'CDN / Edge', 'API Gateway', 'Web Application Firewall'];
+const WEB_APPS = ['Web Application', 'Web API / Service', 'GraphQL API', 'Microservice', 'Serverless Function'];
+const ARTIFACT_SOURCES = ['Container Registry', 'Package / Artifact Registry', 'Open-Source Dependency', 'Compromised Supply Chain', 'Source Code Repository'];
+
 // Any WebSocket flow (plain, secure or unspecified).
 const WS = ['flow.subtype', 'in', ['WebSocket', 'WebSocket (ws://)', 'WebSocket Secure (wss://)']];
 
@@ -395,6 +402,134 @@ export const DEFAULT_RULES = [
     when: [['target.subtype', 'eq', 'Orchestrator (Workflow / Agents)']],
   },
 
+  /* ------------------------------------------- Penetration-testing threats */
+  {
+    id: 'P01', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow',
+    title: 'Cleartext Legacy Protocol ({flow.subtype}) on {flow.name}',
+    description: '"{flow.name}" uses {flow.subtype}, which sends credentials and data in cleartext. Any attacker with a foothold on the network path (including inside the perimeter) can sniff or modify it.',
+    mitigation: 'Replace with the secure equivalent (SSH instead of Telnet, SFTP/FTPS instead of FTP/TFTP, HTTPS, LDAPS, SNMPv3, Kerberos instead of NTLM) and disable the legacy service.',
+    when: [['flow.subtype', 'in', LEGACY], ['flow.props.encrypted', 'ne', 'Yes']],
+  },
+  {
+    id: 'P02', scope: 'interaction', category: 'E', priority: 'High', focus: 'target',
+    title: 'Remote Administration Exposed Across Trust Boundary ({flow.subtype} to {target.name})',
+    description: '{flow.subtype} access to {target.name} crosses {flow.boundaries}. Exposed remote-admin services are prime targets for brute force, credential stuffing and pre-auth exploits.',
+    mitigation: 'Reach admin interfaces only through a VPN or bastion with MFA, restrict source IPs, disable password authentication where possible and patch remote-access services promptly.',
+    when: [['flow.subtype', 'in', REMOTE_ADMIN], ['flow.crossesBoundary', 'eq', true]],
+  },
+  {
+    id: 'P03', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
+    title: 'NTLM Relay / Pass-the-Hash on {flow.name}',
+    description: 'NTLM authentication over "{flow.name}" can be relayed to other services or replayed with captured hashes, letting an attacker authenticate to {target.name} as {source.name}.',
+    mitigation: 'Disable NTLM where possible in favour of Kerberos, enforce SMB / LDAP signing and channel binding (EPA), and restrict NTLM with auditing first.',
+    when: [['flow.subtype', 'eq', 'NTLM']],
+  },
+  {
+    id: 'P04', scope: 'interaction', category: 'E', priority: 'High', focus: 'target',
+    title: 'Directory Credential Attacks against {target.name}',
+    description: '{target.name} is an Active Directory / LDAP directory. Attackers reaching it from {source.name} can attempt password spraying, Kerberoasting, AS-REP roasting, LDAP enumeration or DCSync to escalate to domain admin.',
+    mitigation: 'Enforce strong passwords and MFA, use gMSAs with long random passwords for service accounts, require Kerberos pre-auth, tier admin accounts, and monitor for roasting / replication events.',
+    when: [['target.subtype', 'in', ['Active Directory Domain Controller', 'Directory (LDAP / AD)']]],
+  },
+  {
+    id: 'P05', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
+    title: 'SSO Token / Assertion Forgery or Replay on {flow.name}',
+    description: 'If {target.name} does not strictly validate {flow.subtype} tokens (signature, algorithm, issuer, audience, expiry, nonce / InResponseTo), an attacker can forge, swap or replay them to log in as another user.',
+    mitigation: 'Validate signatures with pinned keys and algorithms (no "none", no XML signature wrapping), check issuer / audience / expiry / nonce, use PKCE and exact redirect-URI matching.',
+    when: [['flow.subtype', 'in', ['SAML', 'OAuth 2.0 / OIDC']]],
+  },
+  {
+    id: 'P06', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'flow',
+    title: 'DNS Spoofing / Hijacking of {flow.name}',
+    description: 'Plain DNS responses to {target.name} can be spoofed or poisoned, redirecting traffic to attacker-controlled hosts. Dangling DNS records also enable subdomain takeover.',
+    mitigation: 'Use DNSSEC-validating resolvers or DNS over HTTPS / TLS, protect registrar accounts with MFA and registry lock, and remove dangling CNAME records.',
+    when: [['flow.subtype', 'eq', 'DNS']],
+  },
+  {
+    id: 'P07', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
+    title: 'Forged Webhook Callbacks to {target.name}',
+    description: '{target.name} receives webhook callbacks from {source.name}. Without a verified signature anyone can POST fake events (e.g. "payment succeeded").',
+    mitigation: 'Verify an HMAC / asymmetric signature on every callback with a timestamp to prevent replay, and re-fetch critical state from the provider API before acting.',
+    when: [['flow.subtype', 'eq', 'Webhook Callback'], ['flow.props.integrity', 'ne', 'Yes']],
+  },
+  {
+    id: 'P08', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'target',
+    title: 'GraphQL Introspection, Batching and Query-Depth Abuse on {target.name}',
+    description: 'GraphQL endpoints often expose their full schema, allow deeply nested or aliased queries and batched mutations, enabling reconnaissance, brute force through batching and resource exhaustion.',
+    mitigation: 'Disable introspection in production, enforce query depth / complexity limits and persisted queries, rate-limit per operation, and authorize at the resolver level.',
+    when: [{ any: [['flow.subtype', 'eq', 'GraphQL'], ['target.subtype', 'eq', 'GraphQL API']] }, ['target.type', 'eq', 'process']],
+  },
+  {
+    id: 'P09', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
+    title: 'HTTP Request Smuggling / Header Spoofing via {source.name}',
+    description: '{source.name} and {target.name} may parse HTTP differently (Content-Length vs Transfer-Encoding, HTTP/2 downgrades), allowing request smuggling. {target.name} may also trust spoofable headers such as X-Forwarded-For or X-Forwarded-Host.',
+    mitigation: 'Normalise and reject ambiguous requests at the edge, use HTTP/2 end-to-end where possible, strip / overwrite forwarding headers at the first hop and only trust them from known proxies.',
+    when: [['source.subtype', 'in', EDGE], ['target.type', 'eq', 'process']],
+  },
+  {
+    id: 'P10', scope: 'interaction', category: 'I', priority: 'High', focus: 'target',
+    title: 'Cloud Credential Theft from Instance Metadata ({target.name})',
+    description: '{source.name} can reach the cloud instance metadata service. A server-side request forgery (SSRF) in {source.name} lets an attacker read temporary cloud credentials from it.',
+    mitigation: 'Enforce IMDSv2 / metadata headers with hop limit 1, block metadata IPs from application egress, and give the workload the least cloud IAM privilege.',
+    when: [['target.subtype', 'eq', 'Cloud Instance Metadata']],
+  },
+  {
+    id: 'P11', scope: 'interaction', category: 'T', priority: 'High', focus: 'source',
+    title: 'Malicious or Vulnerable Artifact from {source.name}',
+    description: '{target.name} consumes code, images or packages from {source.name}. Typosquatting, dependency confusion, compromised maintainers or vulnerable versions can introduce attacker code.',
+    mitigation: 'Pin versions and digests, verify signatures and provenance (Sigstore / SLSA), use a private proxy registry, scan SBOMs for vulnerabilities and block unknown sources.',
+    when: [['source.subtype', 'in', ARTIFACT_SOURCES], ['target.type', 'eq', 'process']],
+  },
+  {
+    id: 'P12', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'flow',
+    title: 'Email Spoofing / Phishing via {flow.name}',
+    description: 'Email sent over "{flow.name}" can be spoofed to or from {target.name} if SPF, DKIM and DMARC are not enforced, enabling phishing and business-email compromise.',
+    mitigation: 'Publish SPF and DKIM, enforce DMARC p=reject, use MTA-STS for TLS, and tag external mail for users.',
+    when: [['flow.subtype', 'in', ['SMTP', 'Email (SMTP)']]],
+  },
+  {
+    id: 'P13', scope: 'interaction', category: 'T', priority: 'High', focus: 'flow',
+    title: 'Unauthenticated Industrial Control Commands on {flow.name}',
+    description: '{flow.subtype} has no built-in authentication. Anyone on the OT / field network can read values or write set-points and commands to {target.name}, with possible safety impact.',
+    mitigation: 'Segment OT networks (IEC 62443 zones and conduits), allow-list masters, use secure protocol variants (DNP3 SA, OPC UA with security) and deploy OT-aware monitoring.',
+    when: [{ any: [['flow.subtype', 'in', ['Modbus', 'DNP3', 'CAN Bus']], ['target.subtype', 'eq', 'PLC / Controller']] }, ['flow.props.authentication', 'in', ['Not Selected', 'None']]],
+  },
+  {
+    id: 'P14', scope: 'interaction', category: 'I', priority: 'Medium', focus: 'flow',
+    title: 'Wireless Eavesdropping, Pairing and Relay Attacks on {flow.name}',
+    description: '{flow.subtype} traffic can be captured from a distance; weak pairing, downgrade or relay attacks may let an attacker read or inject data.',
+    mitigation: 'Use modern secure pairing (BLE LE Secure Connections, WPA3-Enterprise), encrypt at the application layer and apply distance bounding / anti-relay where relevant.',
+    when: [['flow.subtype', 'in', ['Bluetooth / BLE', 'NFC', 'Wi-Fi']]],
+  },
+  {
+    id: 'P15', scope: 'interaction', category: 'T', priority: 'Medium', focus: 'flow',
+    title: 'Malicious Removable Media into {target.name}',
+    description: 'USB devices or physical media can deliver malware, keystroke-injection (BadUSB) or exfiltrate data from {target.name}.',
+    mitigation: 'Disable or allow-list USB devices, scan media on a kiosk, enforce device control in EDR and encrypt removable media.',
+    when: [['flow.subtype', 'eq', 'USB / Physical Media']],
+  },
+  {
+    id: 'P16', scope: 'interaction', category: 'I', priority: 'High', focus: 'source',
+    title: 'Data Exfiltration or Misuse by Insider {source.name}',
+    description: '{source.name} holds legitimate access to {target.name} and may abuse it to copy, alter or delete data while blending in with normal activity.',
+    mitigation: 'Least privilege and just-in-time access, DLP, user-behaviour analytics, separation of duties and tamper-proof audit logging.',
+    when: [['source.subtype', 'in', ['Malicious Insider', 'Privileged Insider']]],
+  },
+  {
+    id: 'P17', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'target',
+    title: 'Volumetric DDoS against {target.name}',
+    description: '{target.name} is an internet-facing edge component. Volumetric or protocol-level floods from {source.name} can take the whole service offline.',
+    mitigation: 'Use a DDoS protection service / scrubbing, anycast CDN, autoscaling with limits, SYN cookies and upstream rate limiting.',
+    when: [['target.subtype', 'in', ['Load Balancer', 'CDN / Edge', 'Web Application Firewall', 'API Gateway', 'DNS Server']], ['source.type', 'eq', 'external']],
+  },
+  {
+    id: 'P18', scope: 'interaction', category: 'R', priority: 'Medium', focus: 'flow',
+    title: 'Log Forging or Suppression before Reaching {target.name}',
+    description: 'Log events sent over "{flow.name}" are not integrity protected. An attacker can inject fake entries (log injection) or drop events to hide their tracks from {target.name}.',
+    mitigation: 'Sanitise log input (CR/LF), ship logs over authenticated TLS, alert on gaps in log sources and store logs in immutable storage.',
+    when: [{ any: [['target.subtype', 'eq', 'SIEM / Log Collector'], ['flow.subtype', 'eq', 'Syslog']] }, ['flow.props.integrity', 'ne', 'Yes']],
+  },
+
   /* ------------------------------------------------ Element-level threats */
   {
     id: 'X01', scope: 'element', category: 'I', priority: 'High', focus: 'element',
@@ -451,6 +586,48 @@ export const DEFAULT_RULES = [
     description: '{element.name} dispatches work to many workers or agents and typically holds their credentials. Its compromise enables lateral movement to everything it orchestrates.',
     mitigation: 'Isolate the orchestrator, issue per-task scoped and short-lived credentials, sign workflow definitions and audit every dispatched action.',
     when: [['element.subtype', 'eq', 'Orchestrator (Workflow / Agents)']],
+  },
+  {
+    id: 'P19', scope: 'element', category: 'E', priority: 'High', focus: 'element',
+    title: 'Server-Side Request Forgery (SSRF) in {element.name}',
+    description: '{element.name} is internet facing. If it fetches URLs or files supplied by users, attackers can make it call internal services, cloud metadata endpoints or admin interfaces.',
+    mitigation: 'Allow-list outbound destinations, resolve and validate IPs (block private, link-local and metadata ranges), disable redirects and unused URL schemes, and isolate egress.',
+    when: [['element.subtype', 'in', WEB_APPS], ['element.props.internetFacing', 'eq', 'Yes']],
+  },
+  {
+    id: 'P20', scope: 'element', category: 'T', priority: 'High', focus: 'element',
+    title: 'Poisoned Pipeline Execution in {element.name}',
+    description: '{element.name} builds and deploys code with powerful credentials. Malicious pull requests, compromised actions / plugins or build scripts can steal secrets or push backdoored artifacts to production.',
+    mitigation: 'Require review before pipelines run untrusted code, pin third-party actions by commit SHA, use OIDC short-lived deploy credentials, isolate runners per job and sign build outputs.',
+    when: [['element.subtype', 'in', ['CI/CD Pipeline', 'Build Agent / Runner']]],
+  },
+  {
+    id: 'P21', scope: 'element', category: 'I', priority: 'High', focus: 'element',
+    title: 'Secrets Committed to {element.name}',
+    description: 'API keys, passwords and private keys committed to {element.name} (including history and forks) are routinely harvested by attackers.',
+    mitigation: 'Enable secret scanning and push protection, rotate any exposed secret immediately, and load secrets at runtime from a vault.',
+    when: [['element.subtype', 'eq', 'Source Code Repository']],
+  },
+  {
+    id: 'P22', scope: 'element', category: 'E', priority: 'High', focus: 'element',
+    title: 'Compromise of Administrative Access Path {element.name}',
+    description: '{element.name} concentrates privileged access. Compromising it (stolen credentials, unpatched software, session hijacking) gives an attacker administrative reach into everything behind it.',
+    mitigation: 'Harden and patch, require phishing-resistant MFA, use just-in-time access, record admin sessions and alert on anomalous logins.',
+    when: [['element.subtype', 'in', ['Bastion / Jump Host', 'Admin Console / Management Plane']]],
+  },
+  {
+    id: 'P23', scope: 'element', category: 'I', priority: 'High', focus: 'element',
+    title: 'Session Tokens in {element.name} Exposed to XSS',
+    description: 'Tokens stored in {element.name} (localStorage / sessionStorage / IndexedDB) can be read by any script running in the page, so a single XSS leads to account takeover.',
+    mitigation: 'Keep session tokens in HttpOnly, Secure, SameSite cookies, or use short-lived in-memory tokens with refresh via a backend-for-frontend.',
+    when: [['element.subtype', 'eq', 'Browser Storage'], ['element.props.storesCredentials', 'eq', 'Yes']],
+  },
+  {
+    id: 'P24', scope: 'element', category: 'I', priority: 'Medium', focus: 'element',
+    title: 'Unprotected Data on Device Storage ({element.name})',
+    description: 'Data in {element.name} can be extracted from lost, stolen, rooted or backed-up devices if it is not encrypted with platform keystores.',
+    mitigation: 'Use the platform keystore / Keychain with hardware-backed keys, avoid storing secrets on the device, exclude sensitive files from backups and detect rooted devices.',
+    when: [['element.subtype', 'eq', 'Mobile Device Storage'], ['element.props.encryptedAtRest', 'ne', 'Yes']],
   },
 ];
 
