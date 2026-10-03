@@ -1,11 +1,13 @@
 // Application state: the threat model document, undo/redo history, UI state
-// and autosave to localStorage. Everything stays in the user's browser.
+// and local autosave. Everything stays in the user's browser.
 
-import { uid, debounce } from './util.js';
+import { uid } from './util.js';
 import { syncThreats } from './engine.js';
 import { STENCILS, defaultProps } from './stencils.js';
+import { validateRules } from './rules.js';
+import { LocalAutosave } from './persistence.js';
+import { validateReview } from './threats.js';
 
-const LS_MODEL = 'stride-tm:model:v1';
 const LS_PREFS = 'stride-tm:prefs:v1';
 const HISTORY_LIMIT = 200;
 
@@ -29,13 +31,49 @@ export function newModel() {
 // Make any loaded document safe to use (older files, hand-edited JSON, imports).
 export function normalizeModel(m) {
   if (!m || typeof m !== 'object' || !Array.isArray(m.diagrams)) throw new Error('Not a threat model file.');
+  if (m.app != null && m.app !== 'stride-threat-modeler') throw new Error('This file belongs to another application.');
+  if (m.version != null && m.version !== 1) throw new Error(`Unsupported STRIDE file version: ${m.version}.`);
+  const ids = new Set();
+  const checkId = (id) => {
+    if (id == null || id === '') return;
+    if (typeof id !== 'string' || ids.has(id)) throw new Error('Model contains an invalid or duplicate diagram/element ID.');
+    ids.add(id);
+  };
+  for (const d of m.diagrams) {
+    if (!d || typeof d !== 'object' || !Array.isArray(d.elements)) throw new Error('Invalid diagram or elements list.');
+    checkId(d.id);
+    for (const e of d.elements) {
+      if (!e || !Object.hasOwn(STENCILS, e.type)) throw new Error(`Unsupported element type: ${e?.type}. Nothing was loaded.`);
+      checkId(e.id);
+      for (const key of ['stroke', 'fill']) {
+        const color = e.style?.[key];
+        if (color != null && !/^(?:#[\da-f]{3,8}|[a-z]+|(?:rgb|hsl)a?\([\d\s.,%+-]+\))$/i.test(color)) {
+          throw new Error(`Invalid element ${key} color.`);
+        }
+      }
+      for (const k of ['x', 'y', 'w', 'h', 'x1', 'y1', 'x2', 'y2', 'bend']) {
+        if (e[k] != null && !Number.isFinite(Number(e[k]))) throw new Error(`Invalid element geometry: ${k}.`);
+      }
+    }
+  }
+  if (m.template != null && !(Array.isArray(m.template) && !m.template.length)) validateRules(m.template);
+  if (m.nextThreatId != null && (!Number.isSafeInteger(m.nextThreatId) || m.nextThreatId < 1)) throw new Error('Invalid next threat ID.');
+  if (m.threats != null && (typeof m.threats !== 'object' || Array.isArray(m.threats))) throw new Error('Invalid threat dictionary.');
+  const threatIds = new Set();
+  for (const [key, t] of Object.entries(m.threats || {})) {
+    if (!t || typeof t !== 'object' || t.key !== key || !Number.isSafeInteger(t.id) || t.id < 1 || threatIds.has(t.id)) {
+      throw new Error('Invalid or duplicate threat ID/key.');
+    }
+    threatIds.add(t.id);
+    if (!['S', 'T', 'R', 'I', 'D', 'E'].includes(t.category)) throw new Error('Invalid STRIDE threat category.');
+    validateReview(t);
+  }
   const base = newModel();
   m.meta = { ...base.meta, ...(m.meta || {}) };
   if (!m.diagrams.length) m.diagrams = base.diagrams;
   for (const d of m.diagrams) {
     d.id ||= uid('d_');
     d.name ||= 'Diagram';
-    d.elements = Array.isArray(d.elements) ? d.elements.filter((e) => e && STENCILS[e.type]) : [];
     for (const e of d.elements) {
       e.id ||= uid('e_');
       e.props = { ...defaultProps(e.type), ...(e.props || {}) };
@@ -45,7 +83,7 @@ export function normalizeModel(m) {
     }
   }
   m.threats = m.threats && typeof m.threats === 'object' ? m.threats : {};
-  const maxId = Math.max(0, ...Object.values(m.threats).map((t) => t.id || 0));
+  const maxId = Object.values(m.threats).reduce((max, t) => Math.max(max, t.id), 0);
   m.nextThreatId = Math.max(m.nextThreatId || 1, maxId + 1);
   m.template = Array.isArray(m.template) ? m.template : null;
   m.app = 'stride-threat-modeler';
@@ -60,11 +98,9 @@ function writeLS(key, value) {
   try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)); return true; } catch { return false; }
 }
 
-class Store {
-  constructor() {
-    let model;
-    try { model = normalizeModel(readLS(LS_MODEL)); } catch { model = newModel(); }
-    syncThreats(model);
+export class Store {
+  constructor({ autosave } = {}) {
+    const model = newModel();
     this.model = model;
     this.snapshot = JSON.stringify(model);
     this.past = [];
@@ -79,11 +115,36 @@ class Store {
       analysis: false,
       views: {},               // per diagram: {x, y, zoom}
       activeThreat: null,      // threat key being edited
-      filter: { text: '', state: '', category: '', priority: '', scope: 'selection' },
+      filter: { text: '', status: '', category: '', severity: '', scope: 'selection' },
     };
-    this.persist = debounce(() => {
-      if (!writeLS(LS_MODEL, this.snapshot)) this.emit('toast', { text: 'Autosave failed (browser storage full or blocked).', kind: 'error' });
-    }, 400);
+    this.saveStatus = 'loading';
+    this.autosave = autosave || new LocalAutosave();
+    this.autosave.onStatus = (status) => {
+      this.saveStatus = status;
+      this.emit('autosave', { status });
+    };
+  }
+
+  async restore() {
+    const candidates = await this.autosave.restore();
+    for (const candidate of candidates) {
+      try {
+        this.model = normalizeModel(JSON.parse(candidate.snapshot));
+        this.snapshot = JSON.stringify(this.model);
+        this.ui.diagramId = this.model.diagrams[0].id;
+        // Do not regenerate on open: the saved threat list is part of the file.
+        this.persist();
+        return;
+      } catch { /* Try the previous durable copy before reporting failure. */ }
+    }
+    if (candidates.length) {
+      this.saveStatus = 'recovery-error';
+      // Leave the unreadable recovery records intact until an explicit edit.
+    } else if (this.saveStatus === 'loading') this.saveStatus = 'ready';
+  }
+
+  persist() {
+    return this.autosave.save(JSON.stringify(this.model));
   }
 
   get diagram() {
@@ -144,8 +205,7 @@ class Store {
   }
 
   replaceModel(m) {
-    normalizeModel(m);
-    syncThreats(m);
+    m = normalizeModel(structuredClone(m));
     this.past.push(this.snapshot);
     this.future = [];
     this.model = m;

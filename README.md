@@ -6,8 +6,10 @@ properties, and STRIDE threats are generated for every interaction. A library of
 stencils and 82 threat rules, including penetration-testing specific ones, gets you from a whiteboard sketch
 to a reviewable threat list.
 
-Everything runs in the browser, with **no build step, no backend and no dependencies**. Models are autosaved
-to `localStorage` and can be saved and opened as files.
+Everything runs in the browser, with **no backend or runtime network calls** after the
+hosted application's static assets load. For zero network traffic including startup and refresh, distribute
+the standalone `STRIDE.html` build described below. Models autosave to **IndexedDB**, with a synchronous local
+recovery journal, and can be saved and opened as local **`.stride` JSON files**.
 
 **Live:** https://0xdhanesh.github.io/STRIDE/
 
@@ -23,11 +25,11 @@ to `localStorage` and can be saved and opened as files.
 | **Connectors** | Hover a shape to get connection dots and drag one to create a data flow. Ends snap magnetically to the nearest shape and preview the attachment while dragging. Aligned shapes get straight connectors, request/response pairs curve apart, and loose ends attach when a shape is dropped on them |
 | **Properties** | Per-element security properties (encrypted, authentication, validates input, runs as root, internet facing…) that drive threat generation. Picking a protocol presets them (HTTPS/wss/LDAPS → encrypted; Telnet/FTP/ws → not). Out-of-scope with justification; notes |
 | **Threat engine** | 82 rules: STRIDE-per-interaction and element-level (modelled on the TMT SDL template), plus web, cloud, AI/MCP, WebSocket, Kafka, contact-center, Kubernetes and penetration-testing threats. Detects boundary crossings for boxes *and* curved lines |
-| **Analysis view** | Threat list with STRIDE chips, search, state/priority filters and a selection filter. Editor for title, category, priority, state, description, justification and mitigation, with suggested mitigations. Custom threats; open-threat badges on the diagram |
+| **Analysis view** | Threat list with STRIDE chips, search, status/severity filters and a selection filter. Per-threat Open, Mitigated, Accepted or Not Applicable status, owner, severity, notes, justification and mitigation, with suggested mitigations. Custom threats; open-threat badges on the diagram; model-wide summary dashboard |
 | **Stable threats** | IDs, states and justifications survive diagram edits. When an interaction disappears, untouched threats are removed and edited ones are kept as *orphaned* |
 | **Validation** | Messages for unconnected flows, invalid DFD links (store→store, entity→store), duplicate names, missing boundaries and unjustified out-of-scope |
 | **Multiple diagrams** | Tabs: add, rename, duplicate, reorder, delete |
-| **Reports & export** | Printable HTML report (summary, per-diagram images, element properties, threats by interaction), CSV, PNG, SVG, JSON |
+| **Reports & export** | Direct PDF, self-contained Markdown, and lossless model/report JSON; each includes diagram images, every element, and threats grouped by STRIDE category and interaction. Printable HTML, CSV, PNG and SVG remain available |
 | **Templates** | View and edit the threat template as JSON; import/export; it's stored inside the model file |
 | **Interop** | Opens Microsoft TMT `.tm7` files (best effort: diagrams, elements, flows, boundaries, threats with state and justification) |
 | **Sharing** | "Copy share link" compresses the whole model into the URL fragment, so nothing is uploaded |
@@ -121,9 +123,9 @@ viewed, edited, exported and replaced from **Menu → Threat template**.
    properties such as encryption and drives protocol-specific threats.
 4. **Set properties honestly.** Leave a property on *Not Selected* until the control is verified. Unknown
    controls generate threats, which gives you a test checklist.
-5. **Triage in Analysis.** Filter by STRIDE category or priority, and record results as *Mitigated*,
-   *Not Applicable* (with justification) or *Needs Investigation*.
-6. **Report.** Generate the HTML report (print to PDF) or export CSV to track findings.
+5. **Triage in Analysis.** Filter by STRIDE category or severity, assign an owner, and record results as
+   *Open*, *Mitigated*, *Accepted*, or *Not Applicable*, with notes and a mitigation description.
+6. **Report.** Export PDF, Markdown or JSON from the menu, or export CSV to track findings.
 
 ## Keyboard shortcuts
 
@@ -142,13 +144,97 @@ viewed, edited, exported and replaced from **Menu → Threat template**.
 | `Shift+A` | Toggle Analysis view |
 | `Ctrl+S` · `Ctrl+O` · `?` | Save · Open · Help |
 
-## Run locally
+## Threat review and summary
+
+In **Analysis**, select a threat to set its **Status** (Open, Mitigated, Accepted, Not Applicable),
+**Severity** (High, Medium, Low), **Owner**, **Notes**, and **Mitigation description**. Justification
+remains a separate field for the decision rationale. Suggested mitigations can be copied into the
+mitigation field. Search includes owner, notes, mitigation and justification as well as threat text.
+Edits autosave locally, participate in undo/redo, and survive threat regeneration and `.stride` reopening.
+Reviewed threats remain as orphaned records when their interaction disappears.
+
+Choose **Analysis → Summary** for counts across **all diagrams**, with four status cards, a category-by-status
+table, and severity totals. Custom and orphaned threats are included, even if their diagram was deleted;
+the list's diagram/selection/search filters do not narrow the dashboard. Canvas badges count Open threats
+and exclude orphaned threats. Accepted threats are counted separately from Mitigated threats.
+
+Older files keep their original fields: `Not Started` and `Needs Investigation` display as Open, and
+severity falls back to the old priority. New records use `status` (`open`, `mitigated`, `accepted`,
+`not-applicable`), `severity`, `notes`, and `owner`. Changing a legacy status retains its original value
+in `legacyState`, while `state` mirrors the new decision for older consumers. The old `priority` and
+`justification` remain intact. Existing HTML and CSV exports include the effective status, severity,
+owner and notes.
+
+## Local report exports
+
+Use **Menu → Export report as PDF / Markdown / JSON**. Each export captures the current model once;
+all diagrams, trust boundaries, annotations, element properties, scope decisions and reviewed threats
+are included. Threats are grouped first by STRIDE category, then by diagram and interaction ID, so
+identically named interactions stay separate. Retained threats whose diagram was deleted are included
+under **No current diagram**. Reports include metadata, status totals, validation observations and all
+review fields; exporting does not regenerate threats or alter the model.
+
+- **PDF:** downloads a paginated, selectable-text PDF with vector diagrams, embedded fonts, repeated
+  table headers and page numbers. Normal threat records stay together; long notes continue across pages.
+  The locally bundled Roboto font covers Latin, Greek and Cyrillic. Unsupported glyphs produce an error
+  rather than missing text: use **Printable HTML report → browser Print → Save as PDF** for system-font
+  rendering of other scripts. PDF text represents arrows as `->` and typographic dashes as `-`.
+- **Markdown:** a single `.md` file embeds SVG diagram images as data URLs. Use a Markdown viewer that
+  permits embedded data images; viewers such as GitHub may suppress them. No companion image files or
+  external image URLs are needed. Model text is escaped to prevent executable HTML or injected images.
+- **JSON:** a versioned `stride-report` envelope contains the complete editable model in `model` and
+  the report snapshot in `report` (SVG images, elements, grouped threats, summary, validation and active
+  rules). **Open** accepts this JSON and restores the model losslessly, including extension fields,
+  stable IDs, custom rules and review decisions. Derived report content is never executed on import.
+
+pdfmake 0.3.11 and its fonts are vendored under `js/vendor/` and embedded in the standalone build. The
+renderer rejects URL resources before they can be requested, in addition to the app's network-blocking
+CSP. Versions, licenses and integrity hashes are recorded in [THIRD_PARTY.md](THIRD_PARTY.md). Users do
+not install anything; there is no CDN or export service.
+
+## Local save and recovery
+
+Use **Menu → Save .stride file** (`Ctrl+S` / `⌘S`) to download the full model: all diagrams, element
+geometry and security properties, threat IDs and decisions, mitigation/justification text, metadata, and
+the custom rule template. **Open** (`Ctrl+O` / `⌘O`) accepts `.stride`, older `.stride.json` / `.json`, and
+the existing best-effort `.tm7` importer. Opening JSON preserves the recorded threat list without running
+the generator again; subsequent model edits regenerate threats as usual. Unsupported versions, element
+types, and malformed models are rejected before replacing the current work. Unknown additional JSON
+fields are retained. Opening another model can be undone.
+
+Completed edits and threat/property text drafts are saved locally. **Autosaved locally** means the
+IndexedDB transaction completed. A synchronous `localStorage` journal protects edits while that write is
+pending. Startup restores the latest recovery copy before enabling the editor and migrates the previous
+`localStorage` autosave after a successful IndexedDB write. Storage failures remain visible beside the
+validation button; a fallback recovery copy is not labelled as an IndexedDB success.
+
+Autosave holds one current model per browser storage location; multiple tabs using that location share
+that recovery slot (the last completed write wins). Use separate `.stride` files for separate models.
+Selection, viewport, open panels and undo history are session-only; theme/grid/style preferences stay in
+`localStorage`. Browser storage can be cleared, evicted, or disabled by policy/private mode. Keep `.stride`
+files as durable backups, particularly when moving or renaming the standalone HTML file, whose storage
+location is browser-dependent. Neither browser storage nor local model files are application-encrypted.
+
+## Standalone offline distribution (no installation)
+
+A maintainer can generate a self-contained file using the dependency-free packaging script:
+
+```sh
+npm run build:offline
+```
+
+Distribute **`dist/STRIDE.html`**. Users open it directly in a modern browser; they need no Node, Python,
+desktop installation, server, or internet connection. Scripts, styles, icons and rules are embedded. The
+file has a script content hash policy, blocks network connections and external resources, and uses system
+fonts. Rebuild it after source changes. The generated file is not committed to the repository.
+
+## Run locally for development
 
 ES modules need to be served over HTTP (opening `index.html` via `file://` won't work):
 
 ```sh
 npm start          # python3 -m http.server 8000, then open http://localhost:8000
-npm test           # threat-engine tests (Node 20+)
+npm test           # engine, review, persistence and offline-package tests (Node 20+)
 ```
 
 ## Deploy to GitHub Pages
@@ -202,7 +288,13 @@ js/main.js        Wiring: actions, menus, tabs, library, quick search, keyboard,
 js/canvas.js      Interactive SVG canvas (selection, connectors, snapping)
 js/render.js      SVG renderer (canvas, exports, report)
 js/store.js       Model, undo/redo, autosave
+js/persistence.js IndexedDB transactions, refresh recovery journal, legacy migration
 js/engine.js      STRIDE rule engine, threat sync, validation
+js/threats.js     Review fields, legacy status/severity mapping and filters
+js/summary.js     Model-wide threat dashboard markup
+js/reports.js     Shared report snapshot, category/interaction grouping, Markdown
+js/pdf-report.js  Local PDF definition, pagination and font validation
+js/vendor/        Pinned PDF renderer, embedded fonts, licenses and integrity hashes
 js/rules.js       Built-in threat template (82 rules)
 js/stencils.js    Element types, subtypes, properties, symbol mapping, library groups
 js/glyphs.js      Technology symbols
@@ -211,10 +303,23 @@ js/io.js          Save/open, PNG/SVG/CSV, report, share link, .tm7 import
 js/ops.js         Element operations (create, delete, paste, bend…)
 js/util.js        Geometry, connector anchoring and hand-drawn path generation
 tests/            Engine tests and a .tm7 fixture
+scripts/          Standalone HTML packaging and development-only PDF QA
 ```
+
+Run `npm test` for persistence, review, report, and offline regression checks. For PDF layout QA,
+run `node scripts/report-qa.mjs`, then `python3 scripts/verify-report-pdf.py` in a development environment
+with PyMuPDF installed. The verifier checks retained text, interaction headings, page bounds and footers,
+and creates PNGs under `tmp/pdfs/` for visual review. PyMuPDF is a development tool only; exported PDFs
+and the standalone app require no installation.
 
 ## Privacy
 
-There is no server component. Nothing is sent anywhere, except that the page loads the *Kalam* web font from
-Google Fonts (and fetches it again to embed it in PNG exports). Remove the font `<link>` in `index.html` if
-you need a fully offline build. The app falls back to a system cursive font.
+There is no server component, telemetry, external font, CDN, or runtime network API. The hosted version
+loads its own static HTML/CSS/JS/icon files; use the standalone HTML distribution to eliminate even those
+requests. A Content Security Policy blocks connections (`connect-src 'none'`), and diagram/report exports
+also contain no external resources. File opening uses the browser File API; saving uses local Blob
+downloads. Spellchecking is disabled in the app to avoid browser-enhanced spellcheck on model text.
+
+The app does not control browser extensions, browser/OS synchronization, or user-chosen file/clipboard
+destinations. The existing explicit share-link action copies the model into a URL fragment; it does not
+upload it. Treat exported files and copied links as containing the full model.

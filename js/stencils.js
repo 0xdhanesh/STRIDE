@@ -12,8 +12,7 @@ export const STRIDE = [
 ];
 export const STRIDE_BY_KEY = Object.fromEntries(STRIDE.map((s) => [s.key, s]));
 
-export const STATES = ['Not Started', 'Needs Investigation', 'Not Applicable', 'Mitigated'];
-export const OPEN_STATES = ['Not Started', 'Needs Investigation'];
+export const STATES = ['Open', 'Mitigated', 'Accepted', 'Not Applicable'];
 export const PRIORITIES = ['High', 'Medium', 'Low'];
 
 const YN = ['Not Selected', 'Yes', 'No'];

@@ -9,7 +9,7 @@ import { BOUNDARY_COLOR, SUBTYPE_GLYPH, SUBTYPE_SHAPE } from './stencils.js';
 import { glyphSVG } from './glyphs.js';
 
 export const FONTS = {
-  sketchy: "Kalam, 'Comic Sans MS', 'Segoe Print', cursive",
+  sketchy: "'Comic Sans MS', 'Segoe Print', cursive",
   clean: "Inter, 'Segoe UI', system-ui, -apple-system, sans-serif",
 };
 
@@ -121,7 +121,7 @@ function renderNode(el, o) {
   }
   if (o.badges && el.type !== 'boundary' && el.type !== 'note') body += badge(x + w - 4, y + 4, o.badges.get(el.id));
   const op = el.outOfScope ? ' opacity="0.55"' : '';
-  return `<g class="el" data-id="${el.id}"${op}>${body}</g>`;
+  return `<g class="el" data-id="${esc(el.id)}"${op}>${body}</g>`;
 }
 
 function arrowHead(g, seed, o) {
@@ -160,7 +160,7 @@ function renderLine(el, byId, o) {
     body += badge(g.mid.x + half + 16, g.mid.y - 12, o.badges.get(el.id));
   }
   const op = el.outOfScope ? ' opacity="0.55"' : '';
-  return `<g class="el" data-id="${el.id}"${op}>${body}</g>`;
+  return `<g class="el" data-id="${esc(el.id)}"${op}>${body}</g>`;
 }
 
 export function renderElements(diagram, o) {
@@ -183,12 +183,11 @@ export function diagramBounds(diagram) {
 }
 
 // Standalone SVG document for export / reports.
-export function diagramToSVG(diagram, { sketchy = true, pad = 30, background = '#ffffff', badges = null, embedFont = true } = {}) {
+export function diagramToSVG(diagram, { sketchy = true, pad = 30, background = '#ffffff', badges = null } = {}) {
   const b = diagramBounds(diagram) || { x: 0, y: 0, w: 400, h: 300 };
   const x = Math.floor(b.x - pad), y = Math.floor(b.y - pad), w = Math.ceil(b.w + pad * 2), h = Math.ceil(b.h + pad * 2);
   const font = sketchy ? FONTS.sketchy : FONTS.clean;
-  const style = embedFont && sketchy ? `<style>@import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&amp;display=swap');</style>` : '';
   const content = renderElements(diagram, { sketchy, ink: '#1e1e1e', bg: background, font, badges });
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}">${style}` +
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}">` +
     `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${background}"/>${content}</svg>`;
 }

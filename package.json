@@ -5,6 +5,7 @@
   "description": "Client-side STRIDE threat modeling tool with an Excalidraw-like canvas",
   "scripts": {
     "start": "python3 -m http.server 8000",
-    "test": "node tests/engine.test.mjs"
+    "build:offline": "node scripts/build-offline.mjs",
+    "test": "node tests/engine.test.mjs && node --test tests/persistence.test.mjs tests/offline.test.mjs tests/threats.test.mjs tests/reports.test.mjs"
   }
 }

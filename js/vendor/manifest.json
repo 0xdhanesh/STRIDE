@@ -1,0 +1,10 @@
+{
+  "pdfmake": "0.3.11",
+  "sha256": {
+    "pdfmake.js": "2114293cc51954eaffd7301fe9a9288f3d88d61e2199cd97cdfc33889b6903c5",
+    "fonts.js": "9cf52e5c2f09ab26996687d63e87bfc81728a441695198b04cfea99745785df2",
+    "font-coverage.js": "d20d3319fca2a9b5855b07a7018925c05b27f53bfdac2d2acd831a3a3c0558f4",
+    "PDFMAKE-LICENSE.txt": "ab919430421c2e244dbb8694d70916eae16235b75c0ea07e9a6c67cd4265c954",
+    "ROBOTO-LICENSE.txt": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+  }
+}

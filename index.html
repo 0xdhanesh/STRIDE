@@ -2,16 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>STRIDE Threat Modeler</title>
   <meta name="description" content="Draw data-flow diagrams and generate STRIDE threats in your browser. Nothing leaves your machine.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
   <link rel="stylesheet" href="css/app.css">
 </head>
-<body>
+<body inert spellcheck="false">
   <main id="canvas-wrap" class="grid">
     <svg id="canvas" aria-label="Diagram canvas" role="img"></svg>
     <textarea id="inline-editor" hidden spellcheck="false" aria-label="Edit label"></textarea>
@@ -40,10 +38,13 @@
     <button class="island icon-btn" id="menu-btn" data-icon="menu" title="Menu" aria-haspopup="true" aria-expanded="false"></button>
     <div id="menu" class="island menu" hidden role="menu">
       <button data-action="open" role="menuitem"><i data-icon="folder"></i>Open… <span class="kbd">Ctrl+O</span></button>
-      <button data-action="save" role="menuitem"><i data-icon="save"></i>Save to file <span class="kbd">Ctrl+S</span></button>
+      <button data-action="save" role="menuitem"><i data-icon="save"></i>Save .stride file <span class="kbd">Ctrl+S</span></button>
       <button data-action="export-png" role="menuitem"><i data-icon="image"></i>Export diagram as PNG</button>
       <button data-action="export-svg" role="menuitem"><i data-icon="image"></i>Export diagram as SVG</button>
-      <button data-action="report" role="menuitem"><i data-icon="report"></i>Generate report</button>
+      <button data-action="report-pdf" role="menuitem"><i data-icon="report"></i>Export report as PDF</button>
+      <button data-action="report-markdown" role="menuitem"><i data-icon="report"></i>Export report as Markdown</button>
+      <button data-action="report-json" role="menuitem"><i data-icon="report"></i>Export report as JSON</button>
+      <button data-action="report" role="menuitem"><i data-icon="report"></i>Printable HTML report</button>
       <button data-action="export-csv" role="menuitem"><i data-icon="table"></i>Export threats (CSV)</button>
       <button data-action="share" role="menuitem"><i data-icon="share"></i>Copy share link</button>
       <hr>
@@ -102,6 +103,7 @@
       <div class="row between">
         <h2>Threats</h2>
         <div class="row gap">
+          <button class="btn small" id="show-summary" title="Summary across all diagrams">Summary</button>
           <button class="btn small" data-action="add-threat" title="Add a custom threat to the selected element">+ Add</button>
           <button class="icon-btn small" data-action="close-analysis" data-icon="x" title="Back to Design (Shift+A)"></button>
         </div>
@@ -109,8 +111,8 @@
       <div id="stride-chips" class="stride-chips"></div>
       <div class="filters">
         <input type="search" id="f-text" placeholder="Search threats…" aria-label="Search threats">
-        <select id="f-state" aria-label="Filter by state"></select>
-        <select id="f-priority" aria-label="Filter by priority"></select>
+        <select id="f-state" aria-label="Filter by status"></select>
+        <select id="f-priority" aria-label="Filter by severity"></select>
         <label class="check-label" title="Only show threats for the selected element or flow"><input type="checkbox" id="f-scope"> Selection only</label>
       </div>
     </header>
@@ -133,6 +135,7 @@
   <nav id="tabs" class="bottom-center island tabs" aria-label="Diagrams"></nav>
 
   <div class="bottom-right">
+    <span id="autosave-status" class="island save-status" role="status" aria-live="polite">Restoring local model…</span>
     <button id="messages-btn" class="island btn" title="Validation messages"><i data-icon="warning"></i><span id="messages-count">0</span></button>
     <button class="island icon-btn" data-action="help" data-icon="help" title="Help (?)"></button>
     <div id="messages" class="island popover" hidden></div>
@@ -140,7 +143,14 @@
 
   <div id="ctxmenu" class="island menu ctx" hidden role="menu"></div>
   <div id="toasts" aria-live="polite"></div>
-  <input type="file" id="file-input" hidden accept=".json,.tm7,application/json">
+  <input type="file" id="file-input" hidden accept=".stride,.json,.tm7,application/json">
+
+  <dialog id="dlg-summary" class="dialog summary-dialog" aria-labelledby="summary-title">
+    <form method="dialog">
+      <div class="row between"><h2 id="summary-title">Threat summary</h2><button class="btn" value="close" autofocus>Close</button></div>
+      <div id="summary-content"></div>
+    </form>
+  </dialog>
 
   <dialog id="dlg-model" class="dialog">
     <form method="dialog" id="model-form">
@@ -234,7 +244,7 @@
       </div>
       <h3>How threat generation works</h3>
       <p>Each data flow connected at both ends is an <em>interaction</em>. The threat template is evaluated for every interaction using the element types, subtypes and security properties you set in the left panel, plus whether the flow crosses a trust boundary (box or line). Threats keep their ID, state and justification when you change the diagram; if an interaction disappears, untouched threats are removed and edited ones are kept and marked <em>orphaned</em>.</p>
-      <p>Threat states: <b>Not Started</b>, <b>Needs Investigation</b>, <b>Not Applicable</b> (add a justification) and <b>Mitigated</b> (describe the mitigation). Open threats are counted in the badges shown on the diagram in Analysis view.</p>
+      <p>Threat statuses: <b>Open</b>, <b>Mitigated</b>, <b>Accepted</b> and <b>Not Applicable</b>. Record an owner, severity, review notes, justification and mitigation description for each threat. Open threats are counted in the diagram badges. Use <b>Analysis → Summary</b> for status and STRIDE category totals across all diagrams.</p>
       <p class="muted small">Microsoft Threat Modeling Tool <code>.tm7</code> files can be opened (best effort: diagrams, elements, flows, boundaries and threats).</p>
       <div class="row end"><button class="btn primary" value="ok">Got it</button></div>
     </form>

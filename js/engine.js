@@ -3,7 +3,8 @@
 // and produces validation messages. DOM-free.
 
 import { DEFAULT_RULES } from './rules.js';
-import { OPEN_STATES } from './stencils.js';
+import { STRIDE, PRIORITIES } from './stencils.js';
+import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity } from './threats.js';
 import { center, lineGeom, pointInRect, quadPolyline, polylinesIntersect } from './util.js';
 
 const ENDPOINT_TYPES = ['process', 'external', 'store'];
@@ -127,7 +128,9 @@ export function generateThreats(model, rules = activeRules(model)) {
   return out;
 }
 
-const untouched = (t) => t.state === 'Not Started' && !t.justification && !t.mitigation && !t.customText && !t.modified;
+const untouched = (t) => threatStatus(t) === 'open' && (!t.state || t.state === 'Not Started' || t.state === 'Open') &&
+  !t.justification && !t.mitigation && !t.notes && !t.owner && !t.customText && !t.modified &&
+  (t.severity == null || t.severity === t.priority);
 
 // Merge freshly generated threats into model.threats, keeping IDs and user edits.
 export function syncThreats(model) {
@@ -142,6 +145,7 @@ export function syncThreats(model) {
         id: model.nextThreatId++, key: g.key, auto: true, ruleId: g.ruleId,
         diagramId: g.diagramId, flowId: g.flowId, elementId: g.elementId,
         category: g.category, priority: g.priority, state: 'Not Started',
+        status: 'open', severity: threatSeverity(g), notes: '', owner: '',
         title: g.title, description: g.description, mitigationHint: g.mitigationHint,
         mitigation: '', justification: '', interaction: g.interaction,
         created: new Date().toISOString(), modified: null,
@@ -166,15 +170,26 @@ export function syncThreats(model) {
 }
 
 export const threatList = (model) => Object.values(model.threats || {}).sort((a, b) => a.id - b.id);
-export const isOpen = (t) => OPEN_STATES.includes(t.state);
+export const isOpen = (t) => threatStatus(t) === 'open';
 
 export function threatStats(threats) {
-  const s = { total: threats.length, open: 0, byCat: {}, byState: {}, byPriority: {} };
+  const counts = (keys) => Object.fromEntries(keys.map((k) => [k, 0]));
+  const s = {
+    total: threats.length, open: 0, orphaned: 0,
+    byCat: counts(STRIDE.map((c) => c.key)), byState: counts(Object.values(STATUS_LABELS)), byPriority: {},
+    byStatus: counts(STATUSES), bySeverity: counts(PRIORITIES),
+    byCatStatus: Object.fromEntries(STRIDE.map((c) => [c.key, counts(STATUSES)])),
+  };
   for (const t of threats) {
+    const status = threatStatus(t), severity = threatSeverity(t);
     if (isOpen(t)) s.open++;
+    if (t.orphan) s.orphaned++;
     s.byCat[t.category] = (s.byCat[t.category] || 0) + 1;
-    s.byState[t.state] = (s.byState[t.state] || 0) + 1;
+    s.byState[STATUS_LABELS[status]]++;
     s.byPriority[t.priority] = (s.byPriority[t.priority] || 0) + 1;
+    s.byStatus[status]++;
+    s.bySeverity[severity]++;
+    if (s.byCatStatus[t.category]) s.byCatStatus[t.category][status]++;
   }
   return s;
 }
@@ -226,7 +241,7 @@ export function threatBadges(model, diagramId) {
     if (!id) continue;
     const b = map.get(id) || { total: 0, open: 0, high: false };
     b.total++;
-    if (isOpen(t)) { b.open++; if (t.priority === 'High') b.high = true; }
+    if (isOpen(t)) { b.open++; if (threatSeverity(t) === 'High') b.high = true; }
     map.set(id, b);
   }
   return map;

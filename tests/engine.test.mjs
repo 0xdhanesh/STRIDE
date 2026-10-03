@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { sampleModel } from '../js/sample.js';
 import { syncThreats, threatList, validate, generateThreats, evalCond } from '../js/engine.js';
 import { DEFAULT_RULES, validateRules } from '../js/rules.js';
+import { updateThreat } from '../js/threats.js';
 
 validateRules(DEFAULT_RULES);
 
@@ -26,7 +27,7 @@ for (const t of list) assert.ok(!/\{[a-z]+\.[a-z.]+\}/i.test(t.title + t.descrip
 
 // Edits survive regeneration; untouched stale threats disappear; edited become orphans.
 const t = m.threats[keys.find((k) => k.includes('|f_1|S01'))];
-t.state = 'Mitigated'; t.justification = 'MFA enforced';
+updateThreat(t, 'status', 'mitigated'); t.justification = 'MFA enforced';
 const id = t.id;
 syncThreats(m);
 assert.equal(m.threats[t.key].id, id);

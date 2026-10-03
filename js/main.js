@@ -6,18 +6,23 @@ import { Canvas } from './canvas.js';
 import { initPropsPanel, initThreatPanel } from './panels.js';
 import { hydrateIcons, icon } from './icons.js';
 import { esc, uid, isLine, isNode, download, slug, elementBounds, unionBounds } from './util.js';
-import { validate, threatList, isOpen, activeRules } from './engine.js';
+import { validate, threatList, isOpen, activeRules, syncThreats } from './engine.js';
 import { validateRules } from './rules.js';
 import { sampleModel } from './sample.js';
 import { deleteElements, duplicateElements, copyPayload, pastePayload, reorder, makeFromLibrary } from './ops.js';
 import { LIBRARY, STENCILS, SUBTYPE_GLYPH } from './stencils.js';
 import { glyphIcon } from './glyphs.js';
 import {
-  saveModelFile, readModelFile, exportPNG, exportSVG, exportCSV, openReport, shareLink, modelFromHash,
+  saveModelFile, readModelFile, exportPNG, exportSVG, exportCSV, openReport, shareLink, modelFromHash, exportReport,
 } from './io.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+// Restore before constructing interactive views, so startup cannot overwrite
+// recovered work with edits made to a temporary empty model.
+await store.restore();
+document.body.inert = false;
 
 const canvas = new Canvas($('#canvas-wrap'));
 const props = initPropsPanel(canvas);
@@ -34,6 +39,22 @@ function toast(text, kind = '') {
   setTimeout(() => t.remove(), kind === 'error' ? 6000 : 3200);
 }
 store.on((type, d) => { if (type === 'toast') toast(d.text, d.kind); });
+
+function renderSaveStatus() {
+  const labels = {
+    loading: 'Restoring local model…', saving: 'Saving locally…', saved: 'Autosaved locally',
+    ready: 'Local autosave ready',
+    fallback: 'Recovery copy only — save a .stride file',
+    error: 'Autosave failed — save a .stride file',
+    'recovery-error': 'Recovery unreadable — open a .stride file',
+  };
+  const el = $('#autosave-status');
+  el.textContent = labels[store.saveStatus];
+  el.dataset.state = store.saveStatus;
+  el.title = 'Stored only in this browser. Save a .stride file for a portable backup. Browser data can be cleared or evicted.';
+}
+store.on((type) => { if (type === 'autosave') renderSaveStatus(); });
+renderSaveStatus();
 
 /* ----------------------------------------------------------------- toolbar */
 
@@ -241,7 +262,7 @@ $('#redo').onclick = () => store.redo();
 function renderTabs() {
   const nav = $('#tabs');
   nav.innerHTML = store.model.diagrams.map((d) =>
-    `<button class="tab${d.id === store.diagram.id ? ' active' : ''}" data-d="${d.id}" title="Double-click to rename · right-click for more">${esc(d.name)}</button>`,
+    `<button class="tab${d.id === store.diagram.id ? ' active' : ''}" data-d="${esc(d.id)}" title="Double-click to rename · right-click for more">${esc(d.name)}</button>`,
   ).join('') + '<button class="tab tab-add" data-add title="Add diagram">+</button>';
 }
 
@@ -489,10 +510,10 @@ fileInput.addEventListener('change', async () => {
 
 function loadModel(m, message) {
   const note = m.importNote;
-  delete m.importNote;
+  store.replaceModel(m);
   store.ui.selection = new Set();
   store.ui.activeThreat = null;
-  store.replaceModel(m);
+  store.setUI({}, 'load');
   requestAnimationFrame(() => canvas.fit());
   toast(note || message || `Opened "${store.model.meta.title}". Undo (Ctrl+Z) to go back.`);
 }
@@ -500,8 +521,12 @@ function loadModel(m, message) {
 async function runAction(name) {
   const sketchy = store.prefs.sketchy;
   switch (name) {
-    case 'open': return pickFile('.json,.tm7,application/json', async (f) => loadModel(await readModelFile(f)));
-    case 'save': saveModelFile(store.model); return toast('Saved to your downloads folder.');
+    case 'open': return pickFile('.stride,.json,.tm7,application/json', async (f) => loadModel(await readModelFile(f)));
+    case 'save':
+      canvas.finishEdit();
+      try { saveModelFile(store.model); toast('Local .stride download started.'); }
+      catch (e) { toast(`Save failed: ${e.message}`, 'error'); }
+      return;
     case 'export-png':
       if (!store.diagram.elements.length) return toast('Nothing to export yet.');
       return exportPNG(store.model, store.diagram, sketchy).catch((e) => toast(`PNG export failed: ${e.message}`, 'error'));
@@ -509,6 +534,19 @@ async function runAction(name) {
       if (!store.diagram.elements.length) return toast('Nothing to export yet.');
       return exportSVG(store.model, store.diagram, sketchy);
     case 'report': return openReport(store.model, sketchy);
+    case 'report-pdf':
+    case 'report-markdown':
+    case 'report-json': {
+      canvas.finishEdit();
+      document.activeElement?.blur();
+      const format = name.slice(7);
+      toast(`Preparing ${format === 'markdown' ? 'Markdown' : format.toUpperCase()} report locally…`);
+      try {
+        await exportReport(store.model, format, { sketchy });
+        toast('Report download started.');
+      } catch (e) { toast(`Report export failed: ${e.message}`, 'error'); }
+      return;
+    }
     case 'export-csv': return exportCSV(store.model);
     case 'share': {
       try {
@@ -520,9 +558,12 @@ async function runAction(name) {
     }
     case 'model-props': return openModelDialog();
     case 'template': return openTemplateDialog();
-    case 'sample':
+    case 'sample': {
       if (store.diagram.elements.length && !confirm('Replace the current model with the example? (You can undo.)')) return;
-      return loadModel(sampleModel(), 'Loaded the example model. Switch to Analysis to see its threats.');
+      const example = sampleModel();
+      syncThreats(example);
+      return loadModel(example, 'Loaded the example model. Switch to Analysis to see its threats.');
+    }
     case 'new':
       if (!confirm('Start a new, empty model? Unsaved work can still be restored with Undo.')) return;
       return loadModel(newModel(), 'New model created.');
@@ -614,10 +655,16 @@ function isTyping(e) {
 }
 
 window.addEventListener('keydown', (e) => {
-  if ($('dialog[open]')) return;
-  if (isTyping(e)) { if (e.key === 'Escape') e.target.blur(); return; }
   const mod = e.metaKey || e.ctrlKey;
   const k = e.key.toLowerCase();
+  if (mod && ['s', 'o'].includes(k) && !$('dialog[open]')) {
+    e.preventDefault();
+    document.activeElement?.blur();
+    runAction(k === 's' ? 'save' : 'open');
+    return;
+  }
+  if ($('dialog[open]')) return;
+  if (isTyping(e)) { if (e.key === 'Escape') e.target.blur(); return; }
 
   if (mod) {
     const handled = {
@@ -682,7 +729,21 @@ store.on((type) => {
   if (type === 'view') zoomLabel();
 });
 
-window.addEventListener('beforeunload', () => store.persist());
+function checkpoint() {
+  canvas.finishEdit();
+  document.activeElement?.blur();
+  // Write the recovery journal synchronously; unload cannot await IndexedDB.
+  if (store.saveStatus !== 'recovery-error') store.persist();
+}
+window.addEventListener('pagehide', checkpoint);
+document.addEventListener('visibilitychange', () => { if (document.hidden) checkpoint(); });
+window.addEventListener('beforeunload', (event) => {
+  checkpoint();
+  if (store.saveStatus === 'saving' || store.saveStatus === 'error') {
+    // Only warn when even the synchronous recovery copy could not be written.
+    if (!store.autosave.journaled) { event.preventDefault(); event.returnValue = ''; }
+  }
+});
 // Don't leave focus on clicked buttons: Space/Enter are canvas shortcuts.
 document.addEventListener('pointerup', (e) => {
   const b = e.target.closest?.('button');

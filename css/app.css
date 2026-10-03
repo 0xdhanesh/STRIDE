@@ -262,7 +262,8 @@ details.props-sec[open] summary::before { content: '▾ '; }
 .t-row .t-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
 .t-id { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .state { font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
-.state[data-s="Not Started"] { background: #ffe3e3; color: #c92a2a; }
+.state[data-s="Open"], .state[data-s="Not Started"] { background: #ffe3e3; color: #c92a2a; }
+.state[data-s="Accepted"] { background: #fff3bf; color: #805800; }
 .state[data-s="Needs Investigation"] { background: #fff3bf; color: #a35d00; }
 .state[data-s="Not Applicable"] { background: #e9ecef; color: #495057; }
 .state[data-s="Mitigated"] { background: #d3f9d8; color: #2b8a3e; }
@@ -277,8 +278,24 @@ details.props-sec[open] summary::before { content: '▾ '; }
 .threat-editor .hint { font-size: 12px; background: var(--input); border-radius: 7px; padding: 8px; color: var(--muted); }
 .threat-editor .hint b { color: var(--text); }
 .threat-editor h3 { margin: 0 0 8px; font-size: 14px; display: flex; gap: 8px; align-items: center; }
+.dialog.summary-dialog { width: min(840px, calc(100vw - 32px)); }
+.status-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
+.status-card { border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.status-card strong { display: block; font-size: 28px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.summary-table-wrap { overflow-x: auto; }
+.summary-table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.summary-table caption { text-align: left; font-weight: 600; padding: 0 0 10px; }
+.summary-table th, .summary-table td { border-bottom: 1px solid var(--line); padding: 10px 8px; text-align: right; }
+.summary-table th:first-child { text-align: left; min-width: 200px; }
+.summary-table thead { font-size: 12px; }
+.summary-table tfoot { font-weight: 700; }
+.summary-severity { display: flex; gap: 20px; flex-wrap: wrap; }
+@media (max-width: 600px) { .status-cards { grid-template-columns: repeat(2, 1fr); } }
 
 /* ----------------------------------------------------------------- footer */
+.save-status { padding: 8px 12px; font-size: 12px; color: var(--muted); max-width: 230px; }
+.save-status[data-state="error"], .save-status[data-state="fallback"], .save-status[data-state="recovery-error"] { color: #c92a2a; }
+@media (max-width: 760px) { .save-status { max-width: 125px; font-size: 10px; padding: 6px; } }
 .zoom, .undo { display: flex; padding: 3px; }
 .zoom button, .undo button { border: 0; background: transparent; height: 32px; min-width: 32px; border-radius: 7px; display: grid; place-items: center; }
 .zoom button:hover, .undo button:hover { background: var(--hover); }
@@ -309,7 +326,7 @@ details.props-sec[open] summary::before { content: '▾ '; }
 #canvas-wrap.empty .welcome { display: grid; }
 .welcome-card { max-width: 460px; text-align: center; color: var(--muted); pointer-events: none; }
 .welcome-card button, .welcome-card a { pointer-events: auto; }
-.welcome-card h1 { font: 700 34px/1.2 Kalam, 'Comic Sans MS', cursive; color: var(--accent); margin: 8px 0; }
+.welcome-card h1 { font: 700 34px/1.2 'Comic Sans MS', cursive; color: var(--accent); margin: 8px 0; }
 .welcome-card ol { text-align: left; display: inline-block; margin: 8px auto 16px; padding-left: 20px; line-height: 1.9; }
 .welcome-logo .icon { width: 54px; height: 54px; color: var(--accent); }
 .welcome-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }

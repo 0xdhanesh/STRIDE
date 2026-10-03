@@ -4,9 +4,11 @@
 import { store } from './store.js';
 import { esc, uid, isLine } from './util.js';
 import { icon, hydrateIcons } from './icons.js';
-import { STENCILS, STRIDE, STRIDE_BY_KEY, STATES, PRIORITIES, STROKES, FILLS, BOUNDARY_COLOR } from './stencils.js';
+import { STENCILS, STRIDE, STRIDE_BY_KEY, PRIORITIES, STROKES, FILLS, BOUNDARY_COLOR } from './stencils.js';
 import { applySubtype, deleteElements, duplicateElements, reorder, reverseFlow, fitNote } from './ops.js';
 import { threatList, isOpen } from './engine.js';
+import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity, updateThreat, matchesThreat } from './threats.js';
+import { renderThreatSummary } from './summary.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const TOOL_ICON = { process: 'process', external: 'external', store: 'store', flow: 'flow', boundary: 'boundary', boundaryLine: 'boundaryLine', note: 'text' };
@@ -97,6 +99,10 @@ export function initPropsPanel(canvas) {
     const el = current();
     if (!el) return;
     if (f === 'name') { el.name = e.target.value; store.render(); }
+    if (['name', 'notes', 'outOfScopeReason'].includes(f)) {
+      el[f] = e.target.value;
+      store.persist();
+    }
   });
 
   root.addEventListener('change', (e) => {
@@ -168,10 +174,13 @@ export function initThreatPanel(canvas) {
   const editor = $('#threat-editor');
   const chips = $('#stride-chips');
   const fText = $('#f-text'), fState = $('#f-state'), fPrio = $('#f-priority'), fScope = $('#f-scope');
+  const summary = $('#dlg-summary');
+  const renderSummary = () => { $('#summary-content').innerHTML = renderThreatSummary(threatList(store.model)); };
+  $('#show-summary').addEventListener('click', () => { renderSummary(); summary.showModal(); });
   const f = store.ui.filter;
 
-  fState.innerHTML = `<option value="">All states</option><option value="open">Open (not done)</option>${STATES.map((s) => `<option>${s}</option>`).join('')}`;
-  fPrio.innerHTML = `<option value="">All priorities</option>${PRIORITIES.map((s) => `<option>${s}</option>`).join('')}`;
+  fState.innerHTML = `<option value="">All statuses</option>${STATUSES.map((s) => `<option value="${s}">${STATUS_LABELS[s]}</option>`).join('')}`;
+  fPrio.innerHTML = `<option value="">All severities</option>${PRIORITIES.map((s) => `<option>${s}</option>`).join('')}`;
 
   const scoped = () => {
     const d = store.diagram;
@@ -183,16 +192,7 @@ export function initThreatPanel(canvas) {
     });
   };
 
-  const filtered = () => {
-    const q = f.text.trim().toLowerCase();
-    return scoped().filter((t) => {
-      if (f.category && t.category !== f.category) return false;
-      if (f.state === 'open' ? !isOpen(t) : f.state && t.state !== f.state) return false;
-      if (f.priority && t.priority !== f.priority) return false;
-      if (q && !`#${t.id} ${t.title} ${t.description} ${t.interaction} ${t.justification}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  };
+  const filtered = () => scoped().filter((t) => matchesThreat(t, f));
 
   function renderChips() {
     const ts = scoped();
@@ -206,7 +206,7 @@ export function initThreatPanel(canvas) {
   function renderList() {
     const ts = filtered();
     const sel = store.ui.selection;
-    const scopeNote = f.scope === 'selection' && sel.size ? `<div class="muted small" style="padding:4px 8px">Showing threats for the selected element${sel.size > 1 ? 's' : ''}.</div>` : '';
+    const scopeNote = `<div class="muted small" style="padding:4px 8px">${f.scope === 'selection' && sel.size ? `Selected elements in ${esc(store.diagram.name)}` : `Current diagram: ${esc(store.diagram.name)}`} · ${ts.length} shown</div>`;
     if (!ts.length) {
       const any = threatList(store.model).length;
       list.innerHTML = scopeNote + `<div class="empty">${any ? 'No threats match the filters.' : 'No threats yet.<br><br>Connect two elements with a <b>Data flow</b> (5). Threats are generated for every interaction, especially flows that cross a <b>Trust boundary</b> (6).'}</div>`;
@@ -217,8 +217,8 @@ export function initThreatPanel(canvas) {
       return `<div class="t-row${t.key === store.ui.activeThreat ? ' active' : ''}" data-key="${esc(t.key)}" role="listitem" tabindex="0">
         <span class="cat" style="background:${c.color}" title="${c.name}">${c.key}</span>
         <div><div class="t-title">${esc(t.title)}${t.orphan ? '<span class="orphan-tag" title="The interaction for this threat no longer exists">orphaned</span>' : ''}${!t.auto ? '<span class="orphan-tag">custom</span>' : ''}</div>
-          <div class="t-sub">${esc(t.interaction)}</div></div>
-        <div class="t-meta"><span class="t-id">#${t.id}</span><span class="state" data-s="${esc(t.state)}">${esc(t.state)}</span><span class="prio" data-p="${esc(t.priority)}">${esc(t.priority)}</span></div>
+          <div class="t-sub">${esc(t.interaction)}</div>${t.owner ? `<div class="t-sub">Owner: ${esc(t.owner)}</div>` : ''}</div>
+        <div class="t-meta"><span class="t-id">#${t.id}</span><span class="state" data-s="${STATUS_LABELS[threatStatus(t)]}">${STATUS_LABELS[threatStatus(t)]}</span><span class="prio" data-p="${threatSeverity(t)}">${threatSeverity(t)}</span></div>
       </div>`;
     }).join('');
   }
@@ -236,13 +236,16 @@ export function initThreatPanel(canvas) {
       <label class="field"><span>Title</span><input data-tf="title" value="${esc(t.title)}"></label>
       <div class="grid3">
         <label class="field"><span>Category</span><select data-tf="category">${opt(STRIDE.map((c) => c.key), t.category, (k) => STRIDE_BY_KEY[k].name)}</select></label>
-        <label class="field"><span>Priority</span><select data-tf="priority">${opt(PRIORITIES, t.priority)}</select></label>
-        <label class="field"><span>State</span><select data-tf="state">${opt(STATES, t.state)}</select></label>
+        <label class="field"><span>Severity</span><select data-tf="severity">${opt(PRIORITIES, threatSeverity(t))}</select></label>
+        <label class="field"><span>Status</span><select data-tf="status">${opt(STATUSES, threatStatus(t), (s) => STATUS_LABELS[s])}</select></label>
       </div>
+      <label class="field"><span>Owner</span><input data-tf="owner" value="${esc(t.owner)}" placeholder="Person or team responsible"></label>
       <label class="field"><span>Interaction</span><input value="${esc(t.interaction)}" disabled></label>
       <label class="field"><span>Description</span><textarea data-tf="description" rows="4">${esc(t.description)}</textarea></label>
-      <label class="field"><span>Justification ${t.state === 'Not Applicable' ? '(why is it not applicable?)' : ''}</span><textarea data-tf="justification" rows="2" placeholder="Why was this state chosen?">${esc(t.justification)}</textarea></label>
-      <label class="field"><span>Mitigation</span><textarea data-tf="mitigation" rows="3" placeholder="How is / will this threat be mitigated?">${esc(t.mitigation)}</textarea></label>
+      <label class="field"><span>Justification</span><textarea data-tf="justification" rows="2" placeholder="Why was this status chosen? Include the reason for acceptance or non-applicability.">${esc(t.justification)}</textarea></label>
+      <label class="field"><span>Notes</span><textarea data-tf="notes" rows="3" placeholder="Review notes, evidence references, and follow-up actions">${esc(t.notes)}</textarea></label>
+      <label class="field"><span>Mitigation description</span><textarea data-tf="mitigation" rows="3" placeholder="How is / will this threat be mitigated?">${esc(t.mitigation)}</textarea></label>
+      ${t.legacyState || (t.status == null && t.state === 'Needs Investigation') ? `<p class="muted small">Original state: ${esc(t.legacyState || t.state)}</p>` : ''}
       ${t.mitigationHint ? `<div class="hint"><b>Suggested mitigation:</b> ${esc(t.mitigationHint)} <button class="btn small" data-t="use-hint" style="margin-top:6px">Use suggestion</button></div>` : ''}
       <div class="row between" style="margin-top:10px">
         <span class="muted small">${t.auto ? `Generated by rule ${esc(t.ruleId)}` : 'Custom threat'}${t.modified ? ` · edited ${new Date(t.modified).toLocaleString()}` : ''}</span>
@@ -257,13 +260,14 @@ export function initThreatPanel(canvas) {
     const on = store.ui.analysis;
     root.hidden = !on;
     if (!on) return;
-    fText.value = f.text; fState.value = f.state; fPrio.value = f.priority; fScope.checked = f.scope === 'selection';
+    fText.value = f.text; fState.value = f.status; fPrio.value = f.severity; fScope.checked = f.scope === 'selection';
     renderChips();
     renderList();
     renderEditor();
   }
 
   store.on((type, detail) => {
+    if (summary.open && ['change', 'loaded'].includes(type)) renderSummary();
     if (!store.ui.analysis) { if (type === 'ui') root.hidden = true; return; }
     if (type === 'change') {
       renderChips(); renderList();
@@ -274,8 +278,8 @@ export function initThreatPanel(canvas) {
   });
 
   fText.addEventListener('input', () => { f.text = fText.value; renderList(); });
-  fState.addEventListener('change', () => { f.state = fState.value; renderList(); });
-  fPrio.addEventListener('change', () => { f.priority = fPrio.value; renderList(); });
+  fState.addEventListener('change', () => { f.status = fState.value; renderList(); });
+  fPrio.addEventListener('change', () => { f.severity = fPrio.value; renderList(); });
   fScope.addEventListener('change', () => { f.scope = fScope.checked ? 'selection' : 'all'; renderChips(); renderList(); });
   chips.addEventListener('click', (e) => {
     const b = e.target.closest('[data-cat]');
@@ -301,15 +305,15 @@ export function initThreatPanel(canvas) {
   editor.addEventListener('input', (e) => {
     const t = active(), k = e.target.dataset.tf;
     if (!t || !k) return;
-    t[k] = e.target.value;
-    if (k === 'title' || k === 'description') t.customText = true;
+    if (e.target.tagName === 'SELECT') return; // One commit per select change.
+    updateThreat(t, k, e.target.value);
+    store.persist();
   });
   editor.addEventListener('change', (e) => {
     const t = active(), k = e.target.dataset.tf;
     if (!t || !k) return;
-    t[k] = e.target.value;
-    t.modified = new Date().toISOString();
-    store.commit(k === 'category' || k === 'state' ? '' : 'threat-editor');
+    updateThreat(t, k, e.target.value);
+    store.commit(k === 'category' ? '' : 'threat-editor');
   });
   editor.addEventListener('click', (e) => {
     const b = e.target.closest('[data-t]');
@@ -317,7 +321,7 @@ export function initThreatPanel(canvas) {
     if (!b || !t) return;
     switch (b.dataset.t) {
       case 'close': store.setUI({ activeThreat: null }, 'threat'); break;
-      case 'use-hint': t.mitigation = t.mitigationHint; t.modified = new Date().toISOString(); store.commit(); break;
+      case 'use-hint': updateThreat(t, 'mitigation', t.mitigationHint); store.commit(); break;
       case 'reset-text': t.customText = false; store.commit(); break;
       case 'delete': delete store.model.threats[t.key]; store.ui.activeThreat = null; store.commit(); break;
       case 'locate': {
@@ -345,6 +349,7 @@ export function initThreatPanel(canvas) {
         id: store.model.nextThreatId++, key, auto: false, ruleId: null, diagramId: store.diagram.id,
         flowId: el?.type === 'flow' ? el.id : null, elementId: el && el.type !== 'flow' ? el.id : null,
         category: 'S', priority: 'Medium', state: 'Not Started', title: 'New threat', description: '',
+        status: 'open', severity: 'Medium', notes: '', owner: '',
         mitigation: '', mitigationHint: '', justification: '', interaction, customText: true,
         created: new Date().toISOString(), modified: new Date().toISOString(),
       };
