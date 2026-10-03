@@ -204,6 +204,8 @@ export function initThreatPanel(canvas) {
   }
 
   function renderList() {
+    // Template text, element names and review fields are untrusted. Every
+    // dynamic text/attribute value below must pass through esc() or an enum.
     const ts = filtered();
     const sel = store.ui.selection;
     const scopeNote = `<div class="muted small" style="padding:4px 8px">${f.scope === 'selection' && sel.size ? `Selected elements in ${esc(store.diagram.name)}` : `Current diagram: ${esc(store.diagram.name)}`} · ${ts.length} shown</div>`;
@@ -218,7 +220,7 @@ export function initThreatPanel(canvas) {
         <span class="cat" style="background:${c.color}" title="${c.name}">${c.key}</span>
         <div><div class="t-title">${esc(t.title)}${t.orphan ? '<span class="orphan-tag" title="The interaction for this threat no longer exists">orphaned</span>' : ''}${!t.auto ? '<span class="orphan-tag">custom</span>' : ''}</div>
           <div class="t-sub">${esc(t.interaction)}</div>${t.contributingFlows?.length ? `<div class="t-sub">${esc(contributingFlowText(t))}</div>` : ''}${t.owner ? `<div class="t-sub">Owner: ${esc(t.owner)}</div>` : ''}</div>
-        <div class="t-meta"><span class="t-id">#${t.id}</span><span class="state" data-s="${STATUS_LABELS[threatStatus(t)]}">${STATUS_LABELS[threatStatus(t)]}</span><span class="prio" data-p="${threatSeverity(t)}">${threatSeverity(t)}</span></div>
+        <div class="t-meta"><span class="t-id">#${esc(t.id)}</span><span class="state" data-s="${STATUS_LABELS[threatStatus(t)]}">${STATUS_LABELS[threatStatus(t)]}</span><span class="prio" data-p="${threatSeverity(t)}">${threatSeverity(t)}</span></div>
       </div>`;
     }).join('');
   }
@@ -229,7 +231,7 @@ export function initThreatPanel(canvas) {
     editor.hidden = false;
     const opt = (arr, v, label = (x) => x) => arr.map((x) => `<option value="${esc(x)}"${x === v ? ' selected' : ''}>${esc(label(x))}</option>`).join('');
     editor.innerHTML = `
-      <h3><span class="cat" style="background:${STRIDE_BY_KEY[t.category]?.color}">${t.category}</span>Threat #${t.id}
+      <h3><span class="cat" style="background:${STRIDE_BY_KEY[t.category]?.color}">${esc(t.category)}</span>Threat #${esc(t.id)}
         <span style="flex:1"></span>
         <button class="icon-btn small" data-t="locate" title="Show on diagram">${icon('pointer', 16)}</button>
         <button class="icon-btn small" data-t="close" title="Close">${icon('x', 16)}</button></h3>

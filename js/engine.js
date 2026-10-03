@@ -16,7 +16,8 @@ export const activeRules = (model) => (Array.isArray(model.template) && model.te
 function resolve(ctx, path) {
   let v = ctx;
   for (const part of String(path).split('.')) {
-    if (v == null) return undefined;
+    if (['__proto__', 'prototype', 'constructor'].includes(part)) return undefined;
+    if (v == null || !Object.hasOwn(v, part)) return undefined;
     v = v[part];
   }
   return v;

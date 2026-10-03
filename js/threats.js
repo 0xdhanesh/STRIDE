@@ -16,6 +16,11 @@ export function validateReview(t) {
   for (const field of ['notes', 'owner', 'mitigation', 'justification']) {
     if (t[field] != null && typeof t[field] !== 'string') throw new Error(`Invalid threat ${field}.`);
   }
+  if (t.contributingFlows != null && (!Array.isArray(t.contributingFlows) || t.contributingFlows.some((f) =>
+    !f || typeof f !== 'object' || ['id', 'sourceId', 'targetId', 'name', 'interaction'].some((key) => typeof f[key] !== 'string')))) {
+    throw new Error('Invalid threat contributing flows.');
+  }
+  if (t.suppressed != null && typeof t.suppressed !== 'boolean') throw new Error('Invalid threat suppression flag.');
 }
 
 export function updateThreat(t, field, value) {

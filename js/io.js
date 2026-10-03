@@ -98,7 +98,11 @@ export async function exportPNG(model, diagram, sketchy) {
 export function exportCSV(model) {
   const dName = Object.fromEntries(model.diagrams.map((d) => [d.id, d.name]));
   const cols = ['ID', 'Diagram', 'Interaction', 'Category', 'Title', 'Severity', 'Status', 'Description', 'Justification', 'Mitigation', 'Suggested mitigation', 'Source', 'Owner', 'Notes', 'Contributing flows'];
-  const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  // Quoting alone does not stop spreadsheet formula execution on open.
+  const cell = (v) => {
+    const value = String(v ?? '');
+    return `"${(/^[\s]*[=+@-]|^[\t\r\n]/.test(value) ? "'" : '') + value.replace(/"/g, '""')}"`;
+  };
   const rows = threatList(model).map((t) => [
     t.id, dName[t.diagramId] || '', t.interaction, STRIDE_BY_KEY[t.category]?.name, t.title, threatSeverity(t), STATUS_LABELS[threatStatus(t)],
     t.description, t.justification, t.mitigation, t.mitigationHint, t.auto ? `Rule ${t.ruleId}` : 'Custom', t.owner, t.notes, contributingFlowText(t),
