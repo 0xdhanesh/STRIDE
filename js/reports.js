@@ -40,6 +40,10 @@ export function elementDetails(e) {
   if (e.sourceId || e.targetId) lines.unshift(`Source: ${e.sourceId || '(unconnected)'}; target: ${e.targetId || '(unconnected)'}`);
   lines.push(`Out of scope: ${e.outOfScope ? 'Yes' : 'No'}${e.outOfScopeReason ? ` - ${e.outOfScopeReason}` : ''}`);
   if (e.notes) lines.push(`Notes: ${e.notes}`);
+  if (e.tm7) {
+    lines.push(`TMT original type: ${e.tm7.header || e.tm7.typeId || e.tm7.genericTypeId || '(unknown)'}`);
+    lines.push(...(e.tm7.properties || []).map((p) => `TMT ${p.name}: ${p.value}`));
+  }
   return lines.join('\n');
 }
 

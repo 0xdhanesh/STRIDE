@@ -251,7 +251,7 @@ export function threatStats(threats) {
 /* ------------------------------------------------------------- validation */
 
 export function validate(model) {
-  const msgs = [];
+  const msgs = (model.importWarnings || []).map((w) => ({ ...w, level: 'warning' }));
   const warn = (text, d, el) => msgs.push({ level: 'warning', text, diagramId: d.id, elementId: el?.id });
   const info = (text, d, el) => msgs.push({ level: 'info', text, diagramId: d.id, elementId: el?.id });
 

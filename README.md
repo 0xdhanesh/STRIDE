@@ -31,7 +31,7 @@ recovery journal, and can be saved and opened as local **`.stride` JSON files**.
 | **Multiple diagrams** | Tabs: add, rename, duplicate, reorder, delete |
 | **Reports & export** | Direct PDF, self-contained Markdown, and lossless model/report JSON; each includes diagram images, every element, and threats grouped by STRIDE category and interaction. Printable HTML, CSV, PNG and SVG remain available |
 | **Templates** | View and edit the threat template as JSON; import/export; it's stored inside the model file |
-| **Interop** | Opens Microsoft TMT `.tm7` files (best effort: diagrams, elements, flows, boundaries, threats with state and justification) |
+| **Interop** | Opens local Microsoft TMT `.tm7` XML files; maps known stencils/security properties, preserves threat reviews and original XML, and flags unmapped content |
 | **Sharing** | "Copy share link" compresses the whole model into the URL fragment, so nothing is uploaded |
 
 ## Stencil catalogue
@@ -197,7 +197,7 @@ not install anything; there is no CDN or export service.
 Use **Menu → Save .stride file** (`Ctrl+S` / `⌘S`) to download the full model: all diagrams, element
 geometry and security properties, threat IDs and decisions, mitigation/justification text, metadata, and
 the custom rule template. **Open** (`Ctrl+O` / `⌘O`) accepts `.stride`, older `.stride.json` / `.json`, and
-the existing best-effort `.tm7` importer. Opening JSON preserves the recorded threat list without running
+local Microsoft TMT `.tm7` files. Opening JSON preserves the recorded threat list without running
 the generator again; subsequent model edits regenerate threats as usual. Unsupported versions, element
 types, and malformed models are rejected before replacing the current work. Unknown additional JSON
 fields are retained. Opening another model can be undone.
@@ -214,6 +214,33 @@ Selection, viewport, open panels and undo history are session-only; theme/grid/s
 `localStorage`. Browser storage can be cleared, evicted, or disabled by policy/private mode. Keep `.stride`
 files as durable backups, particularly when moving or renaming the standalone HTML file, whose storage
 location is browser-dependent. Neither browser storage nor local model files are application-encrypted.
+
+## Microsoft TMT import
+
+Use **Open** to choose a local `.tm7` XML file (UTF-8 or UTF-16). Import runs entirely in the browser with its native XML
+parser. It preserves diagrams, element positions, connector references/coordinates, curved boundaries,
+scope decisions, notes and imported threat reviews. Known stencil names and explicit aliases map to the
+existing catalogue; supported security properties and enum selections map to STRIDE's options. Explicit
+imported property values override subtype defaults such as HTTPS encryption.
+
+Unknown stencils fall back to a generic stencil of the known element family. An unknown shape with no
+known family remains as a note placeholder; unknown lines remain visible connectors. Missing or ambiguous
+endpoints stay unconnected with their coordinates retained. Duplicate IDs are remapped within their
+diagram, and ambiguous references are flagged rather than guessed.
+
+Import warnings open automatically in **Validation messages** and are included in reports. Selecting an
+element shows its original TMT properties and any mapping warnings. Unsupported or conflicting security
+values remain **Not Selected**. Unknown threat states remain **Open**, unknown priorities become **Medium**,
+and unknown categories are temporarily grouped under **Spoofing**, each with a review warning.
+
+The model's `tm7.sourceXML` retains the complete original XML, including unmapped extensions. Per-element
+and per-threat `tm7` metadata preserves original IDs, types, properties and decisions; `importWarnings`
+records conversion issues. These fields survive `.stride` saves, autosave and report JSON round trips.
+Warnings describe the original import and remain as an audit record after edits. Imported threats become
+custom findings so later rule generation preserves their reviews. Embedded Microsoft templates are
+retained in the source XML; new findings use STRIDE's rules. Malformed XML, external entity/DTD declarations
+and broken serialization references are rejected before replacing the current model. Custom/localized
+TMT stencils and properties may need manual mapping after import.
 
 ## Standalone offline distribution (no installation)
 
@@ -311,6 +338,7 @@ js/stencils.js    Element types, subtypes, properties, symbol mapping, library g
 js/glyphs.js      Technology symbols
 js/panels.js      Properties panel and threat panel
 js/io.js          Save/open, PNG/SVG/CSV, report, share link, .tm7 import
+js/tm7.js         Native XML import, explicit mappings, source retention and warnings
 js/ops.js         Element operations (create, delete, paste, bend…)
 js/util.js        Geometry, connector anchoring and hand-drawn path generation
 tests/            Engine tests and a .tm7 fixture
@@ -327,6 +355,11 @@ Rule regressions include positive/negative minimal diagrams for every changed ru
 supersession, legacy review preservation, template validation and output escaping. For a native browser
 DOM check, start the existing static server (`npm start`) and visit `/tests/security.html`; it checks
 that attacker-controlled names and rule text remain literal text in the panel and HTML report.
+
+TM7 fixture tests use Python 3's standard-library XML parser as a test-only bridge for Node (no pip
+packages). The application uses native `DOMParser` and does not require Python. Visit
+`/tests/tm7-browser.html` through the existing static server to run the native parser checks or inspect
+an additional local `.tm7` file without uploading it.
 
 ## Privacy
 

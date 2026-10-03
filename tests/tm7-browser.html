@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; img-src data:; connect-src 'none'">
+<title>STRIDE native TM7 import checks</title>
+<h1>Native TM7 import checks</h1>
+<p id="result">Running…</p>
+<p>Select a local .tm7 file to inspect its import summary:</p>
+<input id="file" type="file" accept=".tm7">
+<pre id="summary"></pre>
+<script type="module" src="./tm7-browser.mjs"></script>
+</html>

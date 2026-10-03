@@ -33,6 +33,19 @@ export function normalizeModel(m) {
   if (!m || typeof m !== 'object' || !Array.isArray(m.diagrams)) throw new Error('Not a threat model file.');
   if (m.app != null && m.app !== 'stride-threat-modeler') throw new Error('This file belongs to another application.');
   if (m.version != null && m.version !== 1) throw new Error(`Unsupported STRIDE file version: ${m.version}.`);
+  if (m.importWarnings != null && (!Array.isArray(m.importWarnings) || m.importWarnings.some((w) =>
+    !w || typeof w.text !== 'string' || typeof w.code !== 'string' ||
+    ['diagramId', 'elementId'].some((key) => w[key] != null && typeof w[key] !== 'string') ||
+    (w.threatIds != null && (!Array.isArray(w.threatIds) || w.threatIds.some((id) => !Number.isSafeInteger(id))))))) {
+    throw new Error('Invalid import warnings.');
+  }
+  const checkImport = (item) => {
+    if (item.tm7 == null) return;
+    if (typeof item.tm7 !== 'object' || Array.isArray(item.tm7)) throw new Error('Invalid TMT import metadata.');
+    if (item.tm7.properties != null && (!Array.isArray(item.tm7.properties) || item.tm7.properties.some((p) =>
+      !p || typeof p.name !== 'string' || typeof p.value !== 'string'))) throw new Error('Invalid original TMT properties.');
+  };
+  checkImport(m);
   const ids = new Set();
   const checkId = (id) => {
     if (id == null || id === '') return;
@@ -42,9 +55,11 @@ export function normalizeModel(m) {
   for (const d of m.diagrams) {
     if (!d || typeof d !== 'object' || !Array.isArray(d.elements)) throw new Error('Invalid diagram or elements list.');
     checkId(d.id);
+    checkImport(d);
     for (const e of d.elements) {
       if (!e || !Object.hasOwn(STENCILS, e.type)) throw new Error(`Unsupported element type: ${e?.type}. Nothing was loaded.`);
       checkId(e.id);
+      checkImport(e);
       for (const key of ['stroke', 'fill']) {
         const color = e.style?.[key];
         if (color != null && !/^(?:#[\da-f]{3,8}|[a-z]+|(?:rgb|hsl)a?\([\d\s.,%+-]+\))$/i.test(color)) {
@@ -65,6 +80,7 @@ export function normalizeModel(m) {
       throw new Error('Invalid or duplicate threat ID/key.');
     }
     threatIds.add(t.id);
+    checkImport(t);
     if (!['S', 'T', 'R', 'I', 'D', 'E'].includes(t.category)) throw new Error('Invalid STRIDE threat category.');
     validateReview(t);
   }

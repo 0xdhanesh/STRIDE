@@ -39,6 +39,13 @@ export function initPropsPanel(canvas) {
     const st = STENCILS[el.type];
     const byId = store.byId();
     let h = `<div class="kind">${icon(TOOL_ICON[el.type], 18)} ${esc(st.label)}</div>`;
+    if (el.tm7) {
+      const warnings = (store.model.importWarnings || []).filter((w) => w.elementId === el.id && w.diagramId === store.diagram.id);
+      h += `<details class="props-sec"${warnings.length ? ' open' : ''}><summary>Microsoft TMT import${warnings.length ? ' — review needed' : ''}</summary>
+        <p class="small">Original type: ${esc(el.tm7.header || el.tm7.typeId || el.tm7.genericTypeId || '(unknown)')}</p>
+        ${warnings.map((w) => `<p class="small">${esc(w.text)}</p>`).join('')}
+        <dl class="small">${(el.tm7.properties || []).map((p) => `<dt>${esc(p.name)}</dt><dd>${esc(p.value)}</dd>`).join('')}</dl></details>`;
+    }
     h += el.type === 'note'
       ? `<label class="field"><span>Text</span><textarea data-f="name" rows="3">${esc(el.name)}</textarea></label>`
       : `<label class="field"><span>Name</span><input data-f="name" value="${esc(el.name)}"></label>`;

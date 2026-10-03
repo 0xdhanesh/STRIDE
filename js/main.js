@@ -516,6 +516,7 @@ function loadModel(m, message) {
   store.setUI({}, 'load');
   requestAnimationFrame(() => canvas.fit());
   toast(note || message || `Opened "${store.model.meta.title}". Undo (Ctrl+Z) to go back.`);
+  if (store.model.importWarnings?.length) $('#messages').hidden = false;
 }
 
 async function runAction(name) {
