@@ -4,6 +4,9 @@ import { DEFAULT_RULES } from '../js/rules.js';
 import { generateThreats, syncThreats, threatList, threatBadges } from '../js/engine.js';
 import { defaultProps, STENCILS } from '../js/stencils.js';
 import { updateThreat, contributingFlowText } from '../js/threats.js';
+import { createReport, buildMarkdown } from '../js/reports.js';
+import { buildReport, serializeModel, readModelFile } from '../js/io.js';
+import { normalizeModel } from '../js/store.js';
 
 function fixture() {
   const node = (id, type, x) => ({ id, name: id, type, subtype: 'Generic Process', x, y: 0, w: 100, h: 100, props: defaultProps(type), style: {} });
@@ -187,4 +190,43 @@ test('legacy per-flow reviews migrate without losing conflicting notes or duplic
   assert.equal(threatList(f.model)[0].id, id);
   assert.equal(threatList(f.model)[0].notes, 'Second flow reviewed');
   assert.ok(Object.values(f.model.threats).some((t) => t.notes === 'Third flow reviewed' && t.mergedInto));
+});
+
+test('supersession filters individual contributions before target grouping', () => {
+  const f = fiveFlows();
+  const generic = { ...rule('T01'), id: 'GENERIC' };
+  const specific = { ...rule('P01'), id: 'SPECIFIC', supersedes: ['GENERIC'] };
+  f.flow.subtype = 'Telnet';
+  const out = generateThreats(f.model, [generic, specific]);
+  const grouped = out.find((t) => t.ruleId === 'GENERIC');
+  assert.equal(grouped.contributingFlows.length, 4);
+  assert.ok(!grouped.contributingFlows.some((flow) => flow.id === f.flow.id));
+  assert.equal(out.filter((t) => t.ruleId === 'SPECIFIC').length, 1);
+  f.flow.outOfScope = true;
+  assert.ok(!generateThreats(f.model, [generic, specific]).some((t) => t.ruleId === 'SPECIFIC'));
+});
+
+test('grouped findings list all flows in reports and survive local file round trips', async () => {
+  const f = fiveFlows(); f.model = normalizeModel(f.model); syncThreats(f.model);
+  const grouped = threatList(f.model).find((t) => t.ruleId === 'T01');
+  updateThreat(grouped, 'notes', 'Grouped evidence');
+  const bundle = createReport(f.model), md = buildMarkdown(bundle), html = buildReport(f.model);
+  const exported = bundle.report.categories.flatMap((c) => c.interactions.flatMap((g) => g.threats)).find((t) => t.key === grouped.key);
+  assert.deepEqual(exported.contributingFlows, grouped.contributingFlows);
+  for (const flow of grouped.contributingFlows) {
+    assert.ok(html.includes(flow.id)); assert.ok(md.includes(flow.id));
+  }
+  const loaded = await readModelFile({ name: 'grouped.stride', text: async () => serializeModel(f.model) });
+  assert.deepEqual(loaded, f.model);
+  syncThreats(loaded); assert.equal(loaded.threats[grouped.key].notes, 'Grouped evidence');
+});
+
+test('superseded reviewed records stay in JSON backups but not published threat registers', () => {
+  const f = fixture(); f.model = normalizeModel(f.model); f.model.template = [rule('I01'), rule('T02')];
+  syncThreats(f.model); const t = threatList(f.model)[0]; updateThreat(t, 'notes', 'Archived evidence');
+  f.flow.subtype = 'Telnet'; f.model.template.push(rule('P01')); syncThreats(f.model);
+  const bundle = createReport(f.model);
+  assert.equal(bundle.model.threats[t.key].notes, 'Archived evidence');
+  assert.equal(bundle.report.summary.total, 1);
+  assert.deepEqual(bundle.report.categories.flatMap((c) => c.interactions.flatMap((g) => g.threats)).map((t) => t.ruleId), ['P01']);
 });

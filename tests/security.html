@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; img-src data:; connect-src 'none'; style-src 'unsafe-inline'">
+<title>STRIDE threat rendering regression</title>
+<h1>Threat rendering regression</h1>
+<p id="result">Running…</p>
+<section id="threats">
+  <button id="show-summary">Summary</button>
+  <input id="f-text"><select id="f-state"></select><select id="f-priority"></select><input id="f-scope" type="checkbox">
+  <div id="stride-chips"></div><div id="threat-list"></div><div id="threat-editor"></div>
+</section>
+<dialog id="dlg-summary"><div id="summary-content"></div></dialog>
+<script type="module" src="./security-browser.mjs"></script>
+</html>

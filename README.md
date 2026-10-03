@@ -278,6 +278,10 @@ A template is a JSON array of rules:
   additional old records are retained with `mergedInto` and `suppressed` fields in the JSON backup.
 - `when`: an array means AND; `{ "any": [...] }` means OR and `{ "not": cond }` negates. A clause is
   `[path, op, value]` with `op` ∈ `eq ne in nin exists`.
+- Template validation rejects malformed clauses, invalid enum values, unknown superseded IDs and
+  unsafe paths, naming the offending rule. `in`/`nin` require an array; `exists` requires a boolean.
+  Paths must start with `source`, `target`, `flow` or `element`; element rules can only use `element`.
+  Prototype-related segments are forbidden, and evaluation never walks inherited properties.
 - Paths: `source.type` (`process`/`external`/`store`), `source.subtype`, `source.props.<key>`, the same for
   `target.*` and `element.*`, `flow.subtype`, `flow.props.<key>`, `flow.crossesBoundary`, `flow.boundaries`.
 - Text fields can use `{source.name}`, `{target.name}`, `{flow.name}`, `{flow.subtype}`, `{flow.boundaries}`,
@@ -318,6 +322,11 @@ run `node scripts/report-qa.mjs`, then `python3 scripts/verify-report-pdf.py` in
 with PyMuPDF installed. The verifier checks retained text, interaction headings, page bounds and footers,
 and creates PNGs under `tmp/pdfs/` for visual review. PyMuPDF is a development tool only; exported PDFs
 and the standalone app require no installation.
+
+Rule regressions include positive/negative minimal diagrams for every changed rule, endpoint grouping,
+supersession, legacy review preservation, template validation and output escaping. For a native browser
+DOM check, start the existing static server (`npm start`) and visit `/tests/security.html`; it checks
+that attacker-controlled names and rule text remain literal text in the panel and HTML report.
 
 ## Privacy
 
