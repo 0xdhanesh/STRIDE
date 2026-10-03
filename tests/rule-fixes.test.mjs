@@ -16,6 +16,14 @@ const rule = (id) => DEFAULT_RULES.find((r) => r.id === id);
 const fires = (f, id) => generateThreats(f.model, [rule(id)]).some((t) => t.ruleId === id);
 const noBoundary = (f) => { f.model.diagrams[0].elements = f.model.diagrams[0].elements.filter((e) => e !== f.boundary); };
 const cases = [
+  ['S02', () => {}, noBoundary],
+  ['S04', (f) => { f.target.type = 'store'; }, noBoundary],
+  ['S05', (f) => { f.source.type = 'store'; }, noBoundary],
+  ['S06', (f) => { f.target.type = 'external'; }, noBoundary],
+  ['E01', () => {}, noBoundary],
+  ['E02', () => {}, (f) => { f.target.props.internetFacing = 'No'; f.target.props.validatesInput = 'Yes'; }],
+  ['D01', () => {}, noBoundary],
+  ['I05', () => {}, (f) => { f.target.props.internetFacing = 'No'; }],
   ['W02', (f) => { f.flow.subtype = 'WebSocket (ws://)'; }, (f) => { f.flow.subtype = 'WebSocket Secure (wss://)'; }],
   ['P01', (f) => { f.flow.subtype = 'Telnet'; }, (f) => { f.flow.subtype = 'NTLM'; }],
   ['E04', (f) => { f.target.subtype = 'Web Application'; f.flow.props.authentication = 'Cookie / Session'; }, (f) => { f.flow.props.authentication = 'Token (OAuth / JWT)'; }],
@@ -61,5 +69,23 @@ test('X04 considers explicit No and unset backups insecure', () => {
   const f = fixture(); f.target.type = 'store';
   for (const value of ['No', 'Not Selected', undefined]) {
     f.target.props.backedUp = value; assert.ok(fires(f, 'X04'));
+  }
+});
+
+test('S04/S05 skip authenticated store flows, including across boundaries', () => {
+  for (const id of ['S04', 'S05']) {
+    const f = fixture(); f[id === 'S04' ? 'target' : 'source'].type = 'store';
+    for (const auth of [undefined, 'Not Selected', 'None']) { f.flow.props.authentication = auth; assert.ok(fires(f, id)); }
+    for (const auth of ['Password', 'Token (OAuth / JWT)', 'mTLS / Certificate']) { f.flow.props.authentication = auth; assert.ok(!fires(f, id)); }
+  }
+});
+
+test('E02 requires a boundary and either internet exposure or missing input validation', () => {
+  const f = fixture(); f.target.props.validatesInput = 'Yes'; f.target.props.internetFacing = 'Yes';
+  assert.ok(fires(f, 'E02'));
+  noBoundary(f); assert.ok(!fires(f, 'E02'));
+  for (const key of ['internetFacing', 'validatesInput']) {
+    const options = STENCILS.process.props.find((p) => p.key === key).options;
+    for (const value of ['Yes', 'No', 'Not Selected']) assert.ok(options.includes(value));
   }
 });

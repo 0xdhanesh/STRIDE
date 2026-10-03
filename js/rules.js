@@ -43,7 +43,7 @@ export const DEFAULT_RULES = [
     title: 'Spoofing the {target.name} Process',
     description: '{target.name} may be spoofed by an attacker and this may lead to information disclosure by {source.name}. Consider using a standard authentication mechanism to identify the destination process.',
     mitigation: 'Use server authentication (TLS with validated certificates, mTLS or signed service identities). Validate host names and consider certificate pinning for high-value clients.',
-    when: [['target.type', 'eq', 'process']],
+    when: [['target.type', 'eq', 'process'], ['flow.crossesBoundary', 'eq', true]],
   },
   {
     id: 'S03', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'source',
@@ -57,21 +57,21 @@ export const DEFAULT_RULES = [
     title: 'Spoofing of Destination Data Store {target.name}',
     description: '{target.name} may be spoofed by an attacker and this may lead to data being written to the attacker\'s target instead of {target.name}. Consider using a standard authentication mechanism to identify the destination data store.',
     mitigation: 'Connect to the data store over an authenticated channel (TLS with certificate validation, managed identity). Pin connection strings in protected configuration.',
-    when: [['target.type', 'eq', 'store']],
+    when: [['target.type', 'eq', 'store'], ['flow.crossesBoundary', 'eq', true], ['flow.props.authentication', 'in', ['Not Selected', 'None']]],
   },
   {
     id: 'S05', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'source',
     title: 'Spoofing of Source Data Store {source.name}',
     description: '{source.name} may be spoofed by an attacker and this may lead to incorrect data delivered to {target.name}. Consider using a standard authentication mechanism to identify the source data store.',
     mitigation: 'Authenticate the data store endpoint (TLS certificate validation, private endpoints) and verify integrity of data read from it.',
-    when: [['source.type', 'eq', 'store']],
+    when: [['source.type', 'eq', 'store'], ['flow.crossesBoundary', 'eq', true], ['flow.props.authentication', 'in', ['Not Selected', 'None']]],
   },
   {
     id: 'S06', scope: 'interaction', category: 'S', priority: 'Medium', focus: 'target',
     title: 'Spoofing of the {target.name} External Destination Entity',
     description: '{target.name} may be spoofed by an attacker and this may lead to data being sent to the attacker\'s target instead of {target.name}. Consider using a standard authentication mechanism to identify the external entity.',
     mitigation: 'Verify the identity of the destination (TLS certificate validation, allow-listed endpoints, signed webhooks).',
-    when: [['target.type', 'eq', 'external']],
+    when: [['target.type', 'eq', 'external'], ['flow.crossesBoundary', 'eq', true]],
   },
   {
     id: 'S07', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
@@ -189,7 +189,7 @@ export const DEFAULT_RULES = [
     title: 'Information Disclosure Through Error Messages of {target.name}',
     description: '{target.name} may return verbose error messages, stack traces or version banners to {source.name}, helping an attacker map the system.',
     mitigation: 'Return generic error messages to callers, log details server-side, and remove version banners and debug endpoints in production.',
-    when: [['source.type', 'eq', 'external'], ['target.type', 'eq', 'process']],
+    when: [['source.type', 'eq', 'external'], ['target.type', 'eq', 'process'], ['target.props.internetFacing', 'ne', 'No']],
   },
 
   /* --------------------------------------------------- Denial of service */
@@ -198,7 +198,7 @@ export const DEFAULT_RULES = [
     title: 'Potential Process Crash or Stop for {target.name}',
     description: '{target.name} crashes, halts, stops or runs slowly; in all cases violating an availability metric.',
     mitigation: 'Bound input sizes and processing time, handle errors defensively, run multiple instances behind health checks, and auto-restart failed processes.',
-    when: [['target.type', 'eq', 'process']],
+    when: [['target.type', 'eq', 'process'], ['flow.crossesBoundary', 'eq', true]],
   },
   {
     id: 'D02', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'flow',
@@ -235,14 +235,14 @@ export const DEFAULT_RULES = [
     title: 'Elevation Using Impersonation',
     description: '{target.name} may be able to impersonate the context of {source.name} in order to gain additional privilege.',
     mitigation: 'Avoid impersonation where possible; when required, constrain delegation, scope tokens to the minimum audience and permissions, and audit its use.',
-    when: [['target.type', 'eq', 'process'], ['source.type', 'in', ['process', 'external']]],
+    when: [['target.type', 'eq', 'process'], ['source.type', 'in', ['process', 'external']], ['flow.crossesBoundary', 'eq', true]],
   },
   {
     id: 'E02', scope: 'interaction', category: 'E', priority: 'High', focus: 'target',
     title: '{target.name} May be Subject to Elevation of Privilege Using Remote Code Execution',
     description: '{source.name} may be able to remotely execute code for {target.name}.',
     mitigation: 'Keep dependencies patched, avoid dynamic code evaluation, run with least privilege in an isolated sandbox/container, and use memory-safe languages where possible.',
-    when: [['target.type', 'eq', 'process'], ['flow.crossesBoundary', 'eq', true]],
+    when: [['target.type', 'eq', 'process'], ['flow.crossesBoundary', 'eq', true], { any: [['target.props.internetFacing', 'eq', 'Yes'], ['target.props.validatesInput', 'ne', 'Yes']] }],
   },
   {
     id: 'E03', scope: 'interaction', category: 'E', priority: 'Medium', focus: 'target',
