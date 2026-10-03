@@ -118,7 +118,7 @@ export const STENCILS = {
     },
     props: [
       { key: 'encrypted', label: 'Encrypted in transit', options: YN },
-      { key: 'authentication', label: 'Authentication', options: ['Not Selected', 'None', 'Password', 'Token (OAuth / JWT)', 'mTLS / Certificate', 'API key', 'Kerberos / Windows'] },
+      { key: 'authentication', label: 'Authentication', options: ['Not Selected', 'None', 'Password', 'Cookie / Session', 'Token (OAuth / JWT)', 'mTLS / Certificate', 'API key', 'Kerberos / Windows'] },
       { key: 'integrity', label: 'Integrity protected', options: YN },
       { key: 'replayProtection', label: 'Replay protection', options: YN },
       { key: 'rateLimited', label: 'Rate limited', options: YN },

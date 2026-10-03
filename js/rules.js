@@ -20,7 +20,7 @@
 // flow.props.<key>, flow.crossesBoundary (boolean), element.*
 
 // Protocol / subtype groups used by the penetration-testing rules.
-const LEGACY = ['Telnet', 'FTP', 'TFTP', 'HTTP', 'LDAP', 'SNMP', 'NTLM'];
+const LEGACY = ['Telnet', 'FTP', 'TFTP', 'HTTP', 'LDAP', 'SNMP'];
 const REMOTE_ADMIN = ['RDP', 'VNC', 'SSH', 'Telnet', 'WinRM / PowerShell Remoting'];
 const EDGE = ['Load Balancer', 'Reverse Proxy', 'CDN / Edge', 'API Gateway', 'Web Application Firewall'];
 const WEB_APPS = ['Web Application', 'Web API / Service', 'GraphQL API', 'Microservice', 'Serverless Function'];
@@ -101,7 +101,7 @@ export const DEFAULT_RULES = [
     title: 'Potential Injection Vulnerability for {target.name}',
     description: 'Queries sent by {source.name} to {target.name} may include attacker-controlled data. Injection (SQL, NoSQL operator, command) can lead to data tampering, disclosure or full compromise of the data store.',
     mitigation: 'Use parameterised queries / prepared statements or a safe ORM. Never concatenate untrusted input into queries. Run the data store account with least privilege.',
-    when: [['target.type', 'eq', 'store'], ['target.subtype', 'in', ['Database', 'SQL Database', 'NoSQL Database', 'Vector Database']]],
+    when: [['target.type', 'eq', 'store'], ['target.subtype', 'in', ['Database', 'SQL Database', 'NoSQL Database']]],
   },
   {
     id: 'T04', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
@@ -131,21 +131,21 @@ export const DEFAULT_RULES = [
     title: 'Potential Data Repudiation by {target.name}',
     description: '{target.name} claims that it did not receive data from a source outside the trust boundary. Consider using logging or auditing to record the source, time, and summary of the received data.',
     mitigation: 'Log security-relevant events (who, what, when, from where) to an append-only store; synchronise clocks; include correlation IDs.',
-    when: [['target.type', 'eq', 'process'], ['target.props.logsSecurityEvents', 'ne', 'Yes']],
+    when: [['target.type', 'eq', 'process'], ['target.props.logsSecurityEvents', 'ne', 'Yes'], ['flow.crossesBoundary', 'eq', true]],
   },
   {
     id: 'R02', scope: 'interaction', category: 'R', priority: 'Low', focus: 'target',
     title: 'External Entity {target.name} Potentially Denies Receiving Data',
     description: '{target.name} claims that it did not receive data from a process on the other side of the trust boundary. Consider using logging or auditing to record the source, time, and summary of the received data.',
     mitigation: 'Record delivery receipts / acknowledgements and keep signed audit logs of outbound transmissions.',
-    when: [['target.type', 'eq', 'external']],
+    when: [['target.type', 'eq', 'external'], ['flow.crossesBoundary', 'eq', true]],
   },
   {
     id: 'R03', scope: 'interaction', category: 'R', priority: 'Low', focus: 'target',
     title: 'Data Store {target.name} Denies {source.name} Potentially Writing Data',
     description: '{target.name} claims that it did not write data received from an entity on the other side of the trust boundary. Consider using logging or auditing to record the source, time, and summary of the received data.',
     mitigation: 'Enable data store audit logging (who wrote what and when) and forward it to a central, tamper-resistant log.',
-    when: [['target.type', 'eq', 'store']],
+    when: [['target.type', 'eq', 'store'], ['flow.crossesBoundary', 'eq', true]],
   },
   {
     id: 'R04', scope: 'interaction', category: 'R', priority: 'Medium', focus: 'target',
@@ -209,7 +209,7 @@ export const DEFAULT_RULES = [
   },
   {
     id: 'D03', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'flow',
-    title: 'Data Store Inaccessible',
+    title: 'Data Store {target.name} Inaccessible from {source.name}',
     description: 'An external agent prevents access to a data store ({source.name} → {target.name}) on the other side of the trust boundary.',
     mitigation: 'Use replicated / highly-available storage, connection pooling with timeouts, and graceful degradation when the store is unavailable.',
     when: [['flow.crossesBoundary', 'eq', true], { any: [['source.type', 'eq', 'store'], ['target.type', 'eq', 'store']] }],
@@ -256,7 +256,7 @@ export const DEFAULT_RULES = [
     title: 'Cross Site Request Forgery against {target.name}',
     description: 'Cross-site request forgery (CSRF or XSRF) is a type of attack in which an attacker forces a user\'s browser to make a forged request to a vulnerable site by exploiting an existing trust relationship between the browser and {target.name}.',
     mitigation: 'Use anti-forgery tokens, SameSite=Lax/Strict cookies, and verify Origin / Referer headers on state-changing requests.',
-    when: [['target.subtype', 'in', ['Web Application', 'Web API / Service']], ['source.type', 'eq', 'external']],
+    when: [['target.subtype', 'in', ['Web Application', 'Web API / Service']], ['source.type', 'eq', 'external'], ['flow.props.authentication', 'eq', 'Cookie / Session']],
   },
   {
     id: 'E05', scope: 'interaction', category: 'E', priority: 'High', focus: 'target',
@@ -325,14 +325,14 @@ export const DEFAULT_RULES = [
     title: 'Cross-Site WebSocket Hijacking against {target.name}',
     description: 'Browsers attach cookies to WebSocket handshakes from any origin. If {target.name} authenticates "{flow.name}" with cookies but does not check the Origin header, a malicious site visited by the user can open a socket as that user and read or send messages.',
     mitigation: 'Validate the Origin header against an allow-list during the handshake, use SameSite cookies, and authenticate with a short-lived token (sent after connect or as a subprotocol) instead of relying on cookies alone.',
-    when: [WS, ['target.type', 'eq', 'process'], ['source.type', 'in', ['external', 'process']], { any: [['source.type', 'eq', 'external'], ['source.subtype', 'in', ['Browser Client (SPA)', 'Web Application']]] }],
+    when: [WS, ['target.type', 'eq', 'process'], ['flow.props.authentication', 'eq', 'Cookie / Session'], { any: [['source.type', 'eq', 'external'], ['source.subtype', 'in', ['Browser Client (SPA)', 'Web Application']]] }],
   },
   {
     id: 'W02', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow',
     title: 'Unencrypted WebSocket (ws://) on {flow.name}',
     description: '"{flow.name}" uses a WebSocket connection that is not declared as encrypted. Messages, session tokens and the handshake cookies can be read or modified by anyone on the network path.',
     mitigation: 'Use wss:// (TLS 1.2+) only, reject ws:// connections and mixed content, and enable HSTS on the host serving the socket.',
-    when: [WS, ['flow.props.encrypted', 'ne', 'Yes']],
+    when: [['flow.subtype', 'in', ['WebSocket', 'WebSocket (ws://)']], ['flow.props.encrypted', 'ne', 'Yes']],
   },
   {
     id: 'W03', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
@@ -406,8 +406,8 @@ export const DEFAULT_RULES = [
   {
     id: 'P01', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow',
     title: 'Cleartext Legacy Protocol ({flow.subtype}) on {flow.name}',
-    description: '"{flow.name}" uses {flow.subtype}, which sends credentials and data in cleartext. Any attacker with a foothold on the network path (including inside the perimeter) can sniff or modify it.',
-    mitigation: 'Replace with the secure equivalent (SSH instead of Telnet, SFTP/FTPS instead of FTP/TFTP, HTTPS, LDAPS, SNMPv3, Kerberos instead of NTLM) and disable the legacy service.',
+    description: '"{flow.name}" uses {flow.subtype} without declared encryption, exposing data and any transmitted credentials in cleartext. Any attacker with a foothold on the network path (including inside the perimeter) can sniff or modify it.',
+    mitigation: 'Replace with the secure equivalent (SSH instead of Telnet, SFTP/FTPS instead of FTP/TFTP, HTTPS, LDAPS, SNMPv3 with privacy) and disable the legacy service.',
     when: [['flow.subtype', 'in', LEGACY], ['flow.props.encrypted', 'ne', 'Yes']],
   },
   {
@@ -557,7 +557,7 @@ export const DEFAULT_RULES = [
     title: 'Data Loss in {element.name}',
     description: '{element.name} is not backed up. Ransomware, accidental deletion or corruption would cause permanent data loss.',
     mitigation: 'Take regular, tested, immutable (off-site) backups and define RPO / RTO targets.',
-    when: [['element.type', 'eq', 'store'], ['element.props.backedUp', 'eq', 'No']],
+    when: [['element.type', 'eq', 'store'], ['element.props.backedUp', 'ne', 'Yes']],
   },
   {
     id: 'X05', scope: 'element', category: 'E', priority: 'Medium', focus: 'element',
