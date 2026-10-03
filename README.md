@@ -3,7 +3,7 @@
 A client-side threat-modeling tool with an Excalidraw-style canvas and the core feature set of the
 Microsoft Threat Modeling Tool. You draw a data-flow diagram, mark trust boundaries and set security
 properties, and STRIDE threats are generated for every interaction. A library of more than 150 technology
-stencils and 82 threat rules, including penetration-testing specific ones, gets you from a whiteboard sketch
+stencils and 81 threat rules, including penetration-testing specific ones, gets you from a whiteboard sketch
 to a reviewable threat list.
 
 Everything runs in the browser, with **no backend or runtime network calls** after the
@@ -24,7 +24,7 @@ recovery journal, and can be saved and opened as local **`.stride` JSON files**.
 | **Quick search** | `/` searches every drawing tool and every stencil. Use `↑` `↓` to move, `Enter` to pick a tool or insert a symbol at the cursor, and `Esc` to close |
 | **Connectors** | Hover a shape to get connection dots and drag one to create a data flow. Ends snap magnetically to the nearest shape and preview the attachment while dragging. Aligned shapes get straight connectors, request/response pairs curve apart, and loose ends attach when a shape is dropped on them |
 | **Properties** | Per-element security properties (encrypted, authentication, validates input, runs as root, internet facing…) that drive threat generation. Picking a protocol presets them (HTTPS/wss/LDAPS → encrypted; Telnet/FTP/ws → not). Out-of-scope with justification; notes |
-| **Threat engine** | 82 rules: STRIDE-per-interaction and element-level (modelled on the TMT SDL template), plus web, cloud, AI/MCP, WebSocket, Kafka, contact-center, Kubernetes and penetration-testing threats. Detects boundary crossings for boxes *and* curved lines |
+| **Threat engine** | 81 rules: STRIDE-per-interaction and element-level (modelled on the TMT SDL template), plus web, cloud, AI/MCP, WebSocket, Kafka, contact-center, Kubernetes and penetration-testing threats. Detects boundary crossings for boxes *and* curved lines |
 | **Analysis view** | Threat list with STRIDE chips, search, status/severity filters and a selection filter. Per-threat Open, Mitigated, Accepted or Not Applicable status, owner, severity, notes, justification and mitigation, with suggested mitigations. Custom threats; open-threat badges on the diagram; model-wide summary dashboard |
 | **Stable threats** | IDs, states and justifications survive diagram edits. When an interaction disappears, untouched threats are removed and edited ones are kept as *orphaned* |
 | **Validation** | Messages for unconnected flows, invalid DFD links (store→store, entity→store), duplicate names, missing boundaries and unjustified out-of-scope |
@@ -101,7 +101,7 @@ Partner Network, Remote Access / VPN, Wireless Network, OT / ICS Network, Physic
 | R01–R04 | Repudiation | Missing audit logging, lower-trusted subjects writing logs |
 | I01–I05 | Information disclosure | Sniffing, weak access control, credentials in transit, verbose errors |
 | D01–D05 | Denial of service | Process crash, interrupted flows, inaccessible stores, resource exhaustion, missing rate limiting |
-| E01–E06 | Elevation of privilege | Impersonation, RCE, execution-flow changes, CSRF, unsafe deserialization, missing authorization |
+| E01–E02, E04–E06 | Elevation of privilege | Impersonation, RCE, cookie/session CSRF, unsafe deserialization, missing authorization (E03 execution-flow guidance merged into T01) |
 | X01–X05 | Element-level | Unencrypted sensitive data, root processes, secrets leakage, missing backups, memory corruption |
 | M01–M04 | AI & MCP | Tool poisoning / indirect prompt injection, excessive agency, token passthrough, data sent to LLM providers |
 | W01–W06 | WebSockets | Cross-site WebSocket hijacking, ws://, unauthenticated handshake, stale authorization, message injection, flooding |
@@ -269,6 +269,13 @@ A template is a JSON array of rules:
   evaluated per process, external entity or data store, with context `element`.
 - `category`: one of `S T R I D E`. `priority`: `High`, `Medium` or `Low`.
 - `focus`: `source`, `target`, `flow` or `element`. If that element is out of scope, the rule is skipped.
+- `dedupeKey`: optional `target`, `source`, or `flow` (default). Endpoint grouping generates one finding
+  per rule/endpoint/diagram and lists every contributing flow in the panel and reports.
+- `supersedes`: optional array of existing rule IDs. A matching rule hides those findings only on the
+  same interaction, before endpoint grouping. Templates omitting both fields retain per-flow behavior.
+- Existing reviewed findings hidden by supersession remain in saved JSON and reappear if the specific
+  rule stops matching. On migration to endpoint grouping, a reviewed record keeps its ID and decisions;
+  additional old records are retained with `mergedInto` and `suppressed` fields in the JSON backup.
 - `when`: an array means AND; `{ "any": [...] }` means OR and `{ "not": cond }` negates. A clause is
   `[path, op, value]` with `op` ∈ `eq ne in nin exists`.
 - Paths: `source.type` (`process`/`external`/`store`), `source.subtype`, `source.props.<key>`, the same for
@@ -295,7 +302,7 @@ js/summary.js     Model-wide threat dashboard markup
 js/reports.js     Shared report snapshot, category/interaction grouping, Markdown
 js/pdf-report.js  Local PDF definition, pagination and font validation
 js/vendor/        Pinned PDF renderer, embedded fonts, licenses and integrity hashes
-js/rules.js       Built-in threat template (82 rules)
+js/rules.js       Built-in threat template (81 rules)
 js/stencils.js    Element types, subtypes, properties, symbol mapping, library groups
 js/glyphs.js      Technology symbols
 js/panels.js      Properties panel and threat panel

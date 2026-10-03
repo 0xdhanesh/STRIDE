@@ -14,6 +14,8 @@
 //              {element.name}, {flow.boundaries} … are interpolated
 //   when:      conditions; an array is AND, {any:[…]} is OR, {not: cond} negates,
 //              a clause is [path, op, value] with op in eq ne in nin exists
+//   dedupeKey: optional 'target' | 'source' | 'flow' (default); group matching flows
+//   supersedes: optional array of rule IDs hidden on the same matching interaction
 // }
 //
 // Paths: source.type, source.subtype, source.props.<key>, target.*, flow.subtype,
@@ -83,10 +85,10 @@ export const DEFAULT_RULES = [
 
   /* ----------------------------------------------------------- Tampering */
   {
-    id: 'T01', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
+    id: 'T01', scope: 'interaction', category: 'T', priority: 'High', focus: 'target', dedupeKey: 'target',
     title: 'Potential Lack of Input Validation for {target.name}',
-    description: 'Data flowing across {flow.name} may be tampered with by an attacker. This may lead to a denial of service attack against {target.name}, an elevation of privilege attack against {target.name} or an information disclosure by {target.name}. Failure to verify that input is as expected is a root cause of a very large number of exploitable issues. Consider all paths and the way they handle data.',
-    mitigation: 'Validate all input with an allow-list approach (type, length, format, range) at the trust boundary. Use schema validation for structured payloads and reject rather than sanitize where possible.',
+    description: 'Data flowing across {flow.name} may be tampered with by an attacker. This may lead to denial of service, elevation of privilege or information disclosure in {target.name}. Crafted input may also change program execution to the attacker\'s choosing. Failure to verify input is a root cause of many exploitable issues; consider every input path and parser.',
+    mitigation: 'Validate all input with an allow-list approach (type, length, format, range) at the trust boundary. Use schema validation and safe parsers; reject rather than sanitize where possible. Prefer memory-safe languages and compile with exploit mitigations (ASLR, DEP, CFG).',
     when: [['target.type', 'eq', 'process'], ['target.props.validatesInput', 'ne', 'Yes']],
   },
   {
@@ -127,7 +129,7 @@ export const DEFAULT_RULES = [
 
   /* --------------------------------------------------------- Repudiation */
   {
-    id: 'R01', scope: 'interaction', category: 'R', priority: 'Medium', focus: 'target',
+    id: 'R01', scope: 'interaction', category: 'R', priority: 'Medium', focus: 'target', dedupeKey: 'target',
     title: 'Potential Data Repudiation by {target.name}',
     description: '{target.name} claims that it did not receive data from a source outside the trust boundary. Consider using logging or auditing to record the source, time, and summary of the received data.',
     mitigation: 'Log security-relevant events (who, what, when, from where) to an append-only store; synchronise clocks; include correlation IDs.',
@@ -185,7 +187,7 @@ export const DEFAULT_RULES = [
     when: [['target.type', 'eq', 'external'], ['flow.props.carriesSensitiveData', 'eq', 'Yes']],
   },
   {
-    id: 'I05', scope: 'interaction', category: 'I', priority: 'Low', focus: 'target',
+    id: 'I05', scope: 'interaction', category: 'I', priority: 'Low', focus: 'target', dedupeKey: 'target',
     title: 'Information Disclosure Through Error Messages of {target.name}',
     description: '{target.name} may return verbose error messages, stack traces or version banners to {source.name}, helping an attacker map the system.',
     mitigation: 'Return generic error messages to callers, log details server-side, and remove version banners and debug endpoints in production.',
@@ -194,7 +196,7 @@ export const DEFAULT_RULES = [
 
   /* --------------------------------------------------- Denial of service */
   {
-    id: 'D01', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'target',
+    id: 'D01', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'target', dedupeKey: 'target',
     title: 'Potential Process Crash or Stop for {target.name}',
     description: '{target.name} crashes, halts, stops or runs slowly; in all cases violating an availability metric.',
     mitigation: 'Bound input sizes and processing time, handle errors defensively, run multiple instances behind health checks, and auto-restart failed processes.',
@@ -238,18 +240,11 @@ export const DEFAULT_RULES = [
     when: [['target.type', 'eq', 'process'], ['source.type', 'in', ['process', 'external']], ['flow.crossesBoundary', 'eq', true]],
   },
   {
-    id: 'E02', scope: 'interaction', category: 'E', priority: 'High', focus: 'target',
+    id: 'E02', scope: 'interaction', category: 'E', priority: 'High', focus: 'target', dedupeKey: 'target',
     title: '{target.name} May be Subject to Elevation of Privilege Using Remote Code Execution',
     description: '{source.name} may be able to remotely execute code for {target.name}.',
     mitigation: 'Keep dependencies patched, avoid dynamic code evaluation, run with least privilege in an isolated sandbox/container, and use memory-safe languages where possible.',
     when: [['target.type', 'eq', 'process'], ['flow.crossesBoundary', 'eq', true], { any: [['target.props.internetFacing', 'eq', 'Yes'], ['target.props.validatesInput', 'ne', 'Yes']] }],
-  },
-  {
-    id: 'E03', scope: 'interaction', category: 'E', priority: 'Medium', focus: 'target',
-    title: 'Elevation by Changing the Execution Flow in {target.name}',
-    description: 'An attacker may pass data into {target.name} in order to change the flow of program execution within {target.name} to the attacker\'s choosing.',
-    mitigation: 'Validate input strictly, use safe parsers, compile with exploit mitigations (ASLR, DEP, CFG) and prefer memory-safe languages.',
-    when: [['target.type', 'eq', 'process'], ['target.props.validatesInput', 'ne', 'Yes']],
   },
   {
     id: 'E04', scope: 'interaction', category: 'E', priority: 'Medium', focus: 'target',
@@ -305,7 +300,7 @@ export const DEFAULT_RULES = [
 
   /* ------------------------------------------------ Kafka / event streams */
   {
-    id: 'K01', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
+    id: 'K01', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow', supersedes: ['S03', 'S07'],
     title: 'Unauthenticated Producer Writes to {target.name}',
     description: '"{flow.name}" does not declare client authentication, so any network peer could produce events to {target.name} while impersonating {source.name}.',
     mitigation: 'Require SASL (SCRAM / OAUTHBEARER) or mTLS client authentication and enforce per-topic ACLs for producers.',
@@ -328,14 +323,14 @@ export const DEFAULT_RULES = [
     when: [WS, ['target.type', 'eq', 'process'], ['flow.props.authentication', 'eq', 'Cookie / Session'], { any: [['source.type', 'eq', 'external'], ['source.subtype', 'in', ['Browser Client (SPA)', 'Web Application']]] }],
   },
   {
-    id: 'W02', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow',
+    id: 'W02', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow', supersedes: ['I01'],
     title: 'Unencrypted WebSocket (ws://) on {flow.name}',
     description: '"{flow.name}" uses a WebSocket connection that is not declared as encrypted. Messages, session tokens and the handshake cookies can be read or modified by anyone on the network path.',
     mitigation: 'Use wss:// (TLS 1.2+) only, reject ws:// connections and mixed content, and enable HSTS on the host serving the socket.',
     when: [['flow.subtype', 'in', ['WebSocket', 'WebSocket (ws://)']], ['flow.props.encrypted', 'ne', 'Yes']],
   },
   {
-    id: 'W03', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow',
+    id: 'W03', scope: 'interaction', category: 'S', priority: 'High', focus: 'flow', supersedes: ['S03', 'S07'],
     title: 'Unauthenticated WebSocket Handshake to {target.name}',
     description: 'The upgrade request for "{flow.name}" does not declare an authentication mechanism, so anyone who can reach {target.name} may open a socket and subscribe to or publish messages.',
     mitigation: 'Authenticate during the handshake (token in a subprotocol / first message, or a validated session) and close connections that fail to authenticate within a short timeout.',
@@ -404,7 +399,7 @@ export const DEFAULT_RULES = [
 
   /* ------------------------------------------- Penetration-testing threats */
   {
-    id: 'P01', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow',
+    id: 'P01', scope: 'interaction', category: 'I', priority: 'High', focus: 'flow', supersedes: ['I01', 'T02'],
     title: 'Cleartext Legacy Protocol ({flow.subtype}) on {flow.name}',
     description: '"{flow.name}" uses {flow.subtype} without declared encryption, exposing data and any transmitted credentials in cleartext. Any attacker with a foothold on the network path (including inside the perimeter) can sniff or modify it.',
     mitigation: 'Replace with the secure equivalent (SSH instead of Telnet, SFTP/FTPS instead of FTP/TFTP, HTTPS, LDAPS, SNMPv3 with privacy) and disable the legacy service.',
@@ -488,7 +483,7 @@ export const DEFAULT_RULES = [
     when: [['flow.subtype', 'in', ['SMTP', 'Email (SMTP)']]],
   },
   {
-    id: 'P13', scope: 'interaction', category: 'T', priority: 'High', focus: 'flow',
+    id: 'P13', scope: 'interaction', category: 'T', priority: 'High', focus: 'flow', supersedes: ['S07'],
     title: 'Unauthenticated Industrial Control Commands on {flow.name}',
     description: '{flow.subtype} has no built-in authentication. Anyone on the OT / field network can read values or write set-points and commands to {target.name}, with possible safety impact.',
     mitigation: 'Segment OT networks (IEC 62443 zones and conduits), allow-list masters, use secure protocol variants (DNP3 SA, OPC UA with security) and deploy OT-aware monitoring.',

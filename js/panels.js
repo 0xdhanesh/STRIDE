@@ -7,14 +7,14 @@ import { icon, hydrateIcons } from './icons.js';
 import { STENCILS, STRIDE, STRIDE_BY_KEY, PRIORITIES, STROKES, FILLS, BOUNDARY_COLOR } from './stencils.js';
 import { applySubtype, deleteElements, duplicateElements, reorder, reverseFlow, fitNote } from './ops.js';
 import { threatList, isOpen } from './engine.js';
-import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity, updateThreat, matchesThreat } from './threats.js';
+import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity, updateThreat, matchesThreat, contributingFlowText } from './threats.js';
 import { renderThreatSummary } from './summary.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const TOOL_ICON = { process: 'process', external: 'external', store: 'store', flow: 'flow', boundary: 'boundary', boundaryLine: 'boundaryLine', note: 'text' };
 const THREATABLE = ['process', 'external', 'store', 'flow'];
 
-const threatsFor = (id) => threatList(store.model).filter((t) => (t.flowId === id || (!t.flowId && t.elementId === id)) && !t.orphan);
+const threatsFor = (id) => threatList(store.model).filter((t) => (t.flowId === id || (!t.flowId && t.elementId === id) || t.contributingFlows?.some((f) => f.id === id)) && !t.orphan);
 
 /* ================================================================ properties */
 
@@ -187,7 +187,7 @@ export function initThreatPanel(canvas) {
     const sel = store.ui.selection;
     return threatList(store.model).filter((t) => {
       if (t.diagramId && t.diagramId !== d.id) return false;
-      if (f.scope === 'selection' && sel.size) return sel.has(t.flowId) || sel.has(t.elementId);
+      if (f.scope === 'selection' && sel.size) return sel.has(t.flowId) || sel.has(t.elementId) || t.contributingFlows?.some((flow) => sel.has(flow.id));
       return true;
     });
   };
@@ -217,7 +217,7 @@ export function initThreatPanel(canvas) {
       return `<div class="t-row${t.key === store.ui.activeThreat ? ' active' : ''}" data-key="${esc(t.key)}" role="listitem" tabindex="0">
         <span class="cat" style="background:${c.color}" title="${c.name}">${c.key}</span>
         <div><div class="t-title">${esc(t.title)}${t.orphan ? '<span class="orphan-tag" title="The interaction for this threat no longer exists">orphaned</span>' : ''}${!t.auto ? '<span class="orphan-tag">custom</span>' : ''}</div>
-          <div class="t-sub">${esc(t.interaction)}</div>${t.owner ? `<div class="t-sub">Owner: ${esc(t.owner)}</div>` : ''}</div>
+          <div class="t-sub">${esc(t.interaction)}</div>${t.contributingFlows?.length ? `<div class="t-sub">${esc(contributingFlowText(t))}</div>` : ''}${t.owner ? `<div class="t-sub">Owner: ${esc(t.owner)}</div>` : ''}</div>
         <div class="t-meta"><span class="t-id">#${t.id}</span><span class="state" data-s="${STATUS_LABELS[threatStatus(t)]}">${STATUS_LABELS[threatStatus(t)]}</span><span class="prio" data-p="${threatSeverity(t)}">${threatSeverity(t)}</span></div>
       </div>`;
     }).join('');
@@ -225,7 +225,7 @@ export function initThreatPanel(canvas) {
 
   function renderEditor() {
     const t = store.model.threats[store.ui.activeThreat];
-    if (!t) { editor.hidden = true; editor.innerHTML = ''; return; }
+    if (!t || t.suppressed) { editor.hidden = true; editor.innerHTML = ''; return; }
     editor.hidden = false;
     const opt = (arr, v, label = (x) => x) => arr.map((x) => `<option value="${esc(x)}"${x === v ? ' selected' : ''}>${esc(label(x))}</option>`).join('');
     editor.innerHTML = `
@@ -241,6 +241,7 @@ export function initThreatPanel(canvas) {
       </div>
       <label class="field"><span>Owner</span><input data-tf="owner" value="${esc(t.owner)}" placeholder="Person or team responsible"></label>
       <label class="field"><span>Interaction</span><input value="${esc(t.interaction)}" disabled></label>
+      ${t.contributingFlows?.length ? `<label class="field"><span>Contributing flows</span><textarea rows="3" disabled>${esc(contributingFlowText(t))}</textarea></label>` : ''}
       <label class="field"><span>Description</span><textarea data-tf="description" rows="4">${esc(t.description)}</textarea></label>
       <label class="field"><span>Justification</span><textarea data-tf="justification" rows="2" placeholder="Why was this status chosen? Include the reason for acceptance or non-applicability.">${esc(t.justification)}</textarea></label>
       <label class="field"><span>Notes</span><textarea data-tf="notes" rows="3" placeholder="Review notes, evidence references, and follow-up actions">${esc(t.notes)}</textarea></label>

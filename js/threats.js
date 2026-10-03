@@ -8,6 +8,7 @@ const LEGACY_STATE = { open: 'Not Started', mitigated: 'Mitigated', accepted: 'A
 
 export const threatStatus = (t) => STATUSES.includes(t.status) ? t.status : Object.hasOwn(LEGACY_STATUS, t.state) ? LEGACY_STATUS[t.state] : 'open';
 export const threatSeverity = (t) => PRIORITIES.includes(t.severity) ? t.severity : PRIORITIES.includes(t.priority) ? t.priority : 'Medium';
+export const contributingFlowText = (t) => (t.contributingFlows || []).map((f) => `${f.interaction} [${f.id}]`).join('\n');
 
 export function validateReview(t) {
   if (t.status != null && !STATUSES.includes(t.status)) throw new Error('Invalid threat status.');
@@ -39,6 +40,6 @@ export function matchesThreat(t, { text = '', status = '', severity = '', catego
   if (severity && threatSeverity(t) !== severity) return false;
   if (category && t.category !== category) return false;
   const query = text.trim().toLowerCase();
-  return !query || [t.id, t.title, t.description, t.interaction, t.justification, t.notes, t.owner, t.mitigation]
+  return !query || [t.id, t.title, t.description, t.interaction, contributingFlowText(t), t.justification, t.notes, t.owner, t.mitigation]
     .join(' ').toLowerCase().includes(query.replace(/^#(?=\d)/, ''));
 }

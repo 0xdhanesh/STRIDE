@@ -2,7 +2,7 @@
 import { normalizeModel } from './store.js';
 import { activeRules, threatList, threatStats, validate } from './engine.js';
 import { STRIDE, STENCILS } from './stencils.js';
-import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity } from './threats.js';
+import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity, contributingFlowText } from './threats.js';
 import { diagramToSVG } from './render.js';
 import { esc } from './util.js';
 
@@ -49,7 +49,7 @@ export function threatDetails(t) {
     ['Record', `${t.auto ? `Rule ${t.ruleId}` : 'Custom threat'}${t.orphan ? ' - orphaned (retained review)' : ''}`],
     ['Description', t.description], ['Mitigation', t.mitigation], ['Notes', t.notes], ['Justification', t.justification],
     ['Suggested mitigation', t.mitigationHint], ['Created', t.created], ['Last reviewed', t.modified],
-    ['Stable key', t.key],
+    ['Stable key', t.key], ...(t.contributingFlows?.length ? [['Contributing flows', contributingFlowText(t)]] : []),
   ];
 }
 

@@ -81,7 +81,7 @@ const elCtx = (el) => ({
 
 /* ------------------------------------------------------------- generation */
 
-export function generateThreats(model, rules = activeRules(model)) {
+export function generateThreats(model, rules = activeRules(model), { includeSuppressed = false } = {}) {
   const out = [];
   const interactionRules = rules.filter((r) => (r.scope || 'interaction') === 'interaction');
   const elementRules = rules.filter((r) => r.scope === 'element');
@@ -97,17 +97,34 @@ export function generateThreats(model, rules = activeRules(model)) {
         source: elCtx(a), target: elCtx(b),
         flow: { ...elCtx(flow), crossesBoundary: crossing.length > 0, boundaries: crossing.join(', ') || 'none' },
       };
+      const matching = [];
       for (const rule of interactionRules) {
         const focusEl = rule.focus === 'source' ? a : rule.focus === 'target' ? b : flow;
         if (flow.outOfScope || focusEl.outOfScope) continue;
         if (!evalCond(rule.when, ctx)) continue;
-        out.push({
+        matching.push({ rule, threat: {
           key: `${d.id}|${flow.id}|${rule.id}`, ruleId: rule.id, diagramId: d.id, flowId: flow.id, elementId: focusEl.id,
           category: rule.category, priority: rule.priority || 'Medium',
           title: interpolate(rule.title, ctx), description: interpolate(rule.description, ctx),
           mitigationHint: interpolate(rule.mitigation || '', ctx),
           interaction: `${ctx.source.name} → ${ctx.target.name}${flow.name ? ` (${flow.name})` : ''}`,
-        });
+        } });
+      }
+      // Evaluate supersession before grouping so it cannot hide findings on
+      // other flows into the same endpoint. Rule order does not affect this.
+      for (const { rule, threat } of matching) {
+        const supersededBy = matching.filter((m) => m.rule !== rule && m.rule.supersedes?.includes(rule.id)).map((m) => m.rule.id);
+        if (supersededBy.length) { threat.suppressed = true; threat.supersededBy = supersededBy; }
+        if (rule.dedupeKey === 'target' || rule.dedupeKey === 'source') {
+          const endpoint = rule.dedupeKey === 'target' ? b : a;
+          threat.key = `${d.id}|${rule.dedupeKey}:${endpoint.id}|${rule.id}`;
+          threat.elementId = endpoint.id;
+          threat.flowId = null;
+          threat.dedupeKey = rule.dedupeKey;
+          threat.contributingFlows = [{ id: flow.id, sourceId: a.id, targetId: b.id, name: flow.name || '', interaction: threat.interaction }];
+          threat.interaction = endpoint.name || '(unnamed)';
+        }
+        out.push(threat);
       }
     }
     for (const el of d.elements) {
@@ -125,7 +142,23 @@ export function generateThreats(model, rules = activeRules(model)) {
       }
     }
   }
-  return out;
+  const groups = new Map();
+  for (const threat of out) {
+    if (!groups.has(threat.key)) groups.set(threat.key, []);
+    groups.get(threat.key).push(threat);
+  }
+  return [...groups.values()].flatMap((matches) => {
+    const visible = matches.filter((t) => !t.suppressed);
+    if (!visible.length && !includeSuppressed) return [];
+    const contributors = visible.length ? visible : matches;
+    const result = { ...contributors[0] };
+    if (result.dedupeKey) {
+      result.contributingFlows = contributors.flatMap((t) => t.contributingFlows).sort((a, b) => a.id.localeCompare(b.id));
+      // Keep interpolation from every contributing flow, not just the first.
+      for (const field of ['title', 'description', 'mitigationHint']) result[field] = [...new Set(contributors.map((t) => t[field]))].join('\n\n');
+    }
+    return [result];
+  });
 }
 
 const untouched = (t) => threatStatus(t) === 'open' && (!t.state || t.state === 'Not Started' || t.state === 'Open') &&
@@ -137,11 +170,24 @@ export function syncThreats(model) {
   model.threats ||= {};
   model.nextThreatId ||= 1;
   const seen = new Set();
-  for (const g of generateThreats(model)) {
+  for (const g of generateThreats(model, activeRules(model), { includeSuppressed: true })) {
     seen.add(g.key);
-    const t = model.threats[g.key];
+    let t = model.threats[g.key];
+    if (g.dedupeKey && !g.suppressed) {
+      const flowIds = new Set(g.contributingFlows.map((f) => f.id));
+      const previous = Object.values(model.threats).filter((old) => old.auto && old.ruleId === g.ruleId && old.diagramId === g.diagramId && flowIds.has(old.flowId));
+      // Reuse a reviewed legacy record before an untouched one. Other review
+      // records remain in the saved model, hidden behind their merged finding.
+      previous.sort((a, b) => Number(untouched(a)) - Number(untouched(b)) || a.id - b.id);
+      if (!t && previous.length) {
+        t = previous.shift(); delete model.threats[t.key];
+        t.key = g.key; model.threats[g.key] = t;
+      }
+      for (const old of previous) { old.mergedInto = g.key; old.suppressed = true; old.orphan = false; }
+    }
+    if (g.suppressed && !t) continue;
     if (!t) {
-      model.threats[g.key] = {
+      t = model.threats[g.key] = {
         id: model.nextThreatId++, key: g.key, auto: true, ruleId: g.ruleId,
         diagramId: g.diagramId, flowId: g.flowId, elementId: g.elementId,
         category: g.category, priority: g.priority, state: 'Not Started',
@@ -156,9 +202,16 @@ export function syncThreats(model) {
       t.mitigationHint = g.mitigationHint;
       if (!t.customText) { t.title = g.title; t.description = g.description; }
     }
+    t.flowId = g.flowId; t.elementId = g.elementId;
+    delete t.mergedInto;
+    for (const field of ['dedupeKey', 'contributingFlows', 'suppressed', 'supersededBy']) {
+      if (g[field] !== undefined) t[field] = g[field]; else delete t[field];
+    }
   }
   for (const [key, t] of Object.entries(model.threats)) {
     if (!t.auto || seen.has(key)) continue;
+    if (t.mergedInto && seen.has(t.mergedInto)) continue;
+    delete t.suppressed; delete t.supersededBy; delete t.mergedInto;
     if (untouched(t)) delete model.threats[key];
     else t.orphan = true;
   }
@@ -169,7 +222,7 @@ export function syncThreats(model) {
   }
 }
 
-export const threatList = (model) => Object.values(model.threats || {}).sort((a, b) => a.id - b.id);
+export const threatList = (model) => Object.values(model.threats || {}).filter((t) => !t.suppressed).sort((a, b) => a.id - b.id);
 export const isOpen = (t) => threatStatus(t) === 'open';
 
 export function threatStats(threats) {
@@ -227,7 +280,7 @@ export function validate(model) {
     if (flows.length && !d.elements.some((e) => e.type === 'boundary' || e.type === 'boundaryLine'))
       info(`Diagram "${d.name}" has no trust boundaries; boundary-crossing threats will not be generated.`, d);
   }
-  const orphans = Object.values(model.threats || {}).filter((t) => t.orphan);
+  const orphans = threatList(model).filter((t) => t.orphan);
   if (orphans.length) msgs.push({ level: 'info', text: `${orphans.length} threat(s) no longer match the diagram but were kept because you edited them.`, threatIds: orphans.map((t) => t.id) });
   return msgs;
 }
@@ -235,7 +288,7 @@ export function validate(model) {
 // Per-element counts used for the badges drawn on the canvas in Analysis view.
 export function threatBadges(model, diagramId) {
   const map = new Map();
-  for (const t of Object.values(model.threats || {})) {
+  for (const t of threatList(model)) {
     if (t.diagramId !== diagramId || t.orphan) continue;
     const id = t.flowId || t.elementId;
     if (!id) continue;
