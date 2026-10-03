@@ -630,11 +630,53 @@ export function validateRules(rules) {
   if (!Array.isArray(rules) || !rules.length) throw new Error('Template must be a non-empty array of rules.');
   const ids = new Set();
   for (const r of rules) {
-    if (!r || typeof r !== 'object') throw new Error('Every rule must be an object.');
-    for (const k of ['id', 'category', 'title', 'when']) if (r[k] == null) throw new Error(`Rule ${r.id || '?'} is missing "${k}".`);
-    if (!'STRIDE'.includes(r.category) || r.category.length !== 1) throw new Error(`Rule ${r.id}: category must be one of S,T,R,I,D,E.`);
+    if (!r || typeof r !== 'object' || Array.isArray(r)) throw new Error('Rule ?: every rule must be an object.');
+    const fail = (message) => { throw new Error(`Rule ${r.id ?? '?'}: ${message}`); };
+    for (const k of ['id', 'category', 'title', 'when']) if (!Object.hasOwn(r, k) || r[k] == null) fail(`missing "${k}".`);
+    if (typeof r.id !== 'string' || !r.id.trim()) fail('id must be a non-empty string.');
+    if (!['S', 'T', 'R', 'I', 'D', 'E'].includes(r.category)) fail('category must be one of S,T,R,I,D,E.');
+    if (typeof r.title !== 'string') fail('title must be text.');
+    for (const k of ['description', 'mitigation']) if (Object.hasOwn(r, k) && typeof r[k] !== 'string') fail(`${k} must be text.`);
     if (ids.has(r.id)) throw new Error(`Duplicate rule id ${r.id}.`);
     ids.add(r.id);
+    for (const [field, values] of [
+      ['scope', ['interaction', 'element']], ['priority', ['High', 'Medium', 'Low']],
+      ['focus', ['source', 'target', 'flow', 'element']], ['dedupeKey', ['target', 'source', 'flow']],
+    ]) if (Object.hasOwn(r, field) && !values.includes(r[field])) fail(`${field} must be one of ${values.join(', ')}.`);
+    if (Object.hasOwn(r, 'supersedes') && (!Array.isArray(r.supersedes) || r.supersedes.some((id) => typeof id !== 'string' || !id.trim()))) fail('supersedes must be an array of rule IDs.');
+
+    const path = (value) => {
+      if (typeof value !== 'string' || !value || value.split('.').some((part) => !part)) fail(`invalid condition path ${JSON.stringify(value)}.`);
+      const parts = value.split('.');
+      if (parts.some((part) => ['__proto__', 'prototype', 'constructor'].includes(part))) fail(`unsafe path "${value}".`);
+      if (!['source', 'target', 'flow', 'element'].includes(parts[0])) fail(`invalid path root in "${value}".`);
+      if (r.scope === 'element' && parts[0] !== 'element') fail(`element-scope condition cannot reference "${value}".`);
+    };
+    const condition = (cond, depth = 0) => {
+      if (depth > 64) fail('condition nesting exceeds 64 levels.');
+      if (Array.isArray(cond)) {
+        if (typeof cond[0] === 'string') {
+          if (cond.length !== 3) fail('clauses must be [path, op, value].');
+          const [p, op, value] = cond; path(p);
+          if (!['eq', 'ne', 'in', 'nin', 'exists'].includes(op)) fail(`unsupported operator "${op}".`);
+          if (['in', 'nin'].includes(op) && !Array.isArray(value)) fail(`operator "${op}" requires an array value.`);
+          if (op === 'exists' && typeof value !== 'boolean') fail('operator "exists" requires a boolean value.');
+        } else for (const child of cond) condition(child, depth + 1);
+        return;
+      }
+      if (cond && typeof cond === 'object' && Object.keys(cond).length === 1) {
+        if (Object.hasOwn(cond, 'any') && Array.isArray(cond.any)) {
+          for (const child of cond.any) condition(child, depth + 1);
+          return;
+        }
+        if (Object.hasOwn(cond, 'not')) { condition(cond.not, depth + 1); return; }
+      }
+      fail('malformed condition; expected [path, op, value], an AND array, {any:[...]}, or {not: condition}.');
+    };
+    condition(r.when);
+  }
+  for (const r of rules) for (const id of r.supersedes || []) {
+    if (!ids.has(id)) throw new Error(`Rule ${r.id}: supersedes references unknown rule "${id}".`);
   }
   return rules;
 }
