@@ -345,7 +345,10 @@ tests/            Engine tests and a .tm7 fixture
 scripts/          Standalone HTML packaging and development-only PDF QA
 ```
 
-Run `npm test` for persistence, review, report, and offline regression checks. For PDF layout QA,
+Run `npm test` for persistence, review, report, and offline regression checks.
+Run `npm run test:acceptance` to generate reviewed local-file and report artifacts while checking
+save/reopen, report JSON restoration, and exports with network APIs blocked. See [REVIEW.md](REVIEW.md)
+for the verification results, code map, rule changes, and remaining native browser checks. For PDF layout QA,
 run `node scripts/report-qa.mjs`, then `python3 scripts/verify-report-pdf.py` in a development environment
 with PyMuPDF installed. The verifier checks retained text, interaction headings, page bounds and footers,
 and creates PNGs under `tmp/pdfs/` for visual review. PyMuPDF is a development tool only; exported PDFs
