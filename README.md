@@ -8,6 +8,8 @@ and security data must stay on the machine.
 
 **[Open the app](https://0xdhanesh.github.io/STRIDE/)**
 
+[Feature reference](USAGE.md) · [Step-by-step modeling guide](GUIDE.md)
+
 ## Client-side by design
 
 - Diagrams, threat generation, reviews, imports and report exports are processed locally in the browser.
