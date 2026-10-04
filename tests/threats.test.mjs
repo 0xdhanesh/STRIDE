@@ -1,18 +1,92 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity, updateThreat, matchesThreat } from '../js/threats.js';
-import { syncThreats, threatStats, threatBadges, isOpen } from '../js/engine.js';
-import { Store, normalizeModel } from '../js/store.js';
+import { syncThreats, threatList, threatStats, threatBadges, isOpen } from '../js/engine.js';
+import { Store, store, normalizeModel, newModel } from '../js/store.js';
 import { sampleModel } from '../js/sample.js';
 import { STRIDE } from '../js/stencils.js';
 import { serializeModel, readModelFile, buildReport } from '../js/io.js';
 import { renderThreatSummary } from '../js/summary.js';
+import { makeElement } from '../js/ops.js';
+import { initPropsPanel, initThreatPanel } from '../js/panels.js';
 
 function model() {
   const m = normalizeModel(sampleModel());
   syncThreats(m);
   return m;
 }
+
+test('properties View and canvas badges agree for an entity with a boundary-crossing flow', () => {
+  const m = newModel(), diagram = m.diagrams[0];
+  const entity = makeElement(m, 'external', { x: 0, y: 0 });
+  const process = makeElement(m, 'process', { x: 400, y: 0 });
+  const boundary = makeElement(m, 'boundary', { x: 250, y: -150 }, { w: 300, h: 300 });
+  const flow = makeElement(m, 'flow', { x: 0, y: 0 });
+  Object.assign(flow, { sourceId: entity.id, targetId: process.id, x2: 400 });
+  diagram.elements.push(entity, process, boundary, flow); syncThreats(m);
+  const spoofing = threatList(m).find((t) => t.ruleId === 'S01');
+  assert.ok(spoofing); assert.equal(spoofing.elementId, entity.id); assert.equal(spoofing.flowId, flow.id);
+  assert.ok(threatList(m).some((t) => t.ruleId === 'S02'), 'Fixture must cross a boundary');
+  m.threats.orphan = { ...structuredClone(spoofing), key: 'orphan', id: m.nextThreatId++, orphan: true };
+
+  // Exercise the real renderers and View handler; substitute only DOM nodes.
+  const nodes = new Map(), oldDocument = globalThis.document, oldWidth = globalThis.innerWidth;
+  const oldModel = store.model, oldUI = store.ui, listeners = new Set(store.listeners);
+  globalThis.innerWidth = 1200;
+  globalThis.document = { querySelector: (selector) => {
+    if (!nodes.has(selector)) nodes.set(selector, {
+      innerHTML: '', handlers: {}, querySelectorAll: () => [],
+      addEventListener(name, handler) { this.handlers[name] = handler; }, showModal() {},
+    });
+    return nodes.get(selector);
+  } };
+  try {
+    store.model = m;
+    store.ui = { ...structuredClone(oldUI), diagramId: diagram.id, selection: new Set([entity.id]), analysis: false,
+      filter: { text: '', status: '', severity: '', category: '', scope: 'all' }, activeThreat: spoofing.key };
+    const props = initPropsPanel({}), threats = initThreatPanel({});
+    for (const element of [entity, process, flow]) {
+      store.ui.selection = new Set([element.id]); props.render();
+      const count = Number(/class="threat-sum"><span>(\d+) threat/.exec(nodes.get('#props').innerHTML)?.[1]);
+      assert.ok(count > 0, `${element.type} must have threats`);
+      nodes.get('#props').handlers.click({ target: { closest: () => ({ dataset: { a: 'show-threats' } }) } });
+      const list = nodes.get('#threat-list').innerHTML;
+      assert.equal((list.match(/role="listitem"/g) || []).length, count, element.type);
+      assert.ok(!list.includes('data-key="orphan"'));
+      assert.equal(threatBadges(m, diagram.id).get(element.id).total, count, element.type);
+    }
+    store.ui.selection = new Set([entity.id, flow.id]); threats.render();
+    const list = nodes.get('#threat-list').innerHTML;
+    assert.equal(list.split(`data-key="${spoofing.key}"`).length - 1, 1, 'Selecting both endpoints must not duplicate a threat');
+    assert.match(nodes.get('#threat-editor').innerHTML, new RegExp(`Threat #${spoofing.id}.*S01`));
+    spoofing.ruleId = '<img src=x onerror=alert(1)>'; threats.render();
+    assert.match(nodes.get('#threat-editor').innerHTML, /&lt;img src=x onerror=alert\(1\)&gt;/);
+    assert.doesNotMatch(nodes.get('#threat-editor').innerHTML, /<img\b/);
+  } finally {
+    globalThis.document = oldDocument;
+    if (oldWidth === undefined) delete globalThis.innerWidth; else globalThis.innerWidth = oldWidth;
+    store.model = oldModel; store.ui = oldUI; store.listeners = listeners;
+  }
+});
+
+test('badges count each threat once for every related element and contributing flow', () => {
+  const base = { id: 1, key: 'related', diagramId: 'd', status: 'open', severity: 'Low', flowId: 'f1', elementId: 'entity',
+    contributingFlows: [{ id: 'f1' }, { id: 'f2' }, { id: 'f2' }] };
+  const m = { threats: {
+    related: base,
+    pending: { id: 2, key: 'pending', diagramId: 'd', status: 'mitigated', needsReview: true, severity: 'High', flowId: 'f2', elementId: 'entity' },
+    closed: { id: 3, key: 'closed', diagramId: 'd', status: 'mitigated', severity: 'High', flowId: 'f1', elementId: 'f1' },
+    orphan: { ...base, id: 4, key: 'orphan', orphan: true },
+    hidden: { ...base, id: 5, key: 'hidden', suppressed: true },
+    history: { ...base, id: 6, key: 'history', reviewMergedInto: 'related' },
+    elsewhere: { ...base, id: 7, key: 'elsewhere', diagramId: 'other' },
+  } };
+  assert.deepEqual(threatBadges(m, 'd'), new Map([
+    ['f1', { total: 2, open: 1, high: false }],
+    ['entity', { total: 2, open: 2, high: true }],
+    ['f2', { total: 2, open: 2, high: true }],
+  ]));
+});
 
 test('new threats start open with review fields and rule-based severity', () => {
   const m = model();

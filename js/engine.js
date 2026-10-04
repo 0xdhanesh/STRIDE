@@ -4,7 +4,7 @@
 
 import { DEFAULT_RULES } from './rules.js';
 import { STRIDE, PRIORITIES } from './stencils.js';
-import { STATUSES, STATUS_LABELS, threatStatus, effectiveThreatStatus, threatSeverity } from './threats.js';
+import { STATUSES, STATUS_LABELS, threatStatus, effectiveThreatStatus, threatSeverity, threatBelongsToElement } from './threats.js';
 import { center, lineGeom, pointInRect, quadPolyline, polylinesIntersect } from './util.js';
 
 const ENDPOINT_TYPES = ['process', 'external', 'store'];
@@ -318,13 +318,15 @@ export function validate(model) {
 export function threatBadges(model, diagramId) {
   const map = new Map();
   for (const t of threatList(model)) {
-    if (t.diagramId !== diagramId || t.orphan) continue;
-    const id = t.flowId || t.elementId;
-    if (!id) continue;
-    const b = map.get(id) || { total: 0, open: 0, high: false };
-    b.total++;
-    if (isOpen(t)) { b.open++; if (threatSeverity(t) === 'High') b.high = true; }
-    map.set(id, b);
+    if (t.diagramId !== diagramId) continue;
+    const ids = new Set([t.flowId, t.elementId, ...(t.contributingFlows || []).map((flow) => flow.id)]);
+    for (const id of ids) {
+      if (!threatBelongsToElement(t, id)) continue;
+      const b = map.get(id) || { total: 0, open: 0, high: false };
+      b.total++;
+      if (isOpen(t)) { b.open++; if (threatSeverity(t) === 'High') b.high = true; }
+      map.set(id, b);
+    }
   }
   return map;
 }

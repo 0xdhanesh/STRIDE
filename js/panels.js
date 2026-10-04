@@ -7,14 +7,14 @@ import { icon, hydrateIcons } from './icons.js';
 import { STENCILS, STRIDE, STRIDE_BY_KEY, PRIORITIES, STROKES, FILLS, BOUNDARY_COLOR } from './stencils.js';
 import { applySubtype, deleteElements, duplicateElements, reorder, reverseFlow, fitNote } from './ops.js';
 import { threatList, isOpen } from './engine.js';
-import { STATUSES, STATUS_LABELS, threatStatus, effectiveThreatStatus, threatSeverity, updateThreat, matchesThreat, contributingFlowText, reviewNotice } from './threats.js';
+import { STATUSES, STATUS_LABELS, threatStatus, effectiveThreatStatus, threatSeverity, updateThreat, matchesThreat, contributingFlowText, threatBelongsToElement, reviewNotice } from './threats.js';
 import { renderThreatSummary } from './summary.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const TOOL_ICON = { process: 'process', external: 'external', store: 'store', flow: 'flow', boundary: 'boundary', boundaryLine: 'boundaryLine', note: 'text' };
 const THREATABLE = ['process', 'external', 'store', 'flow'];
 
-const threatsFor = (id) => threatList(store.model).filter((t) => (t.flowId === id || (!t.flowId && t.elementId === id) || t.contributingFlows?.some((f) => f.id === id)) && !t.orphan);
+const threatsFor = (id) => threatList(store.model).filter((t) => threatBelongsToElement(t, id));
 
 /* ================================================================ properties */
 
@@ -191,10 +191,10 @@ export function initThreatPanel(canvas) {
 
   const scoped = () => {
     const d = store.diagram;
-    const sel = store.ui.selection;
+    const selectedIds = [...store.ui.selection];
     return threatList(store.model).filter((t) => {
       if (t.diagramId && t.diagramId !== d.id) return false;
-      if (f.scope === 'selection' && sel.size) return sel.has(t.flowId) || sel.has(t.elementId) || t.contributingFlows?.some((flow) => sel.has(flow.id));
+      if (f.scope === 'selection' && selectedIds.length) return selectedIds.some((id) => threatBelongsToElement(t, id));
       return true;
     });
   };
@@ -238,7 +238,7 @@ export function initThreatPanel(canvas) {
     editor.hidden = false;
     const opt = (arr, v, label = (x) => x) => arr.map((x) => `<option value="${esc(x)}"${x === v ? ' selected' : ''}>${esc(label(x))}</option>`).join('');
     editor.innerHTML = `
-      <h3><span class="cat" style="background:${STRIDE_BY_KEY[t.category]?.color}">${esc(t.category)}</span>Threat #${esc(t.id)}
+      <h3><span class="cat" style="background:${STRIDE_BY_KEY[t.category]?.color}">${esc(t.category)}</span>Threat #${esc(t.id)}${t.ruleId ? ` <span class="muted small">${esc(t.ruleId)}</span>` : ''}
         <span style="flex:1"></span>
         <button class="icon-btn small" data-t="locate" title="Show on diagram">${icon('pointer', 16)}</button>
         <button class="icon-btn small" data-t="close" title="Close">${icon('x', 16)}</button></h3>

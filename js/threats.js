@@ -10,6 +10,9 @@ export const threatStatus = (t) => STATUSES.includes(t.status) ? t.status : Obje
 export const effectiveThreatStatus = (t) => t.needsReview ? 'open' : threatStatus(t);
 export const threatSeverity = (t) => PRIORITIES.includes(t.severity) ? t.severity : PRIORITIES.includes(t.priority) ? t.priority : 'Medium';
 export const contributingFlowText = (t) => (t.contributingFlows || []).map((f) => `${f.interaction} [${f.id}]`).join('\n');
+// Shared membership for properties, selected-threat lists and canvas badges.
+export const threatBelongsToElement = (t, id) => !t.orphan && id != null &&
+  (t.flowId === id || t.elementId === id || (t.contributingFlows || []).some((flow) => flow.id === id));
 export const newFlowsSinceReview = (t) => (t.contributingFlows || []).filter((f) => !(t.reviewedFlowIds || []).includes(f.id));
 export function reviewNotice(t) {
   if (!t.needsReview) return '';
