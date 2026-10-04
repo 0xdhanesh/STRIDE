@@ -256,6 +256,88 @@ test('previously hidden open legacy records are folded into existing reviewed gr
   assert.equal(grouped.notes.match(/Hidden unfinished work/g).length, 1);
 });
 
+for (const rereview of [false, true]) test(`legacy merge remains permanent through three rule toggles${rereview ? ' after re-review' : ''}`, () => {
+  const f = fixture(), legacy = { ...rule('T01') }; delete legacy.dedupeKey;
+  f.model.diagrams[0].elements.push({ ...structuredClone(f.flow), id: 'flow2', name: 'Second route' });
+  f.model.template = [legacy]; syncThreats(f.model);
+  const records = threatList(f.model);
+  ['accepted', 'open'].forEach((status, i) => {
+    updateThreat(records[i], 'status', status);
+    updateThreat(records[i], 'notes', `Evidence ${i + 1}\nOriginal detail`);
+    updateThreat(records[i], 'mitigation', `Control ${i + 1}`);
+  });
+  f.model.template = [rule('T01')]; syncThreats(f.model);
+  const grouped = threatList(f.model)[0], initialNotes = grouped.notes;
+  assert.equal(grouped.status, 'open'); assert.equal(grouped.needsReview, true);
+  if (rereview) updateThreat(grouped, 'status', 'mitigated');
+  const review = (t) => Object.fromEntries(['id', 'notes', 'mitigation', 'status', 'reviewedFlowIds', 'needsReview'].map((key) => [key, structuredClone(t[key])]));
+  const saved = review(grouped);
+  const history = Object.values(f.model.threats).filter((t) => t.reviewMergedInto);
+  assert.equal(history.length, 1);
+  const archived = history.map((t) => structuredClone(t));
+  for (let cycle = 0; cycle < 3; cycle++) for (const validatesInput of ['Yes', 'No']) {
+    f.target.props.validatesInput = validatesInput;
+    syncThreats(f.model); syncThreats(f.model);
+    const visible = threatList(f.model).filter((t) => t.ruleId === 'T01');
+    assert.deepEqual(visible.map((t) => t.key), [grouped.key]);
+    assert.equal(visible[0], grouped, 'The same grouped record must be reused');
+    assert.equal(grouped.orphan, validatesInput === 'Yes');
+    assert.equal(visible.filter((t) => !t.orphan).length, validatesInput === 'Yes' ? 0 : 1);
+    assert.deepEqual(review(grouped), saved);
+    assert.equal(grouped.notes, initialNotes, 'Merged notes must remain byte-identical');
+    for (let i = 0; i < history.length; i++) {
+      assert.deepEqual(f.model.threats[history[i].key], archived[i]);
+      assert.equal(history[i].suppressed, true); assert.equal(history[i].orphan, false);
+      assert.ok(!visible.includes(history[i]));
+    }
+  }
+});
+
+test('unreviewed grouped records are hidden while unmatched and reused when matching resumes', () => {
+  const f = fixture(); f.model.template = [rule('T01')]; syncThreats(f.model);
+  const grouped = threatList(f.model)[0], id = grouped.id;
+  for (let i = 0; i < 3; i++) {
+    f.target.props.validatesInput = 'Yes'; syncThreats(f.model);
+    assert.equal(threatList(f.model).length, 0);
+    assert.equal(f.model.threats[grouped.key], grouped);
+    f.target.props.validatesInput = 'No'; syncThreats(f.model);
+    assert.deepEqual(threatList(f.model).map((t) => t.id), [id]);
+    assert.equal(threatList(f.model)[0], grouped);
+  }
+});
+
+test('merged history cannot be reassigned or revived by a per-flow template', () => {
+  const f = fixture(), legacy = { ...rule('T01') }; delete legacy.dedupeKey;
+  f.model.template = [legacy]; syncThreats(f.model);
+  const archived = threatList(f.model)[0];
+  Object.assign(archived, { reviewMergedInto: 'another-group', notes: 'Permanent audit evidence', suppressed: false, orphan: true });
+  assert.equal(threatList(f.model).length, 0, 'History is never visible, even before regeneration');
+  f.model.template = [rule('T01')]; syncThreats(f.model);
+  const grouped = threatList(f.model)[0];
+  assert.equal(grouped.notes, ''); assert.equal(archived.reviewMergedInto, 'another-group');
+  f.model.template = [legacy]; syncThreats(f.model);
+  assert.equal(threatList(f.model).length, 0);
+  assert.equal(f.model.threats[archived.key], archived);
+  assert.equal(archived.notes, 'Permanent audit evidence');
+  assert.equal(archived.reviewMergedInto, 'another-group');
+  assert.equal(archived.suppressed, true); assert.equal(archived.orphan, false);
+});
+
+test('adding previously unmerged evidence never prefixes the existing grouped notes again', () => {
+  const f = fixture(), legacy = { ...rule('T01') }; delete legacy.dedupeKey;
+  f.model.template = [legacy]; syncThreats(f.model);
+  updateThreat(threatList(f.model)[0], 'notes', 'Original evidence');
+  updateThreat(threatList(f.model)[0], 'mitigation', 'Original control');
+  f.model.template = [rule('T01')]; syncThreats(f.model);
+  const grouped = threatList(f.model)[0], notes = grouped.notes, mitigation = grouped.mitigation;
+  f.model.diagrams[0].elements.push({ ...structuredClone(f.flow), id: 'flow2', name: 'Second route' });
+  const extra = generateThreats(f.model, [legacy]).find((t) => t.flowId === 'flow2');
+  f.model.threats[extra.key] = { ...extra, auto: true, id: f.model.nextThreatId++, status: 'open', notes: 'Additional evidence', mitigation: 'Additional control' };
+  syncThreats(f.model);
+  assert.equal(grouped.notes, `${notes}\n\nSecond route: Additional evidence`);
+  assert.equal(grouped.mitigation, `${mitigation}\n\nSecond route: Additional control`);
+});
+
 for (const [first, second, expected] of [
   ['accepted', 'open', 'open'], ['mitigated', 'accepted', 'accepted'], ['not-applicable', 'open', 'open'],
   ['mitigated', 'not-applicable', 'mitigated'],
