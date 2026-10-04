@@ -165,6 +165,7 @@ export function initPropsPanel(canvas) {
       case 'delete': deleteElements(d, ids); store.select([]); store.commit(); break;
       case 'show-threats':
         store.ui.filter.scope = 'selection';
+        store.ui.filter.text = '';
         store.setUI({ analysis: true }, 'analysis');
         break;
     }

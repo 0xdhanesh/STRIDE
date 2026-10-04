@@ -16,7 +16,7 @@ function model() {
   return m;
 }
 
-test('properties View and canvas badges agree for an entity with a boundary-crossing flow', () => {
+test('properties View clears stale search and agrees with canvas badges for a boundary-crossing flow', () => {
   const m = newModel(), diagram = m.diagrams[0];
   const entity = makeElement(m, 'external', { x: 0, y: 0 });
   const process = makeElement(m, 'process', { x: 400, y: 0 });
@@ -49,7 +49,12 @@ test('properties View and canvas badges agree for an entity with a boundary-cros
       store.ui.selection = new Set([element.id]); props.render();
       const count = Number(/class="threat-sum"><span>(\d+) threat/.exec(nodes.get('#props').innerHTML)?.[1]);
       assert.ok(count > 0, `${element.type} must have threats`);
+      nodes.get('#f-text').value = 'earlier search with no matching threats';
+      nodes.get('#f-text').handlers.input();
+      assert.equal((nodes.get('#threat-list').innerHTML.match(/role="listitem"/g) || []).length, 0);
       nodes.get('#props').handlers.click({ target: { closest: () => ({ dataset: { a: 'show-threats' } }) } });
+      assert.equal(store.ui.filter.text, '');
+      assert.equal(nodes.get('#f-text').value, '');
       const list = nodes.get('#threat-list').innerHTML;
       assert.equal((list.match(/role="listitem"/g) || []).length, count, element.type);
       assert.ok(!list.includes('data-key="orphan"'));
