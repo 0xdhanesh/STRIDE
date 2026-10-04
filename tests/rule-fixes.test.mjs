@@ -143,7 +143,7 @@ test('source deduplication is optional; legacy custom templates retain per-flow 
 });
 
 test('E03 is removed and its execution-flow and memory-safety guidance survives in T01', () => {
-  assert.equal(DEFAULT_RULES.length, 81); assert.equal(rule('E03'), undefined);
+  assert.equal(DEFAULT_RULES.length, 97); assert.equal(rule('E03'), undefined);
   assert.match(rule('T01').description, /program execution/);
   assert.match(rule('T01').mitigation, /memory-safe.*ASLR, DEP, CFG/);
 });

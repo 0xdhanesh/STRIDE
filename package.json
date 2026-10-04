@@ -7,6 +7,6 @@
     "start": "python3 -m http.server 8000",
     "build:offline": "node scripts/build-offline.mjs",
     "test:acceptance": "node scripts/report-qa.mjs",
-    "test": "node tests/engine.test.mjs && node --test tests/persistence.test.mjs tests/offline.test.mjs tests/threats.test.mjs tests/reports.test.mjs tests/rule-fixes.test.mjs tests/rule-validation.test.mjs tests/rule-security.test.mjs tests/tm7.test.mjs"
+    "test": "node tests/engine.test.mjs && node --test tests/persistence.test.mjs tests/offline.test.mjs tests/threats.test.mjs tests/reports.test.mjs tests/rule-fixes.test.mjs tests/rule-validation.test.mjs tests/rule-security.test.mjs tests/tm7.test.mjs tests/ai-rules.test.mjs"
   }
 }

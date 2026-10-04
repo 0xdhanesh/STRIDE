@@ -30,7 +30,7 @@ test('report JSON restores the full model losslessly, without trusting derived r
   const m = fixture(), before = structuredClone(m);
   const bundle = createReport(m, { generatedAt: '2026-10-03T12:00:00Z' });
   assert.deepEqual(m, before);
-  assert.equal(bundle.report.rules.length, 81);
+  assert.equal(bundle.report.rules.length, 97);
   assert.equal(bundle.report.diagrams.length, 2);
   for (const d of bundle.report.diagrams) {
     assert.match(d.image.svg, /<svg/);

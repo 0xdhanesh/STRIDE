@@ -27,6 +27,7 @@ const REMOTE_ADMIN = ['RDP', 'VNC', 'SSH', 'Telnet', 'WinRM / PowerShell Remotin
 const EDGE = ['Load Balancer', 'Reverse Proxy', 'CDN / Edge', 'API Gateway', 'Web Application Firewall'];
 const WEB_APPS = ['Web Application', 'Web API / Service', 'GraphQL API', 'Microservice', 'Serverless Function'];
 const ARTIFACT_SOURCES = ['Container Registry', 'Package / Artifact Registry', 'Open-Source Dependency', 'Compromised Supply Chain', 'Source Code Repository'];
+const AGENT = 'AI Agent / LLM App';
 
 // Any WebSocket flow (plain, secure or unspecified).
 const WS = ['flow.subtype', 'in', ['WebSocket', 'WebSocket (ws://)', 'WebSocket Secure (wss://)']];
@@ -296,6 +297,134 @@ export const DEFAULT_RULES = [
     description: 'Prompts and context sent by {source.name} to {target.name} may contain personal or confidential data that the provider could log, retain or use for training.',
     mitigation: 'Minimise and redact data before sending, use enterprise agreements with zero data retention, and classify which data may reach external models.',
     when: [['target.subtype', 'eq', 'LLM Provider API']],
+  },
+
+  /* ------------------------------------------- AI / LLM applications */
+  {
+    // OWASP LLM01:2025 — Prompt Injection.
+    id: 'A01', scope: 'interaction', category: 'T', priority: 'High', focus: 'target', dedupeKey: 'target',
+    title: 'Direct Prompt Injection into {target.name}',
+    description: 'Attacker-controlled input to {target.name} may contain instructions that override the intended task, expose data or trigger unauthorized actions. Ordinary input validation does not stop prompt injection: well-formed input can still manipulate the model. Review every contributing input path, including authenticated callers.',
+    mitigation: 'Treat all model input as untrusted, separate system instructions from untrusted content, and enforce authorization outside the prompt. Constrain available tools and arguments, use least-privilege identities, and require approval for high-impact actions.',
+    when: [['target.subtype', 'eq', AGENT], ['source.subtype', 'nin', ['MCP Server', 'LLM Provider API']], { any: [['source.type', 'eq', 'external'], ['flow.crossesBoundary', 'eq', true]] }],
+  },
+  {
+    // OWASP LLM01:2025 — Prompt Injection.
+    id: 'A02', scope: 'interaction', category: 'T', priority: 'High', focus: 'target', dedupeKey: 'target',
+    title: 'Indirect Prompt Injection via Retrieved Content into {target.name}',
+    description: 'Documents, retrieved passages or third-party content consumed by {target.name} may contain attacker-authored instructions. Content that appears to be reference data can redirect the model, disclose context or influence tool calls; storage in a trusted repository does not make those instructions trustworthy.',
+    mitigation: 'Track content provenance, restrict ingestion sources, and keep retrieved content separate from system instructions. Treat retrieved instructions as untrusted, enforce tool permissions outside the model, and test retrieval paths with adversarial documents before granting access to sensitive actions.',
+    when: [['target.subtype', 'eq', AGENT], { any: [['source.type', 'eq', 'store'], ['source.subtype', 'in', ['Third-Party Service', 'SaaS Application']]] }],
+  },
+  {
+    // OWASP LLM05:2025 — Improper Output Handling.
+    id: 'A03', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
+    title: 'Unvalidated Model Output Used by {target.name}',
+    description: 'Model output from {source.name} reaches {target.name} and must be treated as attacker-influenced data. Using it directly in shells, SQL, HTML or tool arguments can turn manipulated or incorrect output into command execution, injection or unauthorized operations.',
+    mitigation: 'Validate model output against strict schemas before use, parameterize database queries, encode output for its rendering context, and avoid constructing shell commands from generated text. Allow-list tool actions and arguments and enforce authorization at the execution boundary.',
+    when: [['source.subtype', 'in', [AGENT, 'ML Model Serving']], { any: [{ all: [['target.type', 'eq', 'process'], ['target.props.validatesInput', 'ne', 'Yes']] }, ['target.subtype', 'in', ['Browser', 'Browser Client (SPA)']]] }],
+  },
+  {
+    // OWASP LLM07:2025 — System Prompt Leakage.
+    id: 'A04', scope: 'element', category: 'I', priority: 'Medium', focus: 'element',
+    title: 'System Prompt and Embedded Secrets in {element.name} May Be Disclosed',
+    description: 'Users may induce {element.name} to reveal system instructions or sensitive values embedded in its prompt. System prompts are not a confidentiality boundary, and revealing policy text must not grant access to protected data or actions.',
+    mitigation: 'Keep secrets and authorization logic out of prompts. Store credentials in a protected secret store, enforce access decisions in application or tool code, and minimize the internal configuration and sensitive context exposed to the model.',
+    when: [['element.subtype', 'eq', AGENT]],
+  },
+  {
+    // OWASP LLM06:2025 — Excessive Agency.
+    id: 'A05', scope: 'element', category: 'E', priority: 'High', focus: 'element',
+    title: '{element.name} Can Act Without Per-Action Authorization',
+    description: '{element.name} does not declare authorization for each requested action. A manipulated model or malicious user may invoke tools using the agent\'s broader authority, changing records, disclosing data or performing high-impact operations beyond the user\'s entitlement.',
+    mitigation: 'Use user-scoped, short-lived credentials and require each tool to enforce authorization for the actual caller, action and resource. Limit tool capabilities, separate read and write operations, and require human approval bound to the exact arguments of high-impact actions.',
+    when: [['element.subtype', 'eq', AGENT], ['element.props.authorizesRequests', 'ne', 'Yes']],
+  },
+  {
+    // OWASP LLM02:2025 — Sensitive Information Disclosure.
+    id: 'A06', scope: 'interaction', category: 'I', priority: 'High', focus: 'target',
+    title: 'Agent Response May Disclose Data Beyond {target.name}\'s Entitlement',
+    description: 'The response from {source.name} may expose retrieved records, conversation history, secrets or inferred information that {target.name} is not entitled to receive. A model\'s willingness to answer is not an authorization decision, even when the user is authenticated.',
+    mitigation: 'Bind retrieval, conversation state and response data to the actual caller\'s entitlements. Minimize sensitive context, isolate users and tenants, apply output disclosure checks, and test responses with identities that must not see each other\'s data.',
+    when: [['source.subtype', 'eq', AGENT], ['target.type', 'eq', 'external'], ['target.subtype', 'nin', ['LLM Provider API']]],
+  },
+  {
+    // OWASP LLM10:2025 — Unbounded Consumption.
+    id: 'A07', scope: 'interaction', category: 'D', priority: 'Medium', focus: 'target', dedupeKey: 'target',
+    title: 'Unbounded Consumption of {target.name}',
+    description: 'Requests to {target.name} are not declared rate limited. Large prompts, repeated inference, recursive tool calls or long-running tasks can exhaust compute, tokens and service capacity, or cause denial-of-wallet through excessive usage charges.',
+    mitigation: 'Enforce per-user and per-tenant request, token, cost and concurrency budgets outside the model. Bound input/output size, tool-call depth and execution time, support cancellation, and alert or stop work when spending or capacity limits are reached.',
+    when: [['target.subtype', 'in', [AGENT, 'ML Model Serving']], ['flow.props.rateLimited', 'ne', 'Yes'], { any: [['source.type', 'eq', 'external'], ['flow.crossesBoundary', 'eq', true]] }],
+  },
+  {
+    // OWASP LLM08:2025 — Vector and Embedding Weaknesses.
+    id: 'A08', scope: 'interaction', category: 'I', priority: 'High', focus: 'source', dedupeKey: 'source',
+    title: 'Retrieval from {source.name} May Ignore Caller Entitlements',
+    description: '{source.name} does not declare fine-grained access control for retrieved content. Shared indexes or incorrectly scoped searches can return another tenant\'s or user\'s passages, exposing data even when the application authenticates the request.',
+    mitigation: 'Apply retrieval filters using the real authenticated caller and server-controlled tenant and resource entitlements. Preserve access metadata during ingestion, isolate indexes where needed, reject missing identity context, and test cross-user and cross-tenant retrieval through every consumer.',
+    when: [['source.subtype', 'eq', 'Vector Database'], ['source.props.accessControl', 'ne', 'Fine-grained']],
+  },
+  {
+    // OWASP LLM04:2025 / LLM08:2025 — Poisoning and Vector Weaknesses.
+    id: 'A09', scope: 'interaction', category: 'T', priority: 'High', focus: 'target', dedupeKey: 'target',
+    title: 'Poisoned Content Indexed into {target.name}',
+    description: 'Content indexed into {target.name} may be attacker-controlled, misleading or contain instructions designed to influence later retrieval and model responses. Poisoned passages or access metadata can persist beyond the original ingestion request and affect many users.',
+    mitigation: 'Authenticate and authorize ingestion writers, preserve source provenance and ownership metadata, and quarantine untrusted documents for review. Version the corpus, monitor unexpected content changes, test retrieval against poisoned samples, and provide a way to remove and re-index compromised content.',
+    when: [['target.subtype', 'eq', 'Vector Database']],
+  },
+  {
+    // OWASP LLM08:2025 — Vector and Embedding Weaknesses.
+    id: 'A10', scope: 'element', category: 'I', priority: 'Medium', focus: 'element',
+    title: 'Embeddings in {element.name} May Reveal Source Text',
+    description: '{element.name} stores embeddings of personal or sensitive data. Access to embeddings may permit inference or reconstruction of source text through embedding inversion; encryption at rest does not prevent inversion by a caller who can read the decrypted vectors.',
+    mitigation: 'Treat embeddings as sensitive data, restrict direct vector reads and exports, and enforce caller entitlements on retrieval APIs. Minimize or redact source data before embedding, separate tenant data, and assess inversion exposure before distributing embeddings or granting broad query access.',
+    when: [['element.subtype', 'eq', 'Vector Database'], ['element.props.storesPII', 'eq', 'Yes']],
+  },
+  {
+    // OWASP LLM04:2025 — Data and Model Poisoning.
+    id: 'A11', scope: 'element', category: 'T', priority: 'High', focus: 'element',
+    title: 'Training Data or Model Weights in {element.name} May Be Poisoned',
+    description: '{element.name} does not declare integrity protection for training data or model weights. An attacker who changes datasets, labels, checkpoints or weights can introduce hidden behaviors, bias decisions or corrupt later fine-tuning and inference.',
+    mitigation: 'Restrict and audit writes, version datasets and checkpoints, verify signatures or pinned hashes before training and loading, and record provenance for every input. Review unexpected changes, evaluate models for poisoned behavior, and keep known-good versions for rollback.',
+    when: [['element.subtype', 'eq', 'ML Model / Training Data'], ['element.props.integrity', 'ne', 'Yes']],
+  },
+  {
+    id: 'A12', scope: 'element', category: 'I', priority: 'Medium', focus: 'element',
+    title: 'Model Weights or Training Data in {element.name} May Be Stolen',
+    description: '{element.name} does not declare fine-grained access control. Excessive read or export permissions may expose proprietary model weights, licensed datasets or sensitive training examples to unauthorized users, workloads or tenants.',
+    mitigation: 'Grant read, write and export permissions separately to the identities that require them. Protect model and dataset storage, backups and distribution channels, audit bulk access, and remove long-lived or shared credentials that allow unrestricted downloads.',
+    when: [['element.subtype', 'eq', 'ML Model / Training Data'], ['element.props.accessControl', 'ne', 'Fine-grained']],
+  },
+  {
+    // OWASP LLM03:2025 — Supply Chain.
+    id: 'A13', scope: 'interaction', category: 'T', priority: 'High', focus: 'target',
+    title: 'Unverified Model Artefact Loaded by {target.name}',
+    description: '{target.name} loads a model artefact from {source.name} without declared integrity protection. Tampered weights can change behavior, and unsafe deserialization formats such as pickle can execute attacker-controlled code during loading.',
+    mitigation: 'Load signed artefacts from approved sources, verify signatures and pin expected hashes before loading, and prefer safe data-only formats such as safetensors. Disable untrusted loader code, isolate conversion/loading with least privilege, and record artefact provenance and versions.',
+    when: [['target.subtype', 'in', [AGENT, 'ML Model Serving']], ['source.subtype', 'in', ['ML Model / Training Data', 'Compromised Supply Chain']], ['flow.props.integrity', 'ne', 'Yes']],
+  },
+  {
+    // MITRE ATLAS — Model extraction and inversion.
+    id: 'A14', scope: 'interaction', category: 'I', priority: 'Medium', focus: 'target', dedupeKey: 'target',
+    title: 'Model Extraction or Inversion through {target.name}',
+    description: 'External callers can query {target.name} without both declared authentication and rate limits. Repeated or carefully chosen queries may approximate proprietary model behavior or infer sensitive information about training data through model extraction or inversion.',
+    mitigation: 'Authenticate callers and enforce per-identity query budgets, detect systematic probing, and limit unnecessary confidence scores or detailed outputs. Review training-data exposure, evaluate extraction and inversion risks, and constrain access to sensitive models and their prediction interfaces.',
+    when: [['target.subtype', 'eq', 'ML Model Serving'], ['source.type', 'eq', 'external'], { any: [['flow.props.rateLimited', 'ne', 'Yes'], ['target.props.authenticatesCallers', 'ne', 'Yes']] }],
+  },
+  {
+    id: 'A15', scope: 'interaction', category: 'S', priority: 'High', focus: 'source',
+    title: 'Unauthenticated MCP Client {source.name}',
+    description: '{source.name} calls the MCP server {target.name} without a declared authentication mechanism. An attacker may impersonate the client and reach tools or data before a trustworthy caller identity has been established.',
+    mitigation: 'Require client authentication before accepting MCP requests, validate token issuer and audience or client certificates, and bind the session to the authenticated identity. Reject anonymous requests and enforce tool authorization separately for that caller.',
+    when: [['source.subtype', 'eq', 'MCP Client / AI Assistant'], ['target.subtype', 'eq', 'MCP Server'], ['flow.props.authentication', 'in', ['Not Selected', 'None']]],
+  },
+  {
+    // OWASP LLM09:2025 — Misinformation.
+    id: 'A16', scope: 'element', category: 'T', priority: 'Low', focus: 'element',
+    title: 'Unverified Output from {element.name} Used for Decisions',
+    description: '{element.name} can produce plausible but false, incomplete or unsupported output. Treating that output as authoritative can corrupt business decisions or cause users and downstream services to act on fabricated facts, citations or calculations.',
+    mitigation: 'Verify factual claims against authoritative sources and validate calculations with deterministic code. Show uncertainty and provenance, evaluate representative failure cases, and require an accountable human to review consequential decisions before acting on generated output.',
+    when: [['element.subtype', 'eq', AGENT]],
   },
 
   /* ------------------------------------------------ Kafka / event streams */
