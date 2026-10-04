@@ -3,7 +3,7 @@
 **Threat modeling entirely in your browser. No backend. No uploads. No desktop installation.**
 
 A web-based alternative to Microsoft Threat Modeling Tool, with an Excalidraw-style canvas,
-150+ technology stencils and 81 STRIDE threat rules. Built for environments where architecture
+150+ technology stencils and 97 STRIDE threat rules. Built for environments where architecture
 and security data must stay on the machine.
 
 **[Open the app](https://0xdhanesh.github.io/STRIDE/)**

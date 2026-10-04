@@ -599,6 +599,7 @@ flowchart LR
     user -->|Question and user identity| agent
     documents -->|Documents and metadata| ingest
     ingest -->|Indexed content and access metadata| vector
+    agent -->|Retrieval query and caller identity| vector
     vector -->|Retrieved passages| agent
     agent -->|Prompt and allowed context| provider
     provider -->|Model output| agent
@@ -609,7 +610,22 @@ flowchart LR
     agent -->|Answer| user
 ```
 
-Use **AI Agent / LLM App**, **Background Worker**, **MCP Server**, **Vector Database**, and **LLM Provider API** for the relevant types. Add the agent's retrieval query to the vector store as a separate flow when documenting its access checks, and use **MCP (JSON-RPC)** for the tool interaction when that is the actual protocol. Set its encryption and authentication explicitly; the subtype alone does not establish a secure transport.
+Use these exact types to reproduce the exercise:
+
+| Component | Kind / Type |
+| --- | --- |
+| Analyst | External Entity / Human User |
+| Document supplier | External Entity / Third-Party Service |
+| External LLM Provider | External Entity / LLM Provider API |
+| AI Agent | Process / AI Agent / LLM App |
+| Ingestion Worker | Process / Background Worker |
+| MCP Server | Process / MCP Server |
+| Vector Database | Data Store / Vector Database |
+| Customer Records | Data Store / SQL Database |
+
+Draw the two zones as boxes, with the analyst, supplier, and provider outside both. Keep the agent, ingestion worker, and MCP server inside the application box and both stores inside the data box. Set the vector store's **Stores PII / sensitive data = Yes** for this exercise. Begin with other security properties **Not Selected** so the expected prompts below are visible, then work through the control experiments.
+
+Draw both the retrieval query and returned passages; they have different rule contexts. Use **MCP (JSON-RPC)** for tool calls/results when that is the actual protocol. Set encryption and authentication from evidence as you refine the model; the subtype alone does not establish a secure transport.
 
 ### Identify the trust changes
 
@@ -619,7 +635,57 @@ Use **AI Agent / LLM App**, **Background Worker**, **MCP Server**, **Vector Data
 - Sending prompts or context to an external provider is a disclosure decision in the modeled system. Draw it explicitly and state which data is allowed.
 - Retrieved content and embeddings can carry tenant/ownership constraints that must survive ingestion, lookup, caching, and output.
 
-### Add specific manual review scenarios
+### Inspect the AI/LLM findings
+
+The 16 A-series rules use the existing six STRIDE categories. The LLM references follow the [OWASP LLM Top 10 (2025)](https://genai.owasp.org/llm-top-10/) numbering. These are architecture-based review prompts, not tests executed against a model or provider.
+
+With the diagram and starting properties above, inspect these specific findings. Generic STRIDE and existing MCP rules can also appear; do not use a fixed overall threat total as the exercise result.
+
+| Rule | Expected matching path or element | What to review |
+| --- | --- | --- |
+| A01 — Direct prompt injection | One grouped finding on AI Agent, covering the analyst's question and the boundary-crossing retrieved passages. | Input validation does not stop prompt injection. Enforce permissions outside the prompt and constrain tool authority. |
+| A02 — Indirect prompt injection | Vector Database → AI Agent; grouped by the agent. | Retrieved content can carry instructions. This rule also accepts direct content from Third-Party Service or SaaS Application sources, even without a boundary crossing. |
+| A03 — Unvalidated model output | AI Agent → MCP Server while that receiving process has not declared input validation. | Model output is attacker-influenced when used as tool arguments, shell commands, SQL, or HTML. |
+| A04 — System prompt disclosure | AI Agent itself. | Keep secrets and authorization logic out of prompts; system instructions are not a confidentiality boundary. |
+| A05 — Per-action authorization | AI Agent while Authorizes requests is not Yes. | Bind every tool action to the actual caller, resource, and allowed operation, with human approval for high-impact actions. |
+| A06 — Response disclosure | AI Agent → Analyst. | A response must not reveal data beyond the recipient's entitlement. |
+| A07 — Unbounded consumption | One grouped finding on AI Agent for qualifying, non-rate-limited inputs: analyst questions, retrieved passages crossing the data boundary, and external provider output in this layout. | Bound request/token/cost/concurrency budgets and tool execution. Denial-of-wallet is included. |
+| A08 — Retrieval entitlements | Vector Database → AI Agent while store Access control is not Fine-grained; grouped by the source store. | Retrieval must filter using the real caller's user/tenant permissions, not an identity supplied in the prompt. |
+| A09 — Poisoned indexed content | One grouped finding on Vector Database for inbound flows, including ingestion and the retrieval-query arrow. | Review ingestion provenance and write authority. The rule matches all incoming vector-store flows; document why a genuinely read-only query cannot index content rather than mislabeling its direction. |
+| A10 — Embedding inversion | Vector Database with Stores PII / sensitive data = Yes. | Readable vectors may reveal source text. Encryption at rest does not prevent inversion by an authorized reader of decrypted embeddings. |
+| A16 — Unverified decision output | AI Agent itself. | Verify facts and calculations; require accountable review before consequential decisions. |
+
+Two intentional exclusions matter: **LLM Provider API → agent** and **MCP Server → agent** do not trigger A01. MCP-origin content is already addressed by **M01**. **Agent → LLM Provider API** does not trigger A06; **M04** covers provider-bound disclosure. These exclusions do not suppress other applicable rules such as A07. The existing M01 condition is broad: it matches every outgoing MCP Server flow, including the record query in this diagram, so assess the specific scenario rather than assuming every match is a tool response.
+
+A01 and A02 can both match retrieved content crossing a boundary: A01 includes boundary-crossing input, and A02 identifies the retrieved-content precondition. They are not supersession rules. T03 still excludes Vector Database; use A08–A10 for vector-specific review, and retain a separate SQL Database component if that technology is actually present.
+
+### Change controls and observe what remains
+
+Perform these experiments in the learning model. In an engagement, change properties only when supported by implementation evidence.
+
+1. Set the agent's **Validates input = Yes**. A01 and A02 remain; ordinary schema validation does not establish prompt-injection resistance.
+2. Set the MCP server's **Validates input = Yes**. Its A03 finding stops matching. If the recipient is instead **Browser** or **Browser Client (SPA)**, A03 remains even with a validation property set; inspect safe rendering for the browser context.
+3. Set the agent's **Authorizes requests = Yes** after recording tool-side authorization evidence. A05 stops matching. A04 and A16 remain review prompts; there are no corresponding “safe prompt” or “verified decisions” switches.
+4. Set vector-store **Access control = Fine-grained**. A08 stops matching. A09 remains because ingestion provenance is a separate question. Setting **Encrypted at rest = Yes** does not suppress A10 while Stores PII / sensitive data remains Yes.
+5. Set **Rate limited = Yes** on every qualifying inbound flow to the agent. A07 stops matching only once no remaining flow meets its conditions. Limiting the public question flow alone does not cover the other contributors in this drawing.
+6. Review A06 using caller-scoped retrieval, context, conversation isolation, and response evidence. There is no response-entitlement checkbox to suppress it; record the verified mitigation and status.
+
+“Stops matching” describes the current rule result. An edited finding can remain as an orphan, preserving its review, as explained in the earlier exercises. For grouped A01/A02/A07/A08/A09 findings, adding a new matching flow after a non-open decision requires reviewing the new contributor. Use **Confirm status for current flows** only after that review.
+
+### Extend the model to cover A11–A15
+
+The base drawing has no training/model store, model-serving process, or external MCP-client subtype, so A11–A15 do not match it. Add these components and paths for the next exercise:
+
+| Addition | Starting properties | Expected rules and control experiment |
+| --- | --- | --- |
+| Data Store / ML Model / Training Data, named Model Artefacts | Integrity protected (signed) and Access control = Not Selected | A11 covers poisoning; A12 covers theft. Integrity = Yes suppresses A11; Fine-grained access suppresses A12. |
+| Process / ML Model Serving, named Prediction API; Model Artefacts → Prediction API and Model Artefacts → AI Agent | Loading flows' Integrity protected = Not Selected | A13 on each loading interaction. Setting integrity on the store alone does not set it on the loading flows; verify and record both. A13 stops matching on a flow when its Integrity protected is Yes. |
+| Analyst → Prediction API | Flow Rate limited and process Authenticates callers = Not Selected | A14 covers extraction/inversion; A07 can also cover consumption. A14 stops matching only when both rate limiting and caller authentication are Yes. A14 is grouped by the serving process. |
+| External Entity / MCP Client / AI Assistant → MCP Server | Authentication = None or Not Selected | A15 covers client impersonation. Declare the actual verified authentication, such as Token (OAuth / JWT), to stop that match. M02/M03 still prompt review of tool authority and token handling. |
+
+A13 also recognizes a **Compromised Supply Chain** source and either an AI Agent / LLM App or ML Model Serving destination. Its mitigation calls for signed artefacts, pinned hashes, approved provenance, and safe loading formats. Pickle can execute code during deserialization; formats such as [safetensors](https://huggingface.co/docs/safetensors/index) avoid that form of executable tensor serialization. Format choice does not establish trustworthy weights or safe loader extensions by itself.
+
+### Make the findings specific to the engagement
 
 | Threat scenario | What a meaningful review establishes |
 | --- | --- |
@@ -630,7 +696,7 @@ Use **AI Agent / LLM App**, **Background Worker**, **MCP Server**, **Vector Data
 | Tool output changes subsequent authorization decisions | Untrusted output cannot replace authoritative policy or identity. |
 | Recursive tool use exhausts cost/capacity | Budgets, timeouts, call limits, and cancellation are enforced at the relevant components. |
 
-The built-in specialist rules provide prompts, not a complete evaluation of prompt injection, tenant filtering, or agency limits. T03 deliberately does not treat **Vector Database** as a SQL/NoSQL injection target. Its absence does not establish that vector-store queries or access controls are safe. If there is also a SQL service behind the retrieval system, model that actual component separately.
+Use A01–A16 and M01–M04 as starting points for these scenarios. Refine generated descriptions and add manual findings for distinct outcomes or missing paths, such as a particular unauthorized payment tool or cross-tenant conversation cache. The presence of these rules does not provide a complete evaluation of prompt injection, tenant filtering, or agency limits.
 
 Use synthetic documents and harmless marker actions for authorized tests. Record whether the boundary was enforced, which identity authorized the action, and what reached external systems. Avoid claiming a mitigation based only on a prompt that tells the model to behave.
 

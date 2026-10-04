@@ -216,7 +216,7 @@ Other subtypes do not imply those settings. For example, REST / JSON, gRPC, SQL 
 
 ### What the engine does
 
-The built-in template contains **81 rules**. Interaction rules inspect connected flows, endpoint types/properties, and boundary crossings. Element rules inspect individual processes, entities, or stores. Threats regenerate as you commit modeling changes; there is no separate network scan to run.
+The built-in template contains **97 rules**, including 16 AI/LLM rules (`A01`–`A16`) for prompt injection, output handling, agent authority, retrieval, model/data integrity, disclosure, and resource consumption. Interaction rules inspect connected flows, endpoint types/properties, and boundary crossings. Element rules inspect individual processes, entities, or stores. Threats regenerate as you commit modeling changes; there is no separate network scan to run.
 
 | Category | Security question |
 | --- | --- |
@@ -229,7 +229,7 @@ The built-in template contains **81 rules**. Interaction rules inspect connected
 
 Generated findings are review prompts based on the model, **not confirmed vulnerabilities**. The engine does not inspect the actual application, scan endpoints, verify a control, infer every attack chain, or certify compliance. Missing findings and a zero-open summary do not prove security.
 
-Rule IDs such as `T01` identify a rule; displayed numbers such as `#18` identify a finding within the model. Technical rule families such as W, K, M, and P still map into the six STRIDE categories; they are not additional categories.
+Rule IDs such as `T01` identify a rule; displayed numbers such as `#18` identify a finding within the model. Technical rule families such as A, W, K, M, and P still map into the six STRIDE categories; they are not additional categories.
 
 ### List, selection, counts, and summary
 
@@ -264,7 +264,7 @@ Use **Open** for unresolved or unverified threats, **Mitigated** for controls wi
 
 ### Grouped findings and review coverage
 
-`T01`, `R01`, `D01`, `E02`, and `I05` group matching flows by target within a diagram. For example, five unvalidated inbound paths to one process create one T01 finding with five contributing flows, not five identical paragraphs. Grouping uses element identities, not names. Custom templates may also group by source.
+`T01`, `R01`, `D01`, `E02`, `I05`, `A01`, `A02`, `A07`, `A09`, and `A14` group matching flows by target within a diagram. `A08` groups retrieval paths by their source vector store. For example, five unvalidated inbound paths to one process create one T01 finding with five contributing flows, not five identical paragraphs. Grouping uses element identities, not names. Custom templates can choose source or target grouping too.
 
 Setting a grouped finding to a non-open status records which contributing flow IDs were reviewed. If another matching flow later joins:
 
@@ -741,7 +741,9 @@ The catalogue below lists exact Type dropdown values. The symbol library provide
 
 ## Built-in rule index
 
-There are **81 built-in rules**. `E03` was folded into `T01`, so the E-series intentionally skips that ID. The category column is the STRIDE category; the ID prefix alone is not the category for specialist rules. Titles below show their interpolation placeholders. For full conditions and mitigation guidance, read [js/rules.js](js/rules.js).
+There are **97 built-in rules**. `E03` was folded into `T01`, so the E-series intentionally skips that ID. The category column is the STRIDE category; the ID prefix alone is not the category for specialist rules. Titles below show their interpolation placeholders. For full conditions and mitigation guidance, read [js/rules.js](js/rules.js).
+
+The A-series uses [OWASP LLM Top 10 (2025)](https://genai.owasp.org/llm-top-10/) numbering: A01/A02 → LLM01, A03 → LLM05, A04 → LLM07, A05 → LLM06, A06 → LLM02, A07 → LLM10, A08/A10 → LLM08, A09 → LLM04/LLM08, A11 → LLM04, A13 → LLM03, and A16 → LLM09. A14 covers model extraction/inversion from [MITRE ATLAS](https://github.com/mitre-atlas/atlas-data/blob/main/dist/ATLAS.yaml); A12 covers stored-model/data theft and A15 covers MCP client authentication. These are local review rules, not remote AI checks. See [GUIDE Exercise 5](GUIDE.md#exercise-5-an-ai-agent-with-mcp-tools-and-retrieval) for matching paths, exclusions, and control experiments.
 
 | ID | Category | Scope | Generated title |
 | --- | --- | --- | --- |
@@ -781,6 +783,22 @@ There are **81 built-in rules**. `E03` was folded into `T01`, so the E-series in
 | M02 | E | interaction | Excessive Agency: Over-privileged Tools in {target.name} |
 | M03 | S | interaction | Token Passthrough / Confused Deputy at {target.name} |
 | M04 | I | interaction | Sensitive Data Sent to LLM Provider {target.name} |
+| A01 | T | interaction | Direct Prompt Injection into {target.name} |
+| A02 | T | interaction | Indirect Prompt Injection via Retrieved Content into {target.name} |
+| A03 | T | interaction | Unvalidated Model Output Used by {target.name} |
+| A04 | I | element | System Prompt and Embedded Secrets in {element.name} May Be Disclosed |
+| A05 | E | element | {element.name} Can Act Without Per-Action Authorization |
+| A06 | I | interaction | Agent Response May Disclose Data Beyond {target.name}'s Entitlement |
+| A07 | D | interaction | Unbounded Consumption of {target.name} |
+| A08 | I | interaction | Retrieval from {source.name} May Ignore Caller Entitlements |
+| A09 | T | interaction | Poisoned Content Indexed into {target.name} |
+| A10 | I | element | Embeddings in {element.name} May Reveal Source Text |
+| A11 | T | element | Training Data or Model Weights in {element.name} May Be Poisoned |
+| A12 | I | element | Model Weights or Training Data in {element.name} May Be Stolen |
+| A13 | T | interaction | Unverified Model Artefact Loaded by {target.name} |
+| A14 | I | interaction | Model Extraction or Inversion through {target.name} |
+| A15 | S | interaction | Unauthenticated MCP Client {source.name} |
+| A16 | T | element | Unverified Output from {element.name} Used for Decisions |
 | K01 | S | interaction | Unauthenticated Producer Writes to {target.name} |
 | K02 | T | interaction | Event Injection / Poisoned Messages in {target.name} |
 | W01 | S | interaction | Cross-Site WebSocket Hijacking against {target.name} |
