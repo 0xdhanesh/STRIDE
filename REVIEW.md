@@ -1,8 +1,9 @@
 # STRIDE verification handoff
 
-Prepared 2026-10-04 for independent review. Application changes are committed through
-`a54083e`; the following acceptance-check commit adds this document and extends the
-existing report QA script. No production code or dependencies changed in this pass.
+Prepared 2026-10-04; updated after independent review. The commits below describe the
+original implementation. The follow-up fixes review coverage for grouped threats,
+conservative legacy merging, `{all:[...]}` compatibility and grouped text. No new
+dependencies, build requirements or runtime network calls were introduced.
 
 ## Review scope
 
@@ -20,6 +21,7 @@ Use `git diff 29db50d..HEAD` for all four features and rule fixes, or
 | `7a88b56` | Prototype traversal and threat-output safety |
 | `010c089` | Rule regressions, lossless reports and native DOM test page |
 | `a54083e` | Local TM7 import, source/review preservation, explicit warnings |
+| `ed6c0bd` | Repeatable file/export acceptance check and initial review handoff |
 
 The source application remains plain HTML/CSS/JavaScript modules, served as static
 files without a required build. The optional offline packaging script embeds those
@@ -47,7 +49,10 @@ threat map keyed by stable generation identity, `nextThreatId`, and an optional
 custom template. Elements contain geometry, references, subtype and security
 properties. Threats contain identity, rule/category, diagram/element/flow references,
 review status/severity/owner/notes/mitigation/justification and generated text.
-Grouped threats list their contributing flows. Suppressed reviewed records remain
+Grouped threats list their contributing flows and store `reviewedFlowIds` when a
+non-Open status is chosen. New contributors set `needsReview`; the recorded status
+remains intact while the effective status is Open. Report JSON includes the effective
+status and notice alongside the lossless model. Suppressed reviewed records remain
 in model JSON while visible threat lists and reports exclude them.
 
 State lives in memory while editing. Recovery uses IndexedDB `stride-tm`, object
@@ -93,7 +98,10 @@ Optional `dedupeKey` defaults to per-flow behavior; `supersedes` defaults to no
 supersession. Older custom templates do not need either field. Paths reject
 prototype-related segments and traverse own properties only. Import rejects invalid
 schema values, malformed conditions, unknown operators/roots and missing superseded
-rule IDs, with the offending rule ID in the error.
+rule IDs, with the offending rule ID in the error. `{all:[...]}` is supported as AND;
+empty AND/OR conditions and cross-scope paths are rejected. T01/E02/I05 descriptions
+describe the target rather than individual source/flow names. Other grouped templates
+use the first contributor in ID order for text, with all paths listed separately.
 
 ## Verification performed
 
@@ -104,7 +112,7 @@ npm test
 npm run test:acceptance
 ```
 
-- `npm test`: **122 passed, 0 failed, 0 skipped**, plus the original engine checks.
+- `npm test`: **142 passed, 0 failed, 0 skipped**, plus the original engine checks.
   The offline test builds `dist/STRIDE.html`, checks its script CSP hash, parses its
   JavaScript and executes its dependencies before DOM bootstrap.
 - Acceptance script: **35 threats** generated and marked mitigated with owner,
@@ -113,11 +121,14 @@ npm run test:acceptance
   was written and reopened with full equality. Every visible threat appeared once
   in category/interaction groups and Markdown; PDFs were generated. Calls to
   fetch, XMLHttpRequest, WebSocket and EventSource were denied and counted: **0**.
-- PDF content/layout check: **19-page sample** and **26-page long-notes report**.
+- PDF content/layout check: **18-page sample** and **25-page long-notes report**.
   All threats and 25 interaction headings retained; page bounds and footers passed.
   Each of 450 numbered evidence paragraphs occurred exactly once, including the
   final marker. Rendered contact sheets and detailed diagram/threat/notes pages
   were visually inspected with no clipping or overlapping content found.
+- Follow-up PDF: new-flow notice, recorded Mitigated decision, effective Open status
+  and preserved notes were extracted and visually checked together on page 10 of
+  `output/pdf/stride-review-required.pdf`.
 
 Artifacts are generated locally and ignored by Git:
 
@@ -170,9 +181,11 @@ browser event handling or actual browser network traffic.
 - Check rule conditions against their descriptions and positive/negative fixtures.
   Five inbound flows must yield one T01; Telnet must show P01 while hiding I01/T02;
   wss must not show W02; bearer-token flows must not show E04.
-- Check grouping and suppression migrations carefully: conflicting older reviews
-  are retained in suppressed model records; the visible grouped threat adopts one
-  reviewed record. Evaluate whether that review policy fits the intended workflow.
+- Check grouping and suppression migrations carefully: conflicting older decisions
+  adopt Open before Accepted before Mitigated/Not Applicable and set `needsReview`.
+  Notes and mitigations are combined with flow-name prefixes. Archived decisions
+  merge once, including records hidden by the earlier implementation, and do not
+  override a later re-review. Confirming the status covers the current flow IDs.
 - Trace attacker-controlled names, imported templates, TM7 text and review fields
   through every DOM/export sink. Validate unsafe templates before replacing a model.
 - Verify TM7 variants with real files. Unknown/custom/localized content is preserved

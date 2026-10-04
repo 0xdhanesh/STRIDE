@@ -7,7 +7,7 @@ import { icon, hydrateIcons } from './icons.js';
 import { STENCILS, STRIDE, STRIDE_BY_KEY, PRIORITIES, STROKES, FILLS, BOUNDARY_COLOR } from './stencils.js';
 import { applySubtype, deleteElements, duplicateElements, reorder, reverseFlow, fitNote } from './ops.js';
 import { threatList, isOpen } from './engine.js';
-import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity, updateThreat, matchesThreat, contributingFlowText } from './threats.js';
+import { STATUSES, STATUS_LABELS, threatStatus, effectiveThreatStatus, threatSeverity, updateThreat, matchesThreat, contributingFlowText, reviewNotice } from './threats.js';
 import { renderThreatSummary } from './summary.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -226,8 +226,8 @@ export function initThreatPanel(canvas) {
       return `<div class="t-row${t.key === store.ui.activeThreat ? ' active' : ''}" data-key="${esc(t.key)}" role="listitem" tabindex="0">
         <span class="cat" style="background:${c.color}" title="${c.name}">${c.key}</span>
         <div><div class="t-title">${esc(t.title)}${t.orphan ? '<span class="orphan-tag" title="The interaction for this threat no longer exists">orphaned</span>' : ''}${!t.auto ? '<span class="orphan-tag">custom</span>' : ''}</div>
-          <div class="t-sub">${esc(t.interaction)}</div>${t.contributingFlows?.length ? `<div class="t-sub">${esc(contributingFlowText(t))}</div>` : ''}${t.owner ? `<div class="t-sub">Owner: ${esc(t.owner)}</div>` : ''}</div>
-        <div class="t-meta"><span class="t-id">#${esc(t.id)}</span><span class="state" data-s="${STATUS_LABELS[threatStatus(t)]}">${STATUS_LABELS[threatStatus(t)]}</span><span class="prio" data-p="${threatSeverity(t)}">${threatSeverity(t)}</span></div>
+          <div class="t-sub">${esc(t.interaction)}</div>${t.contributingFlows?.length ? `<div class="t-sub">${esc(contributingFlowText(t))}</div>` : ''}${t.owner ? `<div class="t-sub">Owner: ${esc(t.owner)}</div>` : ''}${t.needsReview ? `<div class="t-sub">${esc(reviewNotice(t))}. Recorded status: ${STATUS_LABELS[threatStatus(t)]}.</div>` : ''}</div>
+        <div class="t-meta"><span class="t-id">#${esc(t.id)}</span><span class="state" data-s="${STATUS_LABELS[effectiveThreatStatus(t)]}">${STATUS_LABELS[effectiveThreatStatus(t)]}</span><span class="prio" data-p="${threatSeverity(t)}">${threatSeverity(t)}</span></div>
       </div>`;
     }).join('');
   }
@@ -248,6 +248,7 @@ export function initThreatPanel(canvas) {
         <label class="field"><span>Severity</span><select data-tf="severity">${opt(PRIORITIES, threatSeverity(t))}</select></label>
         <label class="field"><span>Status</span><select data-tf="status">${opt(STATUSES, threatStatus(t), (s) => STATUS_LABELS[s])}</select></label>
       </div>
+      ${t.needsReview ? `<div class="hint"><b>${esc(reviewNotice(t))}</b><p>Counted as Open. Recorded status: ${STATUS_LABELS[threatStatus(t)]}.</p><button class="btn small" data-t="review-flows">Confirm status for current flows</button></div>` : ''}
       <label class="field"><span>Owner</span><input data-tf="owner" value="${esc(t.owner)}" placeholder="Person or team responsible"></label>
       <label class="field"><span>Interaction</span><input value="${esc(t.interaction)}" disabled></label>
       ${t.contributingFlows?.length ? `<label class="field"><span>Contributing flows</span><textarea rows="3" disabled>${esc(contributingFlowText(t))}</textarea></label>` : ''}
@@ -323,7 +324,7 @@ export function initThreatPanel(canvas) {
     const t = active(), k = e.target.dataset.tf;
     if (!t || !k) return;
     updateThreat(t, k, e.target.value);
-    store.commit(k === 'category' ? '' : 'threat-editor');
+    store.commit(k === 'category' || k === 'status' ? '' : 'threat-editor');
   });
   editor.addEventListener('click', (e) => {
     const b = e.target.closest('[data-t]');
@@ -332,6 +333,7 @@ export function initThreatPanel(canvas) {
     switch (b.dataset.t) {
       case 'close': store.setUI({ activeThreat: null }, 'threat'); break;
       case 'use-hint': updateThreat(t, 'mitigation', t.mitigationHint); store.commit(); break;
+      case 'review-flows': updateThreat(t, 'status', threatStatus(t)); store.commit(); break;
       case 'reset-text': t.customText = false; store.commit(); break;
       case 'delete': delete store.model.threats[t.key]; store.ui.activeThreat = null; store.commit(); break;
       case 'locate': {

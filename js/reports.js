@@ -2,7 +2,7 @@
 import { normalizeModel } from './store.js';
 import { activeRules, threatList, threatStats, validate } from './engine.js';
 import { STRIDE, STENCILS } from './stencils.js';
-import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity, contributingFlowText } from './threats.js';
+import { STATUSES, STATUS_LABELS, threatStatus, effectiveThreatStatus, threatSeverity, contributingFlowText, reviewNotice } from './threats.js';
 import { diagramToSVG } from './render.js';
 import { esc } from './util.js';
 
@@ -22,7 +22,7 @@ export function createReport(model, { sketchy = false, generatedAt = new Date().
         diagramName: snapshot.diagrams.find((d) => d.id === t.diagramId)?.name || 'No current diagram',
         interactionId: t.flowId || t.elementId || null, label: t.interaction || 'General', threats: [],
       });
-      groups.get(key).threats.push(t);
+      groups.get(key).threats.push({ ...t, effectiveStatus: effectiveThreatStatus(t), reviewNotice: reviewNotice(t) });
     }
     return { key: category.key, name: category.name, color: category.color, interactions: [...groups.values()] };
   });
@@ -49,8 +49,9 @@ export function elementDetails(e) {
 
 export function threatDetails(t) {
   return [
-    ['Status', STATUS_LABELS[threatStatus(t)]], ['Severity', threatSeverity(t)], ['Owner', t.owner || 'Unassigned'],
+    ['Status', STATUS_LABELS[effectiveThreatStatus(t)]], ['Severity', threatSeverity(t)], ['Owner', t.owner || 'Unassigned'],
     ['Record', `${t.auto ? `Rule ${t.ruleId}` : 'Custom threat'}${t.orphan ? ' - orphaned (retained review)' : ''}`],
+    ...(t.needsReview ? [['Recorded status', STATUS_LABELS[threatStatus(t)]], ['Review notice', reviewNotice(t)]] : []),
     ['Description', t.description], ['Mitigation', t.mitigation], ['Notes', t.notes], ['Justification', t.justification],
     ['Suggested mitigation', t.mitigationHint], ['Created', t.created], ['Last reviewed', t.modified],
     ['Stable key', t.key], ...(t.contributingFlows?.length ? [['Contributing flows', contributingFlowText(t)]] : []),

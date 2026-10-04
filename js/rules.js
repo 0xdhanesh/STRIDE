@@ -12,7 +12,7 @@
 //              marked out-of-scope the threat is not generated
 //   title, description, mitigation: text; {source.name}, {target.name}, {flow.name},
 //              {element.name}, {flow.boundaries} … are interpolated
-//   when:      conditions; an array is AND, {any:[…]} is OR, {not: cond} negates,
+//   when:      conditions; an array or {all:[…]} is AND, {any:[…]} is OR, {not: cond} negates,
 //              a clause is [path, op, value] with op in eq ne in nin exists
 //   dedupeKey: optional 'target' | 'source' | 'flow' (default); group matching flows
 //   supersedes: optional array of rule IDs hidden on the same matching interaction
@@ -87,7 +87,7 @@ export const DEFAULT_RULES = [
   {
     id: 'T01', scope: 'interaction', category: 'T', priority: 'High', focus: 'target', dedupeKey: 'target',
     title: 'Potential Lack of Input Validation for {target.name}',
-    description: 'Data flowing across {flow.name} may be tampered with by an attacker. This may lead to denial of service, elevation of privilege or information disclosure in {target.name}. Crafted input may also change program execution to the attacker\'s choosing. Failure to verify input is a root cause of many exploitable issues; consider every input path and parser.',
+    description: 'Unvalidated input to {target.name} may be tampered with by an attacker, leading to denial of service, elevation of privilege or information disclosure. Crafted input may also change program execution to the attacker\'s choosing. Failure to verify input is a root cause of many exploitable issues; consider every input path and parser.',
     mitigation: 'Validate all input with an allow-list approach (type, length, format, range) at the trust boundary. Use schema validation and safe parsers; reject rather than sanitize where possible. Prefer memory-safe languages and compile with exploit mitigations (ASLR, DEP, CFG).',
     when: [['target.type', 'eq', 'process'], ['target.props.validatesInput', 'ne', 'Yes']],
   },
@@ -189,7 +189,7 @@ export const DEFAULT_RULES = [
   {
     id: 'I05', scope: 'interaction', category: 'I', priority: 'Low', focus: 'target', dedupeKey: 'target',
     title: 'Information Disclosure Through Error Messages of {target.name}',
-    description: '{target.name} may return verbose error messages, stack traces or version banners to {source.name}, helping an attacker map the system.',
+    description: '{target.name} may return verbose error messages, stack traces or version banners to external callers, helping an attacker map the system.',
     mitigation: 'Return generic error messages to callers, log details server-side, and remove version banners and debug endpoints in production.',
     when: [['source.type', 'eq', 'external'], ['target.type', 'eq', 'process'], ['target.props.internetFacing', 'ne', 'No']],
   },
@@ -242,7 +242,7 @@ export const DEFAULT_RULES = [
   {
     id: 'E02', scope: 'interaction', category: 'E', priority: 'High', focus: 'target', dedupeKey: 'target',
     title: '{target.name} May be Subject to Elevation of Privilege Using Remote Code Execution',
-    description: '{source.name} may be able to remotely execute code for {target.name}.',
+    description: 'Attackers may be able to remotely execute code in {target.name} through exposed or insufficiently validated inputs.',
     mitigation: 'Keep dependencies patched, avoid dynamic code evaluation, run with least privilege in an isolated sandbox/container, and use memory-safe languages where possible.',
     when: [['target.type', 'eq', 'process'], ['flow.crossesBoundary', 'eq', true], { any: [['target.props.internetFacing', 'eq', 'Yes'], ['target.props.validatesInput', 'ne', 'Yes']] }],
   },
@@ -651,10 +651,12 @@ export function validateRules(rules) {
       if (parts.some((part) => ['__proto__', 'prototype', 'constructor'].includes(part))) fail(`unsafe path "${value}".`);
       if (!['source', 'target', 'flow', 'element'].includes(parts[0])) fail(`invalid path root in "${value}".`);
       if (r.scope === 'element' && parts[0] !== 'element') fail(`element-scope condition cannot reference "${value}".`);
+      if (r.scope !== 'element' && parts[0] === 'element') fail(`interaction-scope condition cannot reference "${value}".`);
     };
     const condition = (cond, depth = 0) => {
       if (depth > 64) fail('condition nesting exceeds 64 levels.');
       if (Array.isArray(cond)) {
+        if (!cond.length) fail('AND conditions must not be empty.');
         if (typeof cond[0] === 'string') {
           if (cond.length !== 3) fail('clauses must be [path, op, value].');
           const [p, op, value] = cond; path(p);
@@ -665,13 +667,16 @@ export function validateRules(rules) {
         return;
       }
       if (cond && typeof cond === 'object' && Object.keys(cond).length === 1) {
-        if (Object.hasOwn(cond, 'any') && Array.isArray(cond.any)) {
-          for (const child of cond.any) condition(child, depth + 1);
-          return;
+        for (const operator of ['any', 'all']) {
+          if (Object.hasOwn(cond, operator) && Array.isArray(cond[operator])) {
+            if (!cond[operator].length) fail(`${operator} conditions must not be empty.`);
+            for (const child of cond[operator]) condition(child, depth + 1);
+            return;
+          }
         }
         if (Object.hasOwn(cond, 'not')) { condition(cond.not, depth + 1); return; }
       }
-      fail('malformed condition; expected [path, op, value], an AND array, {any:[...]}, or {not: condition}.');
+      fail('malformed condition; expected [path, op, value], an AND array, {all:[...]}, {any:[...]}, or {not: condition}.');
     };
     condition(r.when);
   }

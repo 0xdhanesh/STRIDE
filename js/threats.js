@@ -7,8 +7,16 @@ const LEGACY_STATUS = { 'Not Started': 'open', 'Needs Investigation': 'open', Op
 const LEGACY_STATE = { open: 'Not Started', mitigated: 'Mitigated', accepted: 'Accepted', 'not-applicable': 'Not Applicable' };
 
 export const threatStatus = (t) => STATUSES.includes(t.status) ? t.status : Object.hasOwn(LEGACY_STATUS, t.state) ? LEGACY_STATUS[t.state] : 'open';
+export const effectiveThreatStatus = (t) => t.needsReview ? 'open' : threatStatus(t);
 export const threatSeverity = (t) => PRIORITIES.includes(t.severity) ? t.severity : PRIORITIES.includes(t.priority) ? t.priority : 'Medium';
 export const contributingFlowText = (t) => (t.contributingFlows || []).map((f) => `${f.interaction} [${f.id}]`).join('\n');
+export const newFlowsSinceReview = (t) => (t.contributingFlows || []).filter((f) => !(t.reviewedFlowIds || []).includes(f.id));
+export function reviewNotice(t) {
+  if (!t.needsReview) return '';
+  const flows = newFlowsSinceReview(t);
+  return flows.length ? `New flows since review: ${flows.map((f) => f.name || f.interaction || f.id).join(', ')}`
+    : 'Review required: confirm the status for all contributing flows.';
+}
 
 export function validateReview(t) {
   if (t.status != null && !STATUSES.includes(t.status)) throw new Error('Invalid threat status.');
@@ -21,6 +29,10 @@ export function validateReview(t) {
     throw new Error('Invalid threat contributing flows.');
   }
   if (t.suppressed != null && typeof t.suppressed !== 'boolean') throw new Error('Invalid threat suppression flag.');
+  if (t.needsReview != null && typeof t.needsReview !== 'boolean') throw new Error('Invalid threat review flag.');
+  if (t.reviewedFlowIds != null && (!Array.isArray(t.reviewedFlowIds) || t.reviewedFlowIds.some((id) => typeof id !== 'string'))) {
+    throw new Error('Invalid threat reviewed flow IDs.');
+  }
 }
 
 export function updateThreat(t, field, value) {
@@ -34,6 +46,11 @@ export function updateThreat(t, field, value) {
     // Preserve the imported state before mirroring subsequent user decisions.
     if (t.status == null && t.state) t.legacyState ??= t.state;
     t.state = LEGACY_STATE[value];
+    if (t.dedupeKey && t.contributingFlows) {
+      if (value !== 'open') t.reviewedFlowIds = t.contributingFlows.map((f) => f.id);
+      else delete t.reviewedFlowIds;
+      t.needsReview = false;
+    }
   }
   t[field] = value;
   if (field === 'title' || field === 'description') t.customText = true;
@@ -41,7 +58,7 @@ export function updateThreat(t, field, value) {
 }
 
 export function matchesThreat(t, { text = '', status = '', severity = '', category = '' } = {}) {
-  if (status && threatStatus(t) !== status) return false;
+  if (status && effectiveThreatStatus(t) !== status) return false;
   if (severity && threatSeverity(t) !== severity) return false;
   if (category && t.category !== category) return false;
   const query = text.trim().toLowerCase();

@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_RULES } from '../js/rules.js';
-import { generateThreats, syncThreats, threatList, threatBadges } from '../js/engine.js';
+import { generateThreats, syncThreats, threatList, threatBadges, threatStats } from '../js/engine.js';
 import { defaultProps, STENCILS } from '../js/stencils.js';
-import { updateThreat, contributingFlowText } from '../js/threats.js';
-import { createReport, buildMarkdown } from '../js/reports.js';
+import { updateThreat, contributingFlowText, effectiveThreatStatus, matchesThreat, reviewNotice } from '../js/threats.js';
+import { createReport, buildMarkdown, threatDetails } from '../js/reports.js';
 import { buildReport, serializeModel, readModelFile } from '../js/io.js';
 import { normalizeModel } from '../js/store.js';
+import { renderThreatSummary } from '../js/summary.js';
+import { pdfDefinition } from '../js/pdf-report.js';
 
 function fixture() {
   const node = (id, type, x) => ({ id, name: id, type, subtype: 'Generic Process', x, y: 0, w: 100, h: 100, props: defaultProps(type), style: {} });
@@ -188,8 +190,124 @@ test('legacy per-flow reviews migrate without losing conflicting notes or duplic
   f.model.template = [rule('T01')]; syncThreats(f.model); syncThreats(f.model);
   assert.equal(threatList(f.model).length, 1);
   assert.equal(threatList(f.model)[0].id, id);
-  assert.equal(threatList(f.model)[0].notes, 'Second flow reviewed');
+  assert.match(threatList(f.model)[0].notes, /request 2: Second flow reviewed/);
+  assert.match(threatList(f.model)[0].notes, /request 3: Third flow reviewed/);
   assert.ok(Object.values(f.model.threats).some((t) => t.notes === 'Third flow reviewed' && t.mergedInto));
+});
+
+for (const status of ['mitigated', 'accepted', 'not-applicable']) test(`${status} grouped review covers only reviewed flows and can be reconfirmed`, async () => {
+  const f = fixture(); f.model = normalizeModel(f.model); f.model.template = [rule('T01')];
+  syncThreats(f.model);
+  const t = threatList(f.model)[0];
+  updateThreat(t, 'notes', 'Original evidence'); updateThreat(t, 'status', status);
+  assert.deepEqual(t.reviewedFlowIds, ['flow']);
+  f.model.diagrams[0].elements.push({ ...structuredClone(f.flow), id: 'new', name: 'New payment route' });
+  syncThreats(f.model);
+  assert.equal(t.status, status); assert.equal(t.notes, 'Original evidence'); assert.equal(t.needsReview, true);
+  assert.deepEqual(t.reviewedFlowIds, ['flow']);
+  assert.equal(threatStats([t]).byStatus.open, 1); assert.equal(threatStats([t]).byStatus[status], 0);
+  assert.equal(threatStats([t]).byCatStatus.T.open, 1);
+  assert.equal(threatBadges(f.model, 'diagram').get('target').open, 1);
+  assert.equal(matchesThreat(t, { status: 'open' }), true);
+  assert.equal(matchesThreat(t, { status }), false);
+  assert.equal(reviewNotice(t), 'New flows since review: New payment route');
+  assert.match(renderThreatSummary([t]), /data-s="Open">Open<\/span><strong>1<\/strong>/);
+  const bundle = createReport(f.model);
+  assert.equal(bundle.report.summary.open, 1);
+  const exported = bundle.report.categories.flatMap((c) => c.interactions.flatMap((g) => g.threats))[0];
+  assert.equal(exported.status, status); assert.equal(exported.effectiveStatus, 'open');
+  assert.equal(exported.reviewNotice, reviewNotice(t));
+  assert.equal(Object.fromEntries(threatDetails(exported)).Status, 'Open');
+  for (const report of [buildMarkdown(bundle), buildReport(f.model), JSON.stringify(pdfDefinition(bundle).content)]) {
+    assert.ok(report.includes('New flows since review: New payment route'));
+    assert.ok(report.includes('Recorded status'));
+  }
+  for (const content of [serializeModel(f.model), JSON.stringify(bundle)]) {
+    const loaded = await readModelFile({ name: 'review.stride', text: async () => content });
+    assert.deepEqual(loaded, f.model);
+    syncThreats(loaded); assert.equal(loaded.threats[t.key].needsReview, true);
+  }
+  updateThreat(t, 'status', status); syncThreats(f.model);
+  assert.equal(t.needsReview, false); assert.equal(effectiveThreatStatus(t), status);
+  assert.deepEqual(t.reviewedFlowIds, ['flow', 'new']);
+  assert.equal(threatStats([t]).open, 0); assert.equal(reviewNotice(t), '');
+});
+
+test('older grouped reviews use saved contributors as coverage, never newly generated flows', () => {
+  const f = fixture(); f.model.template = [rule('T01')]; syncThreats(f.model);
+  const t = threatList(f.model)[0]; updateThreat(t, 'status', 'mitigated'); delete t.reviewedFlowIds;
+  f.model.diagrams[0].elements.push({ ...structuredClone(f.flow), id: 'new', name: 'New route' });
+  syncThreats(f.model);
+  assert.deepEqual(t.reviewedFlowIds, ['flow']); assert.equal(t.needsReview, true);
+});
+
+test('previously hidden open legacy records are folded into existing reviewed groups once', () => {
+  const f = fiveFlows(); f.model.template = [rule('T01')]; syncThreats(f.model);
+  const grouped = threatList(f.model)[0]; updateThreat(grouped, 'status', 'accepted');
+  updateThreat(grouped, 'notes', 'Previously adopted review');
+  const legacy = { ...rule('T01') }; delete legacy.dedupeKey;
+  const old = generateThreats(f.model, [legacy])[0];
+  f.model.threats[old.key] = { ...old, auto: true, id: f.model.nextThreatId++, status: 'open', notes: 'Hidden unfinished work', mergedInto: grouped.key, suppressed: true };
+  syncThreats(f.model);
+  assert.equal(grouped.status, 'open'); assert.equal(grouped.needsReview, true);
+  assert.match(grouped.notes, /Previously adopted review/); assert.match(grouped.notes, /request: Hidden unfinished work/);
+  updateThreat(grouped, 'status', 'mitigated'); syncThreats(f.model);
+  assert.equal(grouped.status, 'mitigated'); assert.equal(grouped.needsReview, false);
+  assert.equal(grouped.notes.match(/Hidden unfinished work/g).length, 1);
+});
+
+for (const [first, second, expected] of [
+  ['accepted', 'open', 'open'], ['mitigated', 'accepted', 'accepted'], ['not-applicable', 'open', 'open'],
+  ['mitigated', 'not-applicable', 'mitigated'],
+]) test(`legacy merge ${first} + ${second} adopts ${expected}, preserves all evidence, and stays merged after re-review`, () => {
+  const f = fixture();
+  f.model.diagrams[0].elements.push({ ...structuredClone(f.flow), id: 'flow2', name: 'Second route' });
+  const legacy = { ...rule('T01') }; delete legacy.dedupeKey;
+  f.model.template = [legacy]; syncThreats(f.model);
+  const records = threatList(f.model);
+  [first, second].forEach((status, i) => {
+    updateThreat(records[i], 'status', status);
+    updateThreat(records[i], 'notes', `Evidence ${i + 1}`);
+    updateThreat(records[i], 'mitigation', `Control ${i + 1}`);
+  });
+  f.model.template = [rule('T01')]; syncThreats(f.model);
+  const merged = threatList(f.model)[0];
+  assert.equal(threatList(f.model).length, 1); assert.equal(merged.status, expected);
+  assert.equal(merged.needsReview, true); assert.equal(threatStats([merged]).open, 1);
+  assert.match(merged.notes, /request: Evidence 1/); assert.match(merged.notes, /Second route: Evidence 2/);
+  assert.match(merged.mitigation, /request: Control 1/); assert.match(merged.mitigation, /Second route: Control 2/);
+  const notes = merged.notes, mitigation = merged.mitigation;
+  syncThreats(f.model); assert.equal(merged.notes, notes); assert.equal(merged.mitigation, mitigation);
+  updateThreat(merged, 'status', 'mitigated'); syncThreats(f.model); syncThreats(f.model);
+  assert.equal(merged.needsReview, false); assert.equal(threatStats(threatList(f.model)).open, 0);
+  assert.equal(merged.notes, notes); assert.equal(merged.mitigation, mitigation);
+});
+
+test('three inbound flows produce one paragraph for T01, E02 and I05', () => {
+  const f = fixture();
+  for (let i = 2; i <= 3; i++) {
+    const source = { ...structuredClone(f.source), id: `source${i}`, name: `Caller ${i}` };
+    f.model.diagrams[0].elements.push(source, { ...structuredClone(f.flow), id: `flow${i}`, name: `Path ${i}`, sourceId: source.id });
+  }
+  for (const id of ['T01', 'E02', 'I05']) {
+    const [t] = generateThreats(f.model, [rule(id)]);
+    assert.equal(t.contributingFlows.length, 3);
+    assert.doesNotMatch(t.description, /\n|Caller [23]|Path [23]/);
+    assert.doesNotMatch(rule(id).description + rule(id).title, /\{(?:flow|source)\.name\}/);
+  }
+  const custom = { ...rule('T01'), title: '{source.name}', description: 'Input on {flow.name}', mitigation: 'Validate {flow.name}' };
+  const [t] = generateThreats(f.model, [custom]);
+  assert.equal(t.title, 'source'); assert.equal(t.description, 'Input on request'); assert.equal(t.mitigationHint, 'Validate request');
+  f.model.diagrams[0].elements.reverse();
+  assert.deepEqual(generateThreats(f.model, [custom]), [t]);
+});
+
+test('invalid persisted review coverage is rejected', () => {
+  const f = fixture(); f.model = normalizeModel(f.model); syncThreats(f.model);
+  for (const patch of [{ reviewedFlowIds: 'flow' }, { reviewedFlowIds: [null] }, { needsReview: 'yes' }]) {
+    const m = structuredClone(f.model); Object.assign(threatList(m)[0], patch);
+    assert.throws(() => normalizeModel(m), /Invalid threat review/);
+  }
 });
 
 test('supersession filters individual contributions before target grouping', () => {

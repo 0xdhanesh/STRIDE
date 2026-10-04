@@ -61,11 +61,12 @@ export function pdfDefinition(bundle) {
       ] });
       for (const t of group.threats) {
         const fields = threatDetails(t);
+        const metadata = new Set(['Created', 'Last reviewed', 'Stable key', 'Contributing flows']);
         const summary = fields.slice(0, 4).map(([label, value]) => `${label}: ${text(value)}`).join('  |  ');
         const body = [
           { text: summary, fontSize: 8, color: '#596273', margin: [0, 0, 0, 7], ...(t === group.threats[0] ? { id: `${groupId}-first-threat` } : {}) },
-          ...fields.slice(4, 9).filter(([, value]) => value).map(([label, value]) => ({ text: [{ text: `${label}: `, bold: true }, text(value)], margin: [0, 0, 0, 5] })),
-          { text: fields.slice(9).map(([label, value]) => `${label}: ${text(value)}`).join('\n'), fontSize: 7, color: '#596273' },
+          ...fields.slice(4).filter(([label, value]) => value && !metadata.has(label)).map(([label, value]) => ({ text: [{ text: `${label}: `, bold: true }, text(value)], margin: [0, 0, 0, 5] })),
+          { text: fields.filter(([label]) => metadata.has(label)).map(([label, value]) => `${label}: ${text(value)}`).join('\n'), fontSize: 7, color: '#596273' },
         ];
         const estimatedHeight = 65 + fields.reduce((n, [, v]) => n + String(v || '').split('\n').reduce((a, line) => a + Math.max(1, Math.ceil(line.length / 75)) * 12, 0), 0);
         content.push(table([

@@ -4,7 +4,7 @@
 import { esc, slug, download } from './util.js';
 import { diagramToSVG } from './render.js';
 import { threatList, threatStats, validate, threatBadges, activeRules, isOpen } from './engine.js';
-import { STATUS_LABELS, threatStatus, threatSeverity, contributingFlowText } from './threats.js';
+import { STATUS_LABELS, threatStatus, effectiveThreatStatus, threatSeverity, contributingFlowText, reviewNotice } from './threats.js';
 import { STRIDE, STRIDE_BY_KEY, STATES, PRIORITIES, STENCILS } from './stencils.js';
 import { normalizeModel } from './store.js';
 import { parseTM7 } from './tm7.js';
@@ -106,15 +106,16 @@ export async function exportPNG(model, diagram, sketchy) {
 
 export function exportCSV(model) {
   const dName = Object.fromEntries(model.diagrams.map((d) => [d.id, d.name]));
-  const cols = ['ID', 'Diagram', 'Interaction', 'Category', 'Title', 'Severity', 'Status', 'Description', 'Justification', 'Mitigation', 'Suggested mitigation', 'Source', 'Owner', 'Notes', 'Contributing flows'];
+  const cols = ['ID', 'Diagram', 'Interaction', 'Category', 'Title', 'Severity', 'Status', 'Description', 'Justification', 'Mitigation', 'Suggested mitigation', 'Source', 'Owner', 'Notes', 'Contributing flows', 'Recorded status', 'Review notice'];
   // Quoting alone does not stop spreadsheet formula execution on open.
   const cell = (v) => {
     const value = String(v ?? '');
     return `"${(/^[\s]*[=+@-]|^[\t\r\n]/.test(value) ? "'" : '') + value.replace(/"/g, '""')}"`;
   };
   const rows = threatList(model).map((t) => [
-    t.id, dName[t.diagramId] || '', t.interaction, STRIDE_BY_KEY[t.category]?.name, t.title, threatSeverity(t), STATUS_LABELS[threatStatus(t)],
+    t.id, dName[t.diagramId] || '', t.interaction, STRIDE_BY_KEY[t.category]?.name, t.title, threatSeverity(t), STATUS_LABELS[effectiveThreatStatus(t)],
     t.description, t.justification, t.mitigation, t.mitigationHint, t.auto ? `Rule ${t.ruleId}` : 'Custom', t.owner, t.notes, contributingFlowText(t),
+    STATUS_LABELS[threatStatus(t)], reviewNotice(t),
   ].map(cell).join(','));
   download(`${slug(model.meta.title)}-threats.csv`, '﻿' + [cols.map(cell).join(','), ...rows].join('\r\n'), 'text/csv');
 }
@@ -136,14 +137,15 @@ export function buildReport(model, { sketchy = true } = {}) {
   const catRows = STRIDE.map((c) => {
     const ts = threats.filter((t) => t.category === c.key);
     const open = ts.filter(isOpen).length;
-    return `<tr><td><span class="cat" style="background:${c.color}">${c.key}</span> ${c.name}</td><td>${ts.length}</td><td>${open}</td><td>${ts.filter((t) => threatStatus(t) === 'mitigated').length}</td><td>${bar(ts.length)}</td></tr>`;
+    return `<tr><td><span class="cat" style="background:${c.color}">${c.key}</span> ${c.name}</td><td>${ts.length}</td><td>${open}</td><td>${ts.filter((t) => effectiveThreatStatus(t) === 'mitigated').length}</td><td>${bar(ts.length)}</td></tr>`;
   }).join('');
 
   const threatBlock = (t) => `
     <article class="threat">
       <header><span class="cat" style="background:${STRIDE_BY_KEY[t.category]?.color}">${t.category}</span>
         <h4>#${t.id} ${esc(t.title)}</h4>
-        <span class="state s-${slug(STATUS_LABELS[threatStatus(t)])}">${STATUS_LABELS[threatStatus(t)]}</span><span class="prio p-${slug(threatSeverity(t))}">${threatSeverity(t)}</span></header>
+        <span class="state s-${slug(STATUS_LABELS[effectiveThreatStatus(t)])}">${STATUS_LABELS[effectiveThreatStatus(t)]}</span><span class="prio p-${slug(threatSeverity(t))}">${threatSeverity(t)}</span></header>
+      ${t.needsReview ? `<p><b>${para(reviewNotice(t))}</b><br>Counted as Open. Recorded status: ${STATUS_LABELS[threatStatus(t)]}.</p>` : ''}
       <dl>
         <dt>Category</dt><dd>${esc(STRIDE_BY_KEY[t.category]?.name)}</dd>
         <dt>Interaction</dt><dd>${esc(t.interaction || '—')}</dd>

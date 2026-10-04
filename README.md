@@ -153,6 +153,12 @@ mitigation field. Search includes owner, notes, mitigation and justification as 
 Edits autosave locally, participate in undo/redo, and survive threat regeneration and `.stride` reopening.
 Reviewed threats remain as orphaned records when their interaction disappears.
 
+For grouped threats, a non-Open decision records the contributing flow IDs it covers. A new flow sets
+`needsReview`: the recorded status and evidence remain visible, but the threat counts as Open in filters,
+badges, the dashboard and reports. The panel and exports list **New flows since review**. Choose a status
+or **Confirm status for current flows** to re-review the group. Opening older grouped records uses their
+saved contributors as the coverage baseline when threats next regenerate.
+
 Choose **Analysis → Summary** for counts across **all diagrams**, with four status cards, a category-by-status
 table, and severity totals. Custom and orphaned threats are included, even if their diagram was deleted;
 the list's diagram/selection/search filters do not narrow the dashboard. Canvas badges count Open threats
@@ -301,13 +307,18 @@ A template is a JSON array of rules:
 - `supersedes`: optional array of existing rule IDs. A matching rule hides those findings only on the
   same interaction, before endpoint grouping. Templates omitting both fields retain per-flow behavior.
 - Existing reviewed findings hidden by supersession remain in saved JSON and reappear if the specific
-  rule stops matching. On migration to endpoint grouping, a reviewed record keeps its ID and decisions;
-  additional old records are retained with `mergedInto` and `suppressed` fields in the JSON backup.
-- `when`: an array means AND; `{ "any": [...] }` means OR and `{ "not": cond }` negates. A clause is
+  rule stops matching. Migration to endpoint grouping adopts the most conservative decision (Open,
+  then Accepted, then Mitigated/Not Applicable), flags conflicting decisions for review, and combines
+  non-empty notes and mitigations with source flow names. Additional records remain in JSON as audit
+  history; their decisions are merged once so they do not override a later re-review.
+- Grouped generated text comes from the first contributing flow in ID order. Other paths are listed
+  separately rather than concatenating repeated descriptions.
+- `when`: a non-empty array or `{ "all": [...] }` means AND; `{ "any": [...] }` means OR and `{ "not": cond }` negates. Empty AND/OR groups are rejected. A clause is
   `[path, op, value]` with `op` ∈ `eq ne in nin exists`.
 - Template validation rejects malformed clauses, invalid enum values, unknown superseded IDs and
   unsafe paths, naming the offending rule. `in`/`nin` require an array; `exists` requires a boolean.
-  Paths must start with `source`, `target`, `flow` or `element`; element rules can only use `element`.
+  Paths must start with `source`, `target`, `flow` or `element`; element rules can only use `element`,
+  and interaction rules cannot use `element`.
   Prototype-related segments are forbidden, and evaluation never walks inherited properties.
 - Paths: `source.type` (`process`/`external`/`store`), `source.subtype`, `source.props.<key>`, the same for
   `target.*` and `element.*`, `flow.subtype`, `flow.props.<key>`, `flow.crossesBoundary`, `flow.boundaries`.

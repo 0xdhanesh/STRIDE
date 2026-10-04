@@ -4,7 +4,7 @@
 
 import { DEFAULT_RULES } from './rules.js';
 import { STRIDE, PRIORITIES } from './stencils.js';
-import { STATUSES, STATUS_LABELS, threatStatus, threatSeverity } from './threats.js';
+import { STATUSES, STATUS_LABELS, threatStatus, effectiveThreatStatus, threatSeverity } from './threats.js';
 import { center, lineGeom, pointInRect, quadPolyline, polylinesIntersect } from './util.js';
 
 const ENDPOINT_TYPES = ['process', 'external', 'store'];
@@ -152,17 +152,17 @@ export function generateThreats(model, rules = activeRules(model), { includeSupp
     const visible = matches.filter((t) => !t.suppressed);
     if (!visible.length && !includeSuppressed) return [];
     const contributors = visible.length ? visible : matches;
+    if (contributors[0].dedupeKey) contributors.sort((a, b) => a.contributingFlows[0].id.localeCompare(b.contributingFlows[0].id));
     const result = { ...contributors[0] };
     if (result.dedupeKey) {
       result.contributingFlows = contributors.flatMap((t) => t.contributingFlows).sort((a, b) => a.id.localeCompare(b.id));
-      // Keep interpolation from every contributing flow, not just the first.
-      for (const field of ['title', 'description', 'mitigationHint']) result[field] = [...new Set(contributors.map((t) => t[field]))].join('\n\n');
+      // Text comes from the first contributor; the flow list describes all paths.
     }
     return [result];
   });
 }
 
-const untouched = (t) => threatStatus(t) === 'open' && (!t.state || t.state === 'Not Started' || t.state === 'Open') &&
+const untouched = (t) => !t.needsReview && threatStatus(t) === 'open' && (!t.state || t.state === 'Not Started' || t.state === 'Open') &&
   !t.justification && !t.mitigation && !t.notes && !t.owner && !t.customText && !t.modified &&
   (t.severity == null || t.severity === t.priority);
 
@@ -174,17 +174,38 @@ export function syncThreats(model) {
   for (const g of generateThreats(model, activeRules(model), { includeSuppressed: true })) {
     seen.add(g.key);
     let t = model.threats[g.key];
+    // Migrate older grouped decisions using their saved contributors, before
+    // replacing them with the current flows. Newly added flows are not covered.
+    if (t?.dedupeKey && t.reviewedFlowIds == null && threatStatus(t) !== 'open') {
+      t.reviewedFlowIds = (t.contributingFlows || []).map((f) => f.id);
+    }
     if (g.dedupeKey && !g.suppressed) {
       const flowIds = new Set(g.contributingFlows.map((f) => f.id));
-      const previous = Object.values(model.threats).filter((old) => old.auto && old.ruleId === g.ruleId && old.diagramId === g.diagramId && flowIds.has(old.flowId));
-      // Reuse a reviewed legacy record before an untouched one. Other review
-      // records remain in the saved model, hidden behind their merged finding.
-      previous.sort((a, b) => Number(untouched(a)) - Number(untouched(b)) || a.id - b.id);
-      if (!t && previous.length) {
-        t = previous.shift(); delete model.threats[t.key];
-        t.key = g.key; model.threats[g.key] = t;
+      const previous = Object.values(model.threats).filter((old) => old !== t && old.auto && old.ruleId === g.ruleId && old.diagramId === g.diagramId && flowIds.has(old.flowId) && old.reviewMergedInto !== g.key);
+      if (previous.length) {
+        const rank = { open: 0, accepted: 1, mitigated: 2, 'not-applicable': 2 };
+        const records = [...(t ? [t] : []), ...previous].sort((a, b) =>
+          rank[threatStatus(a)] - rank[threatStatus(b)] || Number(untouched(a)) - Number(untouched(b)) || a.id - b.id);
+        const adopted = records[0];
+        const conflict = new Set(records.map(threatStatus)).size > 1 || records.some((r) => r.needsReview);
+        const reviewedFlowIds = [...new Set(records.flatMap((r) => r.reviewedFlowIds ||
+          (threatStatus(r) !== 'open' && !r.needsReview && r.flowId ? [r.flowId] : [])))];
+        const label = (r) => r.flowId ? g.contributingFlows.find((f) => f.id === r.flowId)?.name || r.interaction || r.flowId
+          : `Previously grouped flows: ${(r.contributingFlows || []).map((f) => f.name || f.id).join(', ')}`;
+        const combined = Object.fromEntries(['notes', 'mitigation'].map((field) => [field,
+          records.filter((r) => r[field]?.trim()).map((r) => `${label(r)}: ${r[field]}`).join('\n\n')]));
+        if (!t) {
+          t = adopted; delete model.threats[t.key];
+          t.key = g.key; model.threats[g.key] = t;
+        }
+        t.status = threatStatus(adopted); t.state = adopted.state || STATUS_LABELS[t.status];
+        Object.assign(t, combined);
+        if (reviewedFlowIds.length || conflict) t.reviewedFlowIds = reviewedFlowIds;
+        t.needsReview = conflict;
+        // Keep original records for audit history, but merge their decisions
+        // only once so regeneration cannot restore an obsolete open status.
+        for (const old of previous) if (old !== t) { old.mergedInto = g.key; old.reviewMergedInto = g.key; old.suppressed = true; old.orphan = false; }
       }
-      for (const old of previous) { old.mergedInto = g.key; old.suppressed = true; old.orphan = false; }
     }
     if (g.suppressed && !t) continue;
     if (!t) {
@@ -204,15 +225,16 @@ export function syncThreats(model) {
       if (!t.customText) { t.title = g.title; t.description = g.description; }
     }
     t.flowId = g.flowId; t.elementId = g.elementId;
-    delete t.mergedInto;
+    delete t.mergedInto; delete t.reviewMergedInto;
     for (const field of ['dedupeKey', 'contributingFlows', 'suppressed', 'supersededBy']) {
       if (g[field] !== undefined) t[field] = g[field]; else delete t[field];
     }
+    if (t.dedupeKey && t.reviewedFlowIds && t.contributingFlows.some((f) => !t.reviewedFlowIds.includes(f.id))) t.needsReview = true;
   }
   for (const [key, t] of Object.entries(model.threats)) {
     if (!t.auto || seen.has(key)) continue;
     if (t.mergedInto && seen.has(t.mergedInto)) continue;
-    delete t.suppressed; delete t.supersededBy; delete t.mergedInto;
+    delete t.suppressed; delete t.supersededBy; delete t.mergedInto; delete t.reviewMergedInto;
     if (untouched(t)) delete model.threats[key];
     else t.orphan = true;
   }
@@ -224,7 +246,7 @@ export function syncThreats(model) {
 }
 
 export const threatList = (model) => Object.values(model.threats || {}).filter((t) => !t.suppressed).sort((a, b) => a.id - b.id);
-export const isOpen = (t) => threatStatus(t) === 'open';
+export const isOpen = (t) => effectiveThreatStatus(t) === 'open';
 
 export function threatStats(threats) {
   const counts = (keys) => Object.fromEntries(keys.map((k) => [k, 0]));
@@ -235,7 +257,7 @@ export function threatStats(threats) {
     byCatStatus: Object.fromEntries(STRIDE.map((c) => [c.key, counts(STATUSES)])),
   };
   for (const t of threats) {
-    const status = threatStatus(t), severity = threatSeverity(t);
+    const status = effectiveThreatStatus(t), severity = threatSeverity(t);
     if (isOpen(t)) s.open++;
     if (t.orphan) s.orphaned++;
     s.byCat[t.category] = (s.byCat[t.category] || 0) + 1;
