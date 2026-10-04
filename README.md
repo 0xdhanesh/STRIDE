@@ -1,388 +1,71 @@
 # STRIDE Threat Modeler
 
-A client-side threat-modeling tool with an Excalidraw-style canvas and the core feature set of the
-Microsoft Threat Modeling Tool. You draw a data-flow diagram, mark trust boundaries and set security
-properties, and STRIDE threats are generated for every interaction. A library of more than 150 technology
-stencils and 81 threat rules, including penetration-testing specific ones, gets you from a whiteboard sketch
-to a reviewable threat list.
+**Threat modeling entirely in your browser. No backend. No uploads. No desktop installation.**
 
-Everything runs in the browser, with **no backend or runtime network calls** after the
-hosted application's static assets load. For zero network traffic including startup and refresh, distribute
-the standalone `STRIDE.html` build described below. Models autosave to **IndexedDB**, with a synchronous local
-recovery journal, and can be saved and opened as local **`.stride` JSON files**.
+A web-based alternative to Microsoft Threat Modeling Tool, with an Excalidraw-style canvas,
+150+ technology stencils and 81 STRIDE threat rules. Built for environments where architecture
+and security data must stay on the machine.
 
-**Live:** https://0xdhanesh.github.io/STRIDE/
+**[Open the app](https://0xdhanesh.github.io/STRIDE/)**
 
-## Features
+## Client-side by design
 
-| Area | What you get |
-| --- | --- |
-| **Canvas** | Infinite canvas, pan (space/wheel/hand), zoom, marquee select, move, resize, curved flows, copy/paste, duplicate, z-order, undo/redo, eraser, notes, hand-drawn or clean style, dark mode, touch pinch-zoom |
-| **DFD elements** | Process (incl. *Multiple Processes*), External Entity, Data Store, Data Flow, Trust Boundary box, Trust Boundary line |
-| **Stencils** | 57 process, 26 external-entity, 33 data-store, 53 data-flow (protocol) and 23 trust-zone types, most with their own symbol. Databases draw as cylinders, Kafka topics as segmented logs |
-| **Symbol library** | `Y` or the toolbar button opens 110 curated symbols in 13 groups. Click to add or drag onto the canvas; the library closes once the symbol is placed |
-| **Quick search** | `/` searches every drawing tool and every stencil. Use `↑` `↓` to move, `Enter` to pick a tool or insert a symbol at the cursor, and `Esc` to close |
-| **Connectors** | Hover a shape to get connection dots and drag one to create a data flow. Ends snap magnetically to the nearest shape and preview the attachment while dragging. Aligned shapes get straight connectors, request/response pairs curve apart, and loose ends attach when a shape is dropped on them |
-| **Properties** | Per-element security properties (encrypted, authentication, validates input, runs as root, internet facing…) that drive threat generation. Picking a protocol presets them (HTTPS/wss/LDAPS → encrypted; Telnet/FTP/ws → not). Out-of-scope with justification; notes |
-| **Threat engine** | 81 rules: STRIDE-per-interaction and element-level (modelled on the TMT SDL template), plus web, cloud, AI/MCP, WebSocket, Kafka, contact-center, Kubernetes and penetration-testing threats. Detects boundary crossings for boxes *and* curved lines |
-| **Analysis view** | Threat list with STRIDE chips, search, status/severity filters and a selection filter. Per-threat Open, Mitigated, Accepted or Not Applicable status, owner, severity, notes, justification and mitigation, with suggested mitigations. Custom threats; open-threat badges on the diagram; model-wide summary dashboard |
-| **Stable threats** | IDs, states and justifications survive diagram edits. When an interaction disappears, untouched threats are removed and edited ones are kept as *orphaned* |
-| **Validation** | Messages for unconnected flows, invalid DFD links (store→store, entity→store), duplicate names, missing boundaries and unjustified out-of-scope |
-| **Multiple diagrams** | Tabs: add, rename, duplicate, reorder, delete |
-| **Reports & export** | Direct PDF, self-contained Markdown, and lossless model/report JSON; each includes diagram images, every element, and threats grouped by STRIDE category and interaction. Printable HTML, CSV, PNG and SVG remain available |
-| **Templates** | View and edit the threat template as JSON; import/export; it's stored inside the model file |
-| **Interop** | Opens local Microsoft TMT `.tm7` XML files; maps known stencils/security properties, preserves threat reviews and original XML, and flags unmapped content |
-| **Sharing** | "Copy share link" compresses the whole model into the URL fragment, so nothing is uploaded |
+- Diagrams, threat generation, reviews, imports and report exports are processed locally in the browser.
+- Models autosave to **IndexedDB**, with a local recovery journal. Save the complete model as a
+  **`.stride` file** and reopen it with diagrams, review decisions and custom rules intact.
+- No telemetry, cloud storage, external fonts or CDN assets. A Content Security Policy blocks
+  network connections.
+- The hosted app fetches its static files on startup. The standalone file below needs **zero
+  network traffic, including startup and refresh**.
 
-## Stencil catalogue
+## Use it offline
 
-Every stencil below is available from the element's **Type** dropdown, from quick search (`/`) and, for the
-most common ones, from the symbol library (`Y`).
-
-### Processes (circles)
-
-| Group | Types |
-| --- | --- |
-| Apps & APIs | Generic Process, Web Application, Web API / Service, GraphQL API, Browser Client (SPA), Mobile App, Desktop / Thick Client, Browser Extension, Microservice, Payment Service, Admin Console / Management Plane |
-| Compute & platform | Serverless Function, Background Worker, Scheduled Job / Cron, ETL / Data Pipeline, Container / Pod, Kubernetes Pod, Kubernetes Control Plane, Service Mesh / Sidecar, Orchestrator (Workflow / Agents), Virtual Machine, Mainframe / Legacy System, Kernel Driver / Service, Multiple Processes |
-| Messaging & realtime | Kafka Broker, Message Broker, WebSocket Server / Gateway |
-| Network & edge | API Gateway, Load Balancer, Reverse Proxy, CDN / Edge, Web Application Firewall, Network Firewall, VPN Gateway, Bastion / Jump Host, DNS Server, Mail Server, File Transfer Server |
-| Identity & crypto | Identity Provider, Authentication Service, Authorization / Policy Engine, Active Directory Domain Controller, Certificate Authority / PKI, Secrets Manager |
-| AI | MCP Server, AI Agent / LLM App, ML Model Serving |
-| DevOps & SecOps | CI/CD Pipeline, Build Agent / Runner, SIEM / Log Collector, EDR / Security Agent, Vulnerability Scanner |
-| Contact center | IVR System, Genesys Contact Center |
-| OT / IoT | IoT Gateway, PLC / Controller, SCADA / HMI |
-
-### External entities (rectangles)
-
-Generic External Entity, Human User, Anonymous User, Authenticated User, Administrator, Privileged Insider,
-Browser, Third-Party Service, SaaS Application, Payment Gateway, OAuth / Social Login Provider, Mobile Device,
-IoT Device, Partner System, Supplier / Vendor, Cloud Provider Service, Email Recipient, Phone Caller (PSTN),
-Genesys Cloud (SaaS), MCP Client / AI Assistant, LLM Provider API, Open-Source Dependency, and the threat actors
-**External Attacker (Internet)**, **Malicious Insider**, **Compromised Supply Chain** and **Attacker**.
-
-### Data stores
-
-| Group | Types |
-| --- | --- |
-| Databases *(cylinder)* | Database, SQL Database, NoSQL Database, Vector Database, Data Warehouse / Lake, Time-Series Database |
-| Streams & queues | Kafka Topic / Event Log *(segmented log)*, Message Queue |
-| Files & objects | File System, File Share (SMB / NFS), Blob / Object Storage, Backup |
-| Identity & secrets | Key Vault / Secret Store, HSM / Key Management, Certificate Store, Directory (LDAP / AD), Session Store |
-| Logs | Log Store, Audit Trail, Call Recording Store |
-| Supply chain | Source Code Repository, Container Registry, Package / Artifact Registry, ML Model / Training Data |
-| Other | Generic Data Store, Search Index, Cache, Email Mailbox, Ledger / Blockchain, Browser Storage, Mobile Device Storage, Configuration / Registry, Cloud Instance Metadata |
-
-### Data flows (protocols)
-
-| Group | Types |
-| --- | --- |
-| Web & APIs | HTTP, HTTPS, REST / JSON, GraphQL, SOAP / XML, gRPC, WebSocket Secure (wss://), WebSocket (ws://), Webhook Callback |
-| Messaging | Message (AMQP / MQTT / Kafka), Kafka Produce / Consume, MCP (JSON-RPC), SIP / RTP (Voice) |
-| Identity | OAuth 2.0 / OIDC, SAML, Kerberos, NTLM, LDAP, LDAPS, RADIUS |
-| Infrastructure | DNS, DNS over HTTPS / TLS, NTP, Syslog, SNMP, SMTP, VPN / IPsec |
-| File & remote access | File Transfer (SFTP / SMB), SMB, NFS, FTP, FTPS, TFTP, SSH, Telnet, RDP, VNC, WinRM / PowerShell Remoting |
-| Local & physical | SQL / DB Protocol, IPC / Named Pipe, RPC / DCOM, Bluetooth / BLE, NFC, Wi-Fi, USB / Physical Media |
-| OT | Modbus, DNP3, OPC UA, CAN Bus |
-
-### Trust boundaries
-
-Generic Trust Boundary, Internet Boundary, Machine Boundary, Process Boundary, Corporate Network, DMZ,
-Cloud VPC / VNet, Cloud Account / Subscription, Tenant Boundary, Kubernetes Cluster, Kubernetes Namespace,
-Container Boundary, Sandbox, Browser Sandbox, Kernel / User Mode, Management Network, PCI Zone (CDE),
-Partner Network, Remote Access / VPN, Wireless Network, OT / ICS Network, Physical Boundary, Endpoint / Device.
-
-## Threat rule catalogue
-
-| IDs | Area | Examples |
-| --- | --- | --- |
-| S01–S07 | Spoofing | Spoofed external entities / processes / data stores, weak authentication across boundaries |
-| T01–T06 | Tampering | Missing input validation, tampered flows, SQL/NoSQL injection, XSS, replay, data-store tampering |
-| R01–R04 | Repudiation | Missing audit logging, lower-trusted subjects writing logs |
-| I01–I05 | Information disclosure | Sniffing, weak access control, credentials in transit, verbose errors |
-| D01–D05 | Denial of service | Process crash, interrupted flows, inaccessible stores, resource exhaustion, missing rate limiting |
-| E01–E02, E04–E06 | Elevation of privilege | Impersonation, RCE, cookie/session CSRF, unsafe deserialization, missing authorization (E03 execution-flow guidance merged into T01) |
-| X01–X05 | Element-level | Unencrypted sensitive data, root processes, secrets leakage, missing backups, memory corruption |
-| M01–M04 | AI & MCP | Tool poisoning / indirect prompt injection, excessive agency, token passthrough, data sent to LLM providers |
-| W01–W06 | WebSockets | Cross-site WebSocket hijacking, ws://, unauthenticated handshake, stale authorization, message injection, flooding |
-| K01–K02 | Kafka | Unauthenticated producers, poisoned events |
-| V01–V04 | Contact center | Caller-ID spoofing, card data in recordings, telephony DoS / toll fraud, social engineering of agents |
-| O01, C01–C03 | Platform | Workflow injection, container escape, control-plane compromise, orchestrator as high-value target |
-| **P01–P24** | **Penetration testing** | Cleartext legacy protocols, exposed RDP/SSH/VNC, NTLM relay, AD attacks (Kerberoasting, DCSync), SAML/OIDC forgery, DNS spoofing, forged webhooks, GraphQL abuse, request smuggling, SSRF & cloud-metadata theft, supply-chain artifacts, email spoofing, unauthenticated OT commands, wireless attacks, removable media, insider exfiltration, DDoS, log forging, poisoned pipelines, secrets in repos, bastion compromise, tokens in browser storage, unprotected device storage |
-
-Each rule includes a description and a suggested mitigation. All rules live in `js/rules.js` and can be
-viewed, edited, exported and replaced from **Menu → Threat template**.
-
-## Using it for penetration-test scoping
-
-1. **Draw the attack surface.** Add threat actors (*External Attacker*, *Malicious Insider*,
-   *Compromised Supply Chain*) as external entities and connect them to what they can reach.
-2. **Mark trust zones.** Use *Internet Boundary*, *DMZ*, *Management Network*, *PCI Zone*,
-   *OT / ICS Network* and so on. Flows that cross them get boundary-specific threats (sniffing, tampering, exposed remote admin…).
-3. **Pick real protocols.** Set each flow's type (Telnet, RDP, NTLM, SAML, Modbus, GraphQL…). The type presets
-   properties such as encryption and drives protocol-specific threats.
-4. **Set properties honestly.** Leave a property on *Not Selected* until the control is verified. Unknown
-   controls generate threats, which gives you a test checklist.
-5. **Triage in Analysis.** Filter by STRIDE category or severity, assign an owner, and record results as
-   *Open*, *Mitigated*, *Accepted*, or *Not Applicable*, with notes and a mitigation description.
-6. **Report.** Export PDF, Markdown or JSON from the menu, or export CSV to track findings.
-
-## Keyboard shortcuts
-
-| Keys | Action |
-| --- | --- |
-| `H` · `V`/`1` | Hand (pan) · Select |
-| `P`/`2` · `E`/`3` · `D`/`4` | Process · External entity · Data store |
-| `A`/`5` · `B`/`6` · `L`/`7` | Data flow · Trust boundary · Boundary line |
-| `T`/`8` · `X`/`0` · `Q` | Note · Eraser · Keep tool active |
-| `Y` · `/` | Symbol library · Quick search tools and symbols |
-| `Enter` / double-click | Rename selected |
-| `Del` · `Ctrl+D` · `Ctrl+C/X/V` · `Ctrl+A` | Delete · Duplicate · Copy/cut/paste · Select all |
-| `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
-| Arrows (`Shift` ×10) · `Ctrl+]` / `Ctrl+[` | Nudge · Bring forward / send back |
-| `Shift+1` · `Shift+2` · `Shift+0` | Zoom to fit · Zoom to selection · Reset zoom |
-| `Shift+A` | Toggle Analysis view |
-| `Ctrl+S` · `Ctrl+O` · `?` | Save · Open · Help |
-
-## Threat review and summary
-
-In **Analysis**, select a threat to set its **Status** (Open, Mitigated, Accepted, Not Applicable),
-**Severity** (High, Medium, Low), **Owner**, **Notes**, and **Mitigation description**. Justification
-remains a separate field for the decision rationale. Suggested mitigations can be copied into the
-mitigation field. Search includes owner, notes, mitigation and justification as well as threat text.
-Edits autosave locally, participate in undo/redo, and survive threat regeneration and `.stride` reopening.
-Reviewed threats remain as orphaned records when their interaction disappears.
-
-For grouped threats, a non-Open decision records the contributing flow IDs it covers. A new flow sets
-`needsReview`: the recorded status and evidence remain visible, but the threat counts as Open in filters,
-badges, the dashboard and reports. The panel and exports list **New flows since review**. Choose a status
-or **Confirm status for current flows** to re-review the group. Opening older grouped records uses their
-saved contributors as the coverage baseline when threats next regenerate.
-
-Choose **Analysis → Summary** for counts across **all diagrams**, with four status cards, a category-by-status
-table, and severity totals. Custom and orphaned threats are included, even if their diagram was deleted;
-the list's diagram/selection/search filters do not narrow the dashboard. Canvas badges count Open threats
-and exclude orphaned threats. Accepted threats are counted separately from Mitigated threats.
-
-Older files keep their original fields: `Not Started` and `Needs Investigation` display as Open, and
-severity falls back to the old priority. New records use `status` (`open`, `mitigated`, `accepted`,
-`not-applicable`), `severity`, `notes`, and `owner`. Changing a legacy status retains its original value
-in `legacyState`, while `state` mirrors the new decision for older consumers. The old `priority` and
-`justification` remain intact. Existing HTML and CSV exports include the effective status, severity,
-owner and notes.
-
-## Local report exports
-
-Use **Menu → Export report as PDF / Markdown / JSON**. Each export captures the current model once;
-all diagrams, trust boundaries, annotations, element properties, scope decisions and reviewed threats
-are included. Threats are grouped first by STRIDE category, then by diagram and interaction ID, so
-identically named interactions stay separate. Retained threats whose diagram was deleted are included
-under **No current diagram**. Reports include metadata, status totals, validation observations and all
-review fields; exporting does not regenerate threats or alter the model.
-
-- **PDF:** downloads a paginated, selectable-text PDF with vector diagrams, embedded fonts, repeated
-  table headers and page numbers. Normal threat records stay together; long notes continue across pages.
-  The locally bundled Roboto font covers Latin, Greek and Cyrillic. Unsupported glyphs produce an error
-  rather than missing text: use **Printable HTML report → browser Print → Save as PDF** for system-font
-  rendering of other scripts. PDF text represents arrows as `->` and typographic dashes as `-`.
-- **Markdown:** a single `.md` file embeds SVG diagram images as data URLs. Use a Markdown viewer that
-  permits embedded data images; viewers such as GitHub may suppress them. No companion image files or
-  external image URLs are needed. Model text is escaped to prevent executable HTML or injected images.
-- **JSON:** a versioned `stride-report` envelope contains the complete editable model in `model` and
-  the report snapshot in `report` (SVG images, elements, grouped threats, summary, validation and active
-  rules). **Open** accepts this JSON and restores the model losslessly, including extension fields,
-  stable IDs, custom rules and review decisions. Derived report content is never executed on import.
-
-pdfmake 0.3.11 and its fonts are vendored under `js/vendor/` and embedded in the standalone build. The
-renderer rejects URL resources before they can be requested, in addition to the app's network-blocking
-CSP. Versions, licenses and integrity hashes are recorded in [THIRD_PARTY.md](THIRD_PARTY.md). Users do
-not install anything; there is no CDN or export service.
-
-## Local save and recovery
-
-Use **Menu → Save .stride file** (`Ctrl+S` / `⌘S`) to download the full model: all diagrams, element
-geometry and security properties, threat IDs and decisions, mitigation/justification text, metadata, and
-the custom rule template. **Open** (`Ctrl+O` / `⌘O`) accepts `.stride`, older `.stride.json` / `.json`, and
-local Microsoft TMT `.tm7` files. Opening JSON preserves the recorded threat list without running
-the generator again; subsequent model edits regenerate threats as usual. Unsupported versions, element
-types, and malformed models are rejected before replacing the current work. Unknown additional JSON
-fields are retained. Opening another model can be undone.
-
-Completed edits and threat/property text drafts are saved locally. **Autosaved locally** means the
-IndexedDB transaction completed. A synchronous `localStorage` journal protects edits while that write is
-pending. Startup restores the latest recovery copy before enabling the editor and migrates the previous
-`localStorage` autosave after a successful IndexedDB write. Storage failures remain visible beside the
-validation button; a fallback recovery copy is not labelled as an IndexedDB success.
-
-Autosave holds one current model per browser storage location; multiple tabs using that location share
-that recovery slot (the last completed write wins). Use separate `.stride` files for separate models.
-Selection, viewport, open panels and undo history are session-only; theme/grid/style preferences stay in
-`localStorage`. Browser storage can be cleared, evicted, or disabled by policy/private mode. Keep `.stride`
-files as durable backups, particularly when moving or renaming the standalone HTML file, whose storage
-location is browser-dependent. Neither browser storage nor local model files are application-encrypted.
-
-## Microsoft TMT import
-
-Use **Open** to choose a local `.tm7` XML file (UTF-8 or UTF-16). Import runs entirely in the browser with its native XML
-parser. It preserves diagrams, element positions, connector references/coordinates, curved boundaries,
-scope decisions, notes and imported threat reviews. Known stencil names and explicit aliases map to the
-existing catalogue; supported security properties and enum selections map to STRIDE's options. Explicit
-imported property values override subtype defaults such as HTTPS encryption.
-
-Unknown stencils fall back to a generic stencil of the known element family. An unknown shape with no
-known family remains as a note placeholder; unknown lines remain visible connectors. Missing or ambiguous
-endpoints stay unconnected with their coordinates retained. Duplicate IDs are remapped within their
-diagram, and ambiguous references are flagged rather than guessed.
-
-Import warnings open automatically in **Validation messages** and are included in reports. Selecting an
-element shows its original TMT properties and any mapping warnings. Unsupported or conflicting security
-values remain **Not Selected**. Unknown threat states remain **Open**, unknown priorities become **Medium**,
-and unknown categories are temporarily grouped under **Spoofing**, each with a review warning.
-
-The model's `tm7.sourceXML` retains the complete original XML, including unmapped extensions. Per-element
-and per-threat `tm7` metadata preserves original IDs, types, properties and decisions; `importWarnings`
-records conversion issues. These fields survive `.stride` saves, autosave and report JSON round trips.
-Warnings describe the original import and remain as an audit record after edits. Imported threats become
-custom findings so later rule generation preserves their reviews. Embedded Microsoft templates are
-retained in the source XML; new findings use STRIDE's rules. Malformed XML, external entity/DTD declarations
-and broken serialization references are rejected before replacing the current model. Custom/localized
-TMT stencils and properties may need manual mapping after import.
-
-## Standalone offline distribution (no installation)
-
-A maintainer can generate a self-contained file using the dependency-free packaging script:
+From a local copy of this repository, a maintainer with Node.js can create the standalone file:
 
 ```sh
 npm run build:offline
 ```
 
-Distribute **`dist/STRIDE.html`**. Users open it directly in a modern browser; they need no Node, Python,
-desktop installation, server, or internet connection. Scripts, styles, icons and rules are embedded. The
-file has a script content hash policy, blocks network connections and external resources, and uses system
-fonts. Rebuild it after source changes. The generated file is not committed to the repository.
+Distribute **`dist/STRIDE.html`**. Users open it directly in a modern browser—no installation,
+server or internet connection needed. Scripts, styles, icons, rules and PDF fonts are embedded.
+No package installation is required to generate it. Rebuild after source changes.
 
-## Run locally for development
+## Model → review → export
 
-ES modules need to be served over HTTP (opening `index.html` via `file://` won't work):
+1. **Draw:** add processes, external entities, stores and flows; mark trust boundaries and set
+   security properties. Use `/` to search stencils or `Y` to open the symbol library.
+2. **Review:** generated threats include suggested mitigations. Set Open, Mitigated, Accepted or
+   Not Applicable, with owner, severity, notes and mitigation. The dashboard counts by status
+   and STRIDE category. New flows into a reviewed group require another review; previous
+   decisions and evidence remain visible.
+3. **Save:** use **Ctrl/Cmd+S** for a local `.stride` file; **Ctrl/Cmd+O** reopens it. Autosave
+   recovers work after refresh. Keep local files as durable backups: browser storage can be cleared
+   and multiple tabs share one recovery slot.
+4. **Export:** PDF, Markdown and lossless report JSON include diagram images, an elements table
+   and threats grouped by STRIDE category and interaction. HTML, CSV, SVG and PNG are also available.
+
+The canvas supports multiple diagrams, snapping connectors, undo/redo, pan/zoom and dark mode.
+**Open** also imports Microsoft TMT **`.tm7`** files: known stencils are mapped, original XML and
+reviews are preserved, and unmapped content is flagged for review. Custom templates can be edited
+through **Menu → Threat template**.
+
+Direct PDF supports Latin, Greek and Cyrillic; use **Printable HTML → Print → Save as PDF** for
+other scripts. Markdown images need a viewer that permits embedded SVG data URLs.
+
+## Develop and verify
+
+Plain HTML, CSS and JavaScript modules. No package installation or build step is required to
+serve the source app. Development checks use Node.js 20+ and Python 3.
 
 ```sh
-npm start          # python3 -m http.server 8000, then open http://localhost:8000
-npm test           # engine, review, persistence and offline-package tests (Node 20+)
+npm start                 # Static server at http://localhost:8000 (Python 3)
+npm test                  # Rules, reviews, persistence, imports, exports and offline packaging
+npm run test:acceptance   # Local save/reopen and report checks with network APIs blocked
 ```
 
-## Deploy to GitHub Pages
+Source `index.html` needs a static HTTP server; use `dist/STRIDE.html` for opening directly from disk.
+PDF rendering code and fonts are bundled locally; see [third-party notices](THIRD_PARTY.md).
 
-1. Push this repository to GitHub.
-2. Go to **Settings → Pages → Build and deployment**, choose **Deploy from a branch**, and select `main`
-   with the `/ (root)` folder.
-3. After a minute or two it's live at `https://<user>.github.io/<repo>/`.
-
-The `.nojekyll` file makes GitHub serve the files as-is. All paths are relative, so the app works from
-a sub-path.
-
-## Threat template format
-
-A template is a JSON array of rules:
-
-```json
-{
-  "id": "I01",
-  "scope": "interaction",
-  "category": "I",
-  "priority": "High",
-  "focus": "flow",
-  "title": "Data Flow Sniffing on {flow.name}",
-  "description": "Data flowing across {flow.name} may be sniffed…",
-  "mitigation": "Encrypt the channel with TLS 1.2+…",
-  "when": [["flow.crossesBoundary", "eq", true], ["flow.props.encrypted", "ne", "Yes"]]
-}
-```
-
-- `scope`: `interaction` is evaluated per data flow with context `source`, `target` and `flow`. `element` is
-  evaluated per process, external entity or data store, with context `element`.
-- `category`: one of `S T R I D E`. `priority`: `High`, `Medium` or `Low`.
-- `focus`: `source`, `target`, `flow` or `element`. If that element is out of scope, the rule is skipped.
-- `dedupeKey`: optional `target`, `source`, or `flow` (default). Endpoint grouping generates one finding
-  per rule/endpoint/diagram and lists every contributing flow in the panel and reports.
-- `supersedes`: optional array of existing rule IDs. A matching rule hides those findings only on the
-  same interaction, before endpoint grouping. Templates omitting both fields retain per-flow behavior.
-- Existing reviewed findings hidden by supersession remain in saved JSON and reappear if the specific
-  rule stops matching. Migration to endpoint grouping adopts the most conservative decision (Open,
-  then Accepted, then Mitigated/Not Applicable), flags conflicting decisions for review, and combines
-  non-empty notes and mitigations with source flow names. Additional records remain in JSON as audit
-  history; their decisions are merged once so they do not override a later re-review.
-- Grouped generated text comes from the first contributing flow in ID order. Other paths are listed
-  separately rather than concatenating repeated descriptions.
-- `when`: a non-empty array or `{ "all": [...] }` means AND; `{ "any": [...] }` means OR and `{ "not": cond }` negates. Empty AND/OR groups are rejected. A clause is
-  `[path, op, value]` with `op` ∈ `eq ne in nin exists`.
-- Template validation rejects malformed clauses, invalid enum values, unknown superseded IDs and
-  unsafe paths, naming the offending rule. `in`/`nin` require an array; `exists` requires a boolean.
-  Paths must start with `source`, `target`, `flow` or `element`; element rules can only use `element`,
-  and interaction rules cannot use `element`.
-  Prototype-related segments are forbidden, and evaluation never walks inherited properties.
-- Paths: `source.type` (`process`/`external`/`store`), `source.subtype`, `source.props.<key>`, the same for
-  `target.*` and `element.*`, `flow.subtype`, `flow.props.<key>`, `flow.crossesBoundary`, `flow.boundaries`.
-- Text fields can use `{source.name}`, `{target.name}`, `{flow.name}`, `{flow.subtype}`, `{flow.boundaries}`,
-  `{element.name}` and any other path.
-
-Property keys and subtype names are defined in `js/stencils.js`. Unset properties have the value
-`"Not Selected"`, so rules written as `ne "Yes"` generate threats until someone confirms the control is in place.
-
-## Project layout
-
-```
-index.html        UI shell (toolbar, panels, library, quick search, dialogs)
-css/app.css       Excalidraw-like styling, light/dark
-js/main.js        Wiring: actions, menus, tabs, library, quick search, keyboard, clipboard
-js/canvas.js      Interactive SVG canvas (selection, connectors, snapping)
-js/render.js      SVG renderer (canvas, exports, report)
-js/store.js       Model, undo/redo, autosave
-js/persistence.js IndexedDB transactions, refresh recovery journal, legacy migration
-js/engine.js      STRIDE rule engine, threat sync, validation
-js/threats.js     Review fields, legacy status/severity mapping and filters
-js/summary.js     Model-wide threat dashboard markup
-js/reports.js     Shared report snapshot, category/interaction grouping, Markdown
-js/pdf-report.js  Local PDF definition, pagination and font validation
-js/vendor/        Pinned PDF renderer, embedded fonts, licenses and integrity hashes
-js/rules.js       Built-in threat template (81 rules)
-js/stencils.js    Element types, subtypes, properties, symbol mapping, library groups
-js/glyphs.js      Technology symbols
-js/panels.js      Properties panel and threat panel
-js/io.js          Save/open, PNG/SVG/CSV, report, share link, .tm7 import
-js/tm7.js         Native XML import, explicit mappings, source retention and warnings
-js/ops.js         Element operations (create, delete, paste, bend…)
-js/util.js        Geometry, connector anchoring and hand-drawn path generation
-tests/            Engine tests and a .tm7 fixture
-scripts/          Standalone HTML packaging and development-only PDF QA
-```
-
-Run `npm test` for persistence, review, report, and offline regression checks.
-Run `npm run test:acceptance` to generate reviewed local-file and report artifacts while checking
-save/reopen, report JSON restoration, and exports with network APIs blocked. See [REVIEW.md](REVIEW.md)
-for the verification results, code map, rule changes, and remaining native browser checks. For PDF layout QA,
-run `node scripts/report-qa.mjs`, then `python3 scripts/verify-report-pdf.py` in a development environment
-with PyMuPDF installed. The verifier checks retained text, interaction headings, page bounds and footers,
-and creates PNGs under `tmp/pdfs/` for visual review. PyMuPDF is a development tool only; exported PDFs
-and the standalone app require no installation.
-
-Rule regressions include positive/negative minimal diagrams for every changed rule, endpoint grouping,
-supersession, legacy review preservation, template validation and output escaping. For a native browser
-DOM check, start the existing static server (`npm start`) and visit `/tests/security.html`; it checks
-that attacker-controlled names and rule text remain literal text in the panel and HTML report.
-
-TM7 fixture tests use Python 3's standard-library XML parser as a test-only bridge for Node (no pip
-packages). The application uses native `DOMParser` and does not require Python. Visit
-`/tests/tm7-browser.html` through the existing static server to run the native parser checks or inspect
-an additional local `.tm7` file without uploading it.
-
-## Privacy
-
-There is no server component, telemetry, external font, CDN, or runtime network API. The hosted version
-loads its own static HTML/CSS/JS/icon files; use the standalone HTML distribution to eliminate even those
-requests. A Content Security Policy blocks connections (`connect-src 'none'`), and diagram/report exports
-also contain no external resources. File opening uses the browser File API; saving uses local Blob
-downloads. Spellchecking is disabled in the app to avoid browser-enhanced spellcheck on model text.
-
-The app does not control browser extensions, browser/OS synchronization, or user-chosen file/clipboard
-destinations. The existing explicit share-link action copies the model into a URL fragment; it does not
-upload it. Treat exported files and copied links as containing the full model.
+- [Stencils and security properties](js/stencils.js)
+- [Threat rules and template schema](js/rules.js)
+- [Architecture, review notes and browser verification steps](REVIEW.md)
