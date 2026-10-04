@@ -108,6 +108,7 @@ export function generateThreats(model, rules = activeRules(model), { includeSupp
           category: rule.category, priority: rule.priority || 'Medium',
           title: interpolate(rule.title, ctx), description: interpolate(rule.description, ctx),
           mitigationHint: interpolate(rule.mitigation || '', ctx),
+          ...(rule.refs ? { refs: [...rule.refs] } : {}),
           interaction: `${ctx.source.name} → ${ctx.target.name}${flow.name ? ` (${flow.name})` : ''}`,
         } });
       }
@@ -138,6 +139,7 @@ export function generateThreats(model, rules = activeRules(model), { includeSupp
           category: rule.category, priority: rule.priority || 'Medium',
           title: interpolate(rule.title, ctx), description: interpolate(rule.description, ctx),
           mitigationHint: interpolate(rule.mitigation || '', ctx),
+          ...(rule.refs ? { refs: [...rule.refs] } : {}),
           interaction: ctx.element.name,
         });
       }
@@ -228,7 +230,7 @@ export function syncThreats(model) {
     }
     t.flowId = g.flowId; t.elementId = g.elementId;
     delete t.mergedInto;
-    for (const field of ['dedupeKey', 'contributingFlows', 'suppressed', 'supersededBy']) {
+    for (const field of ['dedupeKey', 'contributingFlows', 'suppressed', 'supersededBy', 'refs']) {
       if (g[field] !== undefined) t[field] = g[field]; else delete t[field];
     }
     if (t.dedupeKey && t.reviewedFlowIds && t.contributingFlows.some((f) => !t.reviewedFlowIds.includes(f.id))) t.needsReview = true;

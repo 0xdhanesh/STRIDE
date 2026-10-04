@@ -154,6 +154,7 @@ export function buildReport(model, { sketchy = true } = {}) {
         <dt>Owner</dt><dd>${para(t.owner) || '—'}</dd>
         <dt>Notes</dt><dd>${para(t.notes) || '—'}</dd>
         <dt>Record</dt><dd>${t.auto ? `Rule ${esc(t.ruleId)}` : 'Custom threat'}${t.orphan ? ' - orphaned (retained review)' : ''}</dd>
+        ${t.refs?.length ? `<dt>References</dt><dd>${para(t.refs.join(', '))}</dd>` : ''}
         ${t.justification ? `<dt>Justification</dt><dd>${para(t.justification)}</dd>` : ''}
         ${t.mitigation ? `<dt>Mitigation</dt><dd>${para(t.mitigation)}</dd>` : ''}
         ${t.mitigationHint && !t.mitigation ? `<dt>Suggested mitigation</dt><dd class="muted">${para(t.mitigationHint)}</dd>` : ''}

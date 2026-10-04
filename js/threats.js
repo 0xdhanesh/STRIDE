@@ -1,5 +1,6 @@
 // Review fields and backwards-compatible reads for saved threat records.
 import { PRIORITIES, STRIDE_BY_KEY } from './stencils.js';
+import { validRefs } from './rules.js';
 
 export const STATUSES = ['open', 'mitigated', 'accepted', 'not-applicable'];
 export const STATUS_LABELS = { open: 'Open', mitigated: 'Mitigated', accepted: 'Accepted', 'not-applicable': 'Not Applicable' };
@@ -22,6 +23,7 @@ export function reviewNotice(t) {
 }
 
 export function validateReview(t) {
+  if (Object.hasOwn(t, 'refs') && !validRefs(t.refs)) throw new Error('Invalid threat refs: expected 1-8 non-empty strings, each at most 40 characters.');
   if (t.status != null && !STATUSES.includes(t.status)) throw new Error('Invalid threat status.');
   if (t.severity != null && !PRIORITIES.includes(t.severity)) throw new Error('Invalid threat severity.');
   for (const field of ['notes', 'owner', 'mitigation', 'justification']) {

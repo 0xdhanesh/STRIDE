@@ -243,6 +243,7 @@ export function initThreatPanel(canvas) {
         <span style="flex:1"></span>
         <button class="icon-btn small" data-t="locate" title="Show on diagram">${icon('pointer', 16)}</button>
         <button class="icon-btn small" data-t="close" title="Close">${icon('x', 16)}</button></h3>
+      ${t.refs?.length ? `<p class="muted small"><b>References:</b> ${esc(t.refs.join(', '))}</p>` : ''}
       <label class="field"><span>Title</span><input data-tf="title" value="${esc(t.title)}"></label>
       <div class="grid3">
         <label class="field"><span>Category</span><select data-tf="category">${opt(STRIDE.map((c) => c.key), t.category, (k) => STRIDE_BY_KEY[k].name)}</select></label>

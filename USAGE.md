@@ -248,6 +248,7 @@ Canvas badges count open findings using the same membership rule. One grouped fi
 | Field/action | Use |
 | --- | --- |
 | Title and Description | Explain the specific threat; edits to generated text survive regeneration. |
+| References | Read-only rule references such as OWASP, CWE, ATLAS, or internal control IDs; shown as plain text. |
 | Category | Choose one of the six STRIDE categories. |
 | Severity | High, Medium, or Low; initialized from the rule's priority and then reviewable. |
 | Status | Open, Mitigated, Accepted, or Not Applicable. |
@@ -405,6 +406,9 @@ Save a model checkpoint before replacing a template. To extend the existing rule
 | `description`, `mitigation` | Optional strings with interpolation. Mitigation becomes the suggested mitigation. |
 | `dedupeKey` | `flow` (default), `source`, or `target`; endpoint grouping applies to interaction rules within each diagram. |
 | `supersedes` | Optional array of other rule IDs present in the same template; suppresses their matches on the same interaction. |
+| `refs` | Optional array of **1–8 non-empty strings**, each **at most 40 characters**. For example, `["OWASP-LLM01", "CWE-79", "ATLAS AML.T0051"]`. Whitespace-only entries, empty arrays, and non-string values are rejected. |
+
+References are literal labels, not interpolated placeholders or automatically opened links. They appear in the threat detail panel and Markdown, HTML, and PDF reports, and are retained in `.stride` and report JSON. On regeneration, generated threats copy the current rule references; adding, changing, or removing references does not change threat keys, create orphans, clear review notes, or acknowledge new flows. Retained orphan records keep their last references. Templates without `refs` continue to work and show no empty reference field.
 
 Interaction conditions can use `source`, `target`, and `flow`; element conditions can use only `element`. Context objects expose `id`, `name`, `type`, `subtype`, `props`, and `outOfScope`. Flow context additionally supplies boolean `flow.crossesBoundary` and the text `flow.boundaries`. Use the exact property keys and option strings documented above; names and option comparisons are case-sensitive.
 
@@ -432,6 +436,7 @@ Here is a complete demonstration template. Applying it by itself intentionally r
     "priority": "Medium",
     "focus": "target",
     "dedupeKey": "target",
+    "refs": ["ORG-AUDIT-01"],
     "title": "Audit evidence required for {target.name}",
     "description": "Confirm that {target.name} records attributable security events for every contributing path.",
     "mitigation": "Record actor, action, outcome, time, and correlation ID in protected audit storage.",
@@ -448,7 +453,7 @@ Here is a complete demonstration template. Applying it by itself intentionally r
 
 Titles, descriptions, and mitigations interpolate placeholders such as `{target.name}`, `{flow.name}`, or `{element.name}`. Missing values leave their placeholders visible. For grouped rules, write text about the grouped endpoint; if text differs between contributors, the engine uses the first contributor's text and lists the paths separately.
 
-Validation rejects invalid categories/scopes/priorities/focus/grouping values, duplicate IDs, unknown superseded IDs, unsupported operators, malformed clauses, empty AND/OR groups, conditions deeper than 64 nesting levels, inappropriate roots for the scope, and unsafe path segments (`__proto__`, `prototype`, `constructor`). Error messages identify the affected rule. Paths cannot traverse inherited properties. Template and element text is rendered as text/escaped content rather than executable markup.
+Validation rejects invalid categories/scopes/priorities/focus/grouping values, invalid reference arrays or strings, duplicate IDs, unknown superseded IDs, unsupported operators, malformed clauses, empty AND/OR groups, conditions deeper than 64 nesting levels, inappropriate roots for the scope, and unsafe path segments (`__proto__`, `prototype`, `constructor`). Error messages identify the affected rule. Paths cannot traverse inherited properties. Template and element text, including references, is rendered as text/escaped content rather than executable markup.
 
 The validator does not prove your rule is logically useful or that a property name exists. Test custom rules with both a model that should match and one that should not. The definitive built-in conditions and schema are in [js/rules.js](js/rules.js).
 
@@ -743,7 +748,9 @@ The catalogue below lists exact Type dropdown values. The symbol library provide
 
 There are **97 built-in rules**. `E03` was folded into `T01`, so the E-series intentionally skips that ID. The category column is the STRIDE category; the ID prefix alone is not the category for specialist rules. Titles below show their interpolation placeholders. For full conditions and mitigation guidance, read [js/rules.js](js/rules.js).
 
-The A-series uses [OWASP LLM Top 10 (2025)](https://genai.owasp.org/llm-top-10/) numbering: A01/A02 → LLM01, A03 → LLM05, A04 → LLM07, A05 → LLM06, A06 → LLM02, A07 → LLM10, A08/A10 → LLM08, A09 → LLM04/LLM08, A11 → LLM04, A13 → LLM03, and A16 → LLM09. A14 covers model extraction/inversion from [MITRE ATLAS](https://github.com/mitre-atlas/atlas-data/blob/main/dist/ATLAS.yaml); A12 covers stored-model/data theft and A15 covers MCP client authentication. These are local review rules, not remote AI checks. See [GUIDE Exercise 5](GUIDE.md#exercise-5-an-ai-agent-with-mcp-tools-and-retrieval) for matching paths, exclusions, and control experiments.
+The A-series uses [OWASP LLM Top 10 (2025)](https://genai.owasp.org/llm-top-10/) numbering: A01/A02 → LLM01, A03 → LLM05, A04 → LLM07, A05/A15 → LLM06, A06/A12 → LLM02, A07/A14 → LLM10, A08/A10 → LLM08, A09 → LLM04/LLM08, A11 → LLM04, A13 → LLM03, and A16 → LLM09. A14 also carries `ATLAS AML.T0024.001` (inversion) and `ATLAS AML.T0024.002` (extraction), from [MITRE ATLAS](https://github.com/mitre-atlas/atlas-data/blob/main/dist/ATLAS.yaml). These are local review rules, not remote AI checks. See [GUIDE Exercise 5](GUIDE.md#exercise-5-an-ai-agent-with-mcp-tools-and-retrieval) for matching paths, exclusions, and control experiments.
+
+A12's stored-model/data theft is cross-referenced to [LLM02 disclosure](https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/). A14's inference-interface extraction is cross-referenced to [LLM10 consumption/model theft](https://genai.owasp.org/llmrisk/llm102025-unbounded-consumption/). A15's missing MCP client authentication is cross-referenced to [LLM06's user-context and permission controls](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/). These are related risk/control mappings, not claims that OWASP defines dedicated rules with the same conditions.
 
 | ID | Category | Scope | Generated title |
 | --- | --- | --- | --- |

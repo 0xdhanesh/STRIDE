@@ -51,6 +51,7 @@ export function threatDetails(t) {
   return [
     ['Status', STATUS_LABELS[effectiveThreatStatus(t)]], ['Severity', threatSeverity(t)], ['Owner', t.owner || 'Unassigned'],
     ['Record', `${t.auto ? `Rule ${t.ruleId}` : 'Custom threat'}${t.orphan ? ' - orphaned (retained review)' : ''}`],
+    ...(t.refs?.length ? [['References', t.refs.join(', ')]] : []),
     ...(t.needsReview ? [['Recorded status', STATUS_LABELS[threatStatus(t)]], ['Review notice', reviewNotice(t)]] : []),
     ['Description', t.description], ['Mitigation', t.mitigation], ['Notes', t.notes], ['Justification', t.justification],
     ['Suggested mitigation', t.mitigationHint], ['Created', t.created], ['Last reviewed', t.modified],
