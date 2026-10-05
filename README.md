@@ -8,7 +8,7 @@ and security data must stay on the machine.
 
 **[Open the app](https://0xdhanesh.github.io/STRIDE/)**
 
-[Feature reference](USAGE.md) · [Step-by-step modeling guide](GUIDE.md)
+[Feature reference](USAGE.md) · [Step-by-step modeling guide](GUIDE.md) · [Black-box demos](DEMO.md)
 
 ## Client-side by design
 
