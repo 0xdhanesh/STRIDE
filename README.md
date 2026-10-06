@@ -32,6 +32,11 @@ Distribute **`dist/STRIDE.html`**. Users open it directly in a modern browser—
 server or internet connection needed. Scripts, styles, icons, rules and PDF fonts are embedded.
 No package installation is required to generate it. Rebuild after source changes.
 
+For a GitHub release, create and publish a release with a tag pointing to the commit you want
+to distribute. GitHub Actions runs the tests, builds the standalone file from that tag, and
+attaches **`STRIDE.html`** to the release assets. The workflow also runs the tests on pushes
+and pull requests to `main`.
+
 ## Model → review → export
 
 1. **Draw:** add processes, external entities, stores and flows; mark trust boundaries and set
