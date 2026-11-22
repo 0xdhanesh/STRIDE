@@ -4,7 +4,7 @@
 import { GENERIC, GENERIC_IDS, REPRESENTATION, kbFor, normalizeTemplate } from './kb.js';
 import { center, controlFromBend, flatten, perimeterPoint, rectOf, rectsOverlap } from './geometry.js';
 import { clone, isSafeKey, nowIso, safeStringMap, uid } from './util.js';
-import { annotateSignals } from './signal.js';
+import { annotateThreats } from './enrich/enrichThreat.js';
 
 export const MODEL_FORMAT = 'stride-model';
 export const MODEL_VERSION = 1;
@@ -517,7 +517,7 @@ export function updateThreat(model, ref, patch = {}, user = 'user') {
   }
   t.changedBy = String(user || 'user');
   t.modifiedAt = nowIso();
-  annotateSignals(model);
+  annotateThreats(model);
   touch(model);
   return t;
 }
@@ -574,7 +574,7 @@ export function addUserThreat(model, flowRef, fields = {}, user = 'user') {
     edited: ['title', 'description', 'mitigation'],
   };
   model.threats.push(threat);
-  annotateSignals(model);
+  annotateThreats(model);
   touch(model);
   return threat;
 }
@@ -584,7 +584,7 @@ export function deleteThreat(model, ref) {
   if (!t) throw new ModelError(`Threat not found: ${ref}`);
   if (!t.userDefined && !t.orphan) throw new ModelError('Generated threats cannot be deleted; mark them Not Applicable instead');
   model.threats = model.threats.filter((x) => x !== t);
-  annotateSignals(model);
+  annotateThreats(model);
   touch(model);
   return t;
 }
@@ -721,8 +721,8 @@ export function loadModel(input) {
     }
   }
   const maxId = threats.reduce((m, t) => Math.max(m, t.id), 0);
-  // threat.signal is derived data: any stored copy is dropped and recomputed below.
-  return annotateSignals({
+  // threat.signal and threat.enriched are derived data: any stored copy is dropped and recomputed below.
+  return annotateThreats({
     format: MODEL_FORMAT,
     version: MODEL_VERSION,
     id: isSafeKey(raw.id) ? raw.id : uid('tm'),

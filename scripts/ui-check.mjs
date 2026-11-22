@@ -230,7 +230,7 @@ async function main() {
     await evaluate(`document.getElementById('hsview').click()`);
     await sleep(200);
     const hs = await evaluate(`(() => ({ rows: document.querySelectorAll('.table-wrap tbody tr').length, high: __stride.store.model.threats.filter(t => t.signal?.level === 'high').length, first: document.querySelector('.table-wrap tbody tr td.title')?.textContent || '' }))()`);
-    check(hs.rows === hs.high && hs.rows > 0 && hs.rows < allRows && hs.first.startsWith('Command injection via shell_exec'), `high-signal view filters and ranks threats (${allRows} → ${hs.rows}, first: ${hs.first.slice(0, 60)})`);
+    check(hs.rows === hs.high && hs.rows > 0 && hs.rows < allRows && hs.first.startsWith('Command / code injection sink (shell_exec)'), `high-signal view filters and ranks threats (${allRows} → ${hs.rows}, first: ${hs.first.slice(0, 60)})`);
 
     if (SHOT) {
       await evaluate(`(() => { __stride.store.setModel(__stride.core.createSampleModel()); __stride.ui.canvas.zoomToFit(); })()`);

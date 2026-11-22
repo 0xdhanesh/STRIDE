@@ -7,7 +7,8 @@ import { GENERIC } from './kb.js';
 import { polylineCrossesRect, polylinesIntersect, rectOf } from './geometry.js';
 import { effectiveProperties, elementIndex, interactionString, kbOf, lineGeometry, touch } from './model.js';
 import { compileRule, evaluate, expandTemplate } from './rules.js';
-import { annotateSignals } from './signal.js';
+import { annotateThreats } from './enrich/enrichThreat.js';
+import { adoptCandidate, matchByStableKey } from './enrich/triage.js';
 
 export function threatKey(typeId, sourceId, flowId, targetId) {
   return `${typeId}:${sourceId}:${flowId}:${targetId}`;
@@ -144,13 +145,15 @@ function isUntouched(t) {
  * Generate threats and merge them into model.threats (MTMT GenerateThreatsInternal):
  *  - new keys are added with the next sequential id;
  *  - existing keys keep their triage and get refreshed text (unless the user edited it);
+ *  - a threat whose key vanished is re-attached to a new candidate with the same stable key
+ *    (type + source/target/flow names), keeping its triage;
  *  - threats that are no longer produced are removed if untouched, otherwise kept as orphans;
  *  - user-defined threats are never removed.
  */
 export function generateThreats(model, { diagramId } = {}) {
-  const summary = { enabled: model.settings.threatGeneration !== false, added: 0, updated: 0, removed: 0, orphaned: 0, restored: 0, total: 0, errors: [] };
+  const summary = { enabled: model.settings.threatGeneration !== false, added: 0, updated: 0, removed: 0, orphaned: 0, restored: 0, rematched: 0, total: 0, errors: [] };
   if (!summary.enabled) {
-    annotateSignals(model);
+    annotateThreats(model);
     summary.total = model.threats.length;
     return summary;
   }
@@ -160,6 +163,7 @@ export function generateThreats(model, { diagramId } = {}) {
   const idx = elementIndex(model);
   const inScope = (t) => (diagramId ? t.diagramId === diagramId : true);
   const kept = [];
+  const unmatched = [];
 
   for (const t of model.threats) {
     if (t.userDefined) {
@@ -198,7 +202,24 @@ export function generateThreats(model, { diagramId } = {}) {
       }
       if (changed) summary.updated++;
       kept.push(t);
-    } else if (isUntouched(t)) {
+    } else {
+      unmatched.push(t);
+    }
+  }
+  // Stable triage: a threat whose key vanished but whose type + source/target/flow names
+  // reappear under a new key (elements got new ids) keeps its triage under the new key.
+  const adopted = new Set();
+  for (const [t, c] of matchByStableKey(unmatched, [...candidates.values()])) {
+    candidates.delete(c.key);
+    if (t.orphan) summary.restored++;
+    adoptCandidate(t, c);
+    adopted.add(t);
+    summary.rematched++;
+    kept.push(t);
+  }
+  for (const t of unmatched) {
+    if (adopted.has(t)) continue;
+    if (isUntouched(t)) {
       summary.removed++;
     } else {
       if (!t.orphan) summary.orphaned++;
@@ -221,9 +242,9 @@ export function generateThreats(model, { diagramId } = {}) {
     summary.added++;
   }
   kept.sort((a, b) => a.id - b.id);
-  const changed = summary.added || summary.removed || summary.orphaned || summary.updated || summary.restored;
+  const changed = summary.added || summary.removed || summary.orphaned || summary.updated || summary.restored || summary.rematched;
   model.threats = kept;
-  annotateSignals(model); // post-processing only: never feeds back into rule matching or merge
+  annotateThreats(model); // post-processing only: never feeds back into rule matching or merge
   if (changed) touch(model);
   summary.total = kept.length;
   return summary;

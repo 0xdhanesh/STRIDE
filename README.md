@@ -62,6 +62,26 @@ MTMT is a rule engine that runs over a diagram. This tool follows the same model
    always wins. HTML, Markdown and JSON reports start with an executive summary and the high-signal
    findings table, followed by the full threat register. The web threat list has a **High-signal
    view** toggle.
+7. **Enrichment.** High-signal threats are then turned into testing items (`src/core/enrich/`). Each
+   threat gets an additive `enriched` object, and `title`/`description` stay unchanged for MTMT:
+
+   | Class | When | Title |
+   |---|---|---|
+   | `rce-sink` | evidence or flow name has `shell_exec`, `exec(`, `system(`, `eval(`, deserialization | Command / code injection sink |
+   | `ssrf` | outbound HTTP (`http.Get`, `fetch`, `curl_exec` …) with a user-supplied URL | SSRF in outbound request |
+   | `idor` | API endpoint + object id + evidence of a missing authz/membership check | IDOR / BOLA on *resource* endpoints |
+   | `auth-bypass` | WebSocket flow with authentication in play | Inconsistent WebSocket authentication |
+   | `csrf` | the CSRF rule fired on a cookie/session flow (or a weak token is observed) | CSRF on state-changing endpoint |
+   | `upload` | file upload with no size/type control recorded | Unrestricted file upload |
+   | `generic` | anything else | original title |
+
+   `enriched` carries `specificTitle`, `class`, `evidence` (`[{file, line, sink}]`), `whyTest`,
+   `confidence` (`observed-sink` | `hypothesized` | `needs-verification`), and `groupKey`. A class
+   hit that is backed by file evidence also counts as a dangerous sink (+30). Threats with the same
+   `groupKey` are collapsed in reports into one representative that shows *Related flows: N*. In the
+   model, all threats are kept, and the secondary ones have `enriched.duplicateOf`. During regeneration,
+   a threat whose element ids changed but whose type and source/target/flow names are the same is
+   matched by a stable key. It keeps its state, justification and custom notes.
 
 ### Rule language
 
