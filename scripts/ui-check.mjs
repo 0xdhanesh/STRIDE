@@ -48,6 +48,17 @@ async function launch(chrome) {
   return { proc, dir, port };
 }
 
+/** Terminate Chrome and wait for it to exit (SIGKILL after a grace period). */
+async function stopChrome(proc) {
+  if (proc.exitCode !== null || proc.signalCode !== null) return;
+  const exited = new Promise((r) => proc.once('exit', r));
+  proc.kill('SIGTERM');
+  const timer = setTimeout(() => proc.kill('SIGKILL'), 3000);
+  await exited;
+  clearTimeout(timer);
+  await sleep(300);
+}
+
 class Cdp {
   constructor(ws) {
     this.ws = ws;
@@ -212,10 +223,14 @@ async function main() {
     check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(' | ')}` : ''}`);
     ws.close();
   } finally {
-    proc.kill();
     server.close();
-    await sleep(200);
-    fs.rmSync(dir, { recursive: true, force: true });
+    await stopChrome(proc);
+    // Best effort: Chrome helpers can still be flushing the profile; never fail the run over cleanup.
+    try {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    } catch (e) {
+      console.log(`note: could not remove temporary profile ${dir} (${e.code || e.message})`);
+    }
   }
   if (failures) {
     console.log(`\n${failures} UI check(s) failed`);

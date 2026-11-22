@@ -1,4 +1,4 @@
-name: Test and release standalone HTML
+name: Test and release
 
 on:
   push:
@@ -36,8 +36,21 @@ jobs:
         with:
           node-version: '20'
       - run: npm run build:offline
-      - name: Attach standalone HTML to the release
+      - name: Package release zip
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          NAME="stride-threat-modeler-${RELEASE_TAG}"
+          STAGE="dist/${NAME}"
+          rm -rf "$STAGE" && mkdir -p "$STAGE"
+          cp dist/STRIDE.html "$STAGE/"
+          cp -R index.html favicon.svg src bin package.json README.md THIRD_PARTY.md "$STAGE/"
+          (cd dist && zip -qr "${NAME}.zip" "${NAME}")
+          unzip -l "dist/${NAME}.zip" | tail -1
+          echo "ZIP=dist/${NAME}.zip" >> "$GITHUB_ENV"
+      - name: Attach standalone HTML and zip to the release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$RELEASE_TAG" dist/STRIDE.html --clobber
+        run: gh release upload "$RELEASE_TAG" dist/STRIDE.html "$ZIP" --clobber
