@@ -35,21 +35,27 @@ export function collectModules(entry = ENTRY) {
 const sha = (s) => `'sha256-${crypto.createHash('sha256').update(s, 'utf8').digest('base64')}'`;
 
 export function buildOffline() {
-  const favicon = `data:image/svg+xml;base64,${fs.readFileSync(path.join(ROOT, 'favicon.svg')).toString('base64')}`;
+  // Inline every referenced asset (assets/*.png|svg) as a data: URI so the file is self-contained.
+  const dataUri = (rel) => {
+    const ext = path.extname(rel).slice(1).toLowerCase();
+    const mime = { png: 'image/png', svg: 'image/svg+xml', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }[ext];
+    if (!mime) throw new Error(`Unsupported asset type: ${rel}`);
+    return `data:${mime};base64,${fs.readFileSync(path.join(ROOT, rel)).toString('base64')}`;
+  };
+  const inlineAssets = (text) => text.replace(/assets\/[A-Za-z0-9._-]+\.(?:png|svg|jpe?g|webp)/g, (rel) => dataUri(rel));
   const modules = collectModules();
   const imports = {};
   for (const [rel, code0] of modules) {
-    const code = code0.replace(/(['"])favicon\.svg\1/g, `$1${favicon}$1`);
+    const code = inlineAssets(code0);
     imports[toKey(rel)] = `data:text/javascript;base64,${Buffer.from(code, 'utf8').toString('base64')}`;
   }
   const importMap = JSON.stringify({ imports });
   const boot = `import ${JSON.stringify(toKey(ENTRY))};`;
   const css = fs.readFileSync(path.join(ROOT, 'src/web/styles.css'), 'utf8');
   const csp = `default-src 'none'; script-src ${sha(importMap)} ${sha(boot)} data:; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src data:; object-src 'none'; base-uri 'none'; form-action 'none'`;
-  let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  let html = inlineAssets(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'));
   html = html
     .replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, `<meta http-equiv="Content-Security-Policy" content="${csp}" />`)
-    .replace(/<link rel="icon"[^>]*>/, `<link rel="icon" href="${favicon}" type="image/svg+xml" />`)
     .replace(/<link rel="stylesheet"[^>]*>/, () => `<style>\n${css}\n</style>`)
     .replace(/<script type="module" src="[^"]*"><\/script>/, () => `<script type="importmap">${importMap}</script>\n    <script type="module">${boot}</script>`);
   if (!html.includes('type="importmap"')) throw new Error('index.html is missing the module script tag');

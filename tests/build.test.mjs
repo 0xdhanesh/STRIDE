@@ -10,6 +10,8 @@ test('offline build inlines every module and pins inline scripts in the CSP', ()
   assert.ok(r.modules >= 15);
   assert.ok(!/<link rel="stylesheet"/.test(html));
   assert.ok(!/src="src\//.test(html));
+  assert.ok(!html.includes('assets/'), 'icons are inlined');
+  assert.ok(html.includes('rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,'));
   const map = JSON.parse(/<script type="importmap">([\s\S]*?)<\/script>/.exec(html)[1]);
   assert.equal(Object.keys(map.imports).length, r.modules);
   for (const [key, url] of Object.entries(map.imports)) {

@@ -319,7 +319,7 @@ function renderTopbar() {
   ], 'Settings');
   clear(topbar).append(
     h('button', { class: 'btn show-sm', type: 'button', 'aria-label': 'Stencils', onClick: () => app.classList.toggle('show-palette') }, icon('menu')),
-    h('div', { class: 'brand' }, h('img', { src: 'favicon.svg', alt: '' }), h('span', { class: 'hide-sm' }, 'STRIDE'), h('button', { class: 'btn model-name', type: 'button', title: 'Rename model', onClick: renameModel }, model.meta.name + (store.dirty && store.fileName ? ' •' : ''))),
+    h('div', { class: 'brand' }, h('img', { src: 'assets/logo-64.png', alt: '', width: 28, height: 28 }), h('span', { class: 'hide-sm' }, 'STRIDE'), h('button', { class: 'btn model-name', type: 'button', title: 'Rename model', onClick: renameModel }, model.meta.name + (store.dirty && store.fileName ? ' •' : ''))),
     fileMenu,
     h('div', { class: 'sep hide-sm' }),
     tabs,
