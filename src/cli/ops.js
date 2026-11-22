@@ -11,6 +11,7 @@ import {
   addNote,
   addUserThreat,
   applyTemplate,
+  displayTitle,
   elementIndex,
   explainFlow,
   filterThreats,
@@ -202,6 +203,7 @@ export function threatView(model, t) {
     type: t.typeId,
     category: kb.category(t.category)?.name || t.category,
     title: t.title,
+    displayTitle: displayTitle(t),
     state: THREAT_STATE_LABELS[t.state] || t.state,
     priority: t.priority,
     interaction: t.interaction,
@@ -216,6 +218,20 @@ export function threatView(model, t) {
     signal: t.signal
       ? { level: t.signal.level, score: t.signal.score, title: t.signal.title, sink: t.signal.sink, evidence: t.signal.evidence, reasons: t.signal.reasons }
       : undefined,
+    enriched:
+      t.enriched && t.enriched.class !== 'generic'
+        ? (({ specificTitle, class: cls, evidence, whyTest, confidence, groupKey, duplicateOf, relatedFlows, relatedThreats }) => ({
+            specificTitle,
+            class: cls,
+            evidence,
+            whyTest,
+            confidence,
+            groupKey,
+            duplicateOf,
+            relatedFlows,
+            relatedThreats,
+          }))(t.enriched)
+        : undefined,
   };
 }
 
@@ -285,7 +301,7 @@ export function opReport(model, { format = 'html', diagram, signal } = {}) {
       return JSON.stringify(
         {
           summary: summarize(model),
-          stakeholder: level === 'off' ? undefined : (({ level: l, counts, highByCategory, lines, findings }) => ({ level: l, counts, highByCategory, executiveSummary: lines, findings }))(stakeholderSummary(model, { signal: level })),
+          stakeholder: level === 'off' ? undefined : (({ level: l, counts, highByCategory, lines, findings, collapsed }) => ({ level: l, counts, highByCategory, executiveSummary: lines, findings, collapsed }))(stakeholderSummary(model, { signal: level })),
           threats: model.threats.map((t) => threatView(model, t)),
           validation: opValidate(model),
         },

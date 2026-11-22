@@ -134,7 +134,7 @@ function formatThreats(res) {
   const sig = { high: 'HIGH', medium: 'MED ', generic: '    ' };
   const lines = res.threats.map(
     (t) =>
-      `${String(t.id).padStart(4)}  ${sig[t.signal?.level] || '    '} ${t.state.padEnd(22)} ${String(t.priority).padEnd(7)} ${t.category.padEnd(23)} ${t.signal?.title || t.title}\n      ${t.interaction}${t.orphan ? ' (no longer present)' : ''}`,
+      `${String(t.id).padStart(4)}  ${sig[t.signal?.level] || '    '} ${t.state.padEnd(22)} ${String(t.priority).padEnd(7)} ${t.category.padEnd(23)} ${t.displayTitle || t.title}\n      ${t.interaction}${t.orphan ? ' (no longer present)' : ''}`,
   );
   return `${lines.join('\n')}\n\n${res.total} threat(s)`;
 }

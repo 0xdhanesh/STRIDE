@@ -611,7 +611,7 @@ export class Drawer {
           'td',
           { class: 'title' },
           displayTitle(t),
-          t.signal?.title ? h('span', { class: 'muted small' }, `  (rule: ${t.title})`) : null,
+          displayTitle(t) !== t.title ? h('span', { class: 'muted small' }, `  (rule: ${t.title})`) : null,
           t.userDefined ? h('span', { class: 'muted small' }, '  (user-defined)') : null,
         ),
         h('td', { class: 'small muted' }, t.orphan ? 'No longer present in the diagram' : t.interaction),

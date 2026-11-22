@@ -6,7 +6,8 @@ import { renderDiagramSvg } from './svg.js';
 import { validateModel } from './validate.js';
 import { csvCell, escapeHtml } from './util.js';
 import { GENERIC } from './kb.js';
-import { SIGNAL_LABELS, SIGNAL_LEVELS, annotateSignals, displayTitle, levelsAtLeast, normalizeSignalLevel, oneLine } from './signal.js';
+import { annotateThreats, enrichedEvidence } from './enrich/enrichThreat.js';
+import { SIGNAL_LABELS, SIGNAL_LEVELS, displayTitle, levelsAtLeast, normalizeSignalLevel, oneLine } from './signal.js';
 
 export function filterThreats(model, { states, categories, priorities, signals, diagramId, text, includeOrphans = true } = {}) {
   const q = text ? String(text).toLowerCase() : '';
@@ -59,7 +60,7 @@ export function summarize(model) {
  * Returns plain data so HTML, Markdown and JSON reports share one source of truth.
  */
 export function stakeholderSummary(model, { signal = 'high', top = 3 } = {}) {
-  annotateSignals(model);
+  annotateThreats(model);
   const kb = kbOf(model);
   const s = summarize(model);
   const idx = elementIndex(model);
@@ -68,7 +69,7 @@ export function stakeholderSummary(model, { signal = 'high', top = 3 } = {}) {
   const nodes = model.diagrams.reduce((n, d) => n + d.elements.filter((e) => [GENERIC.PROCESS, GENERIC.EXTERNAL, GENERIC.STORE].includes(e.generic)).length, 0);
   const flows = model.diagrams.reduce((n, d) => n + d.elements.filter((e) => e.generic === GENERIC.FLOW).length, 0);
   const catName = (id) => kb.category(id)?.name || id;
-  const findings = model.threats
+  const ranked = model.threats
     .filter((t) => levels.includes(t.signal?.level || 'generic'))
     .sort((a, b) => (b.signal?.score ?? 0) - (a.signal?.score ?? 0) || a.id - b.id)
     .map((t) => ({
@@ -83,13 +84,25 @@ export function stakeholderSummary(model, { signal = 'high', top = 3 } = {}) {
       signal: t.signal?.level || 'generic',
       score: t.signal?.score ?? 0,
       reasons: t.signal?.reasons || [],
-      evidence: t.signal?.evidence || [],
-      mitigation: t.signal?.fix || oneLine(t.mitigation),
+      evidence: enrichedEvidence(t),
+      evidenceDetail: t.enriched?.evidence || [],
+      class: t.enriched?.class || 'generic',
+      whyTest: t.enriched?.whyTest || '',
+      confidence: t.enriched?.class && t.enriched.class !== 'generic' ? t.enriched.confidence : '',
+      groupKey: t.enriched?.groupKey || '',
+      relatedFlows: t.enriched?.relatedFlows || 0,
+      relatedThreats: t.enriched?.relatedThreats || [],
+      duplicateOf: t.enriched?.duplicateOf,
+      mitigation: t.enriched?.fix || t.signal?.fix || oneLine(t.mitigation),
       interaction: t.interaction,
       source: idx.get(t.sourceId)?.element.name || '',
       target: idx.get(t.targetId)?.element.name || '',
       orphan: !!t.orphan,
     }));
+  // De-duplication: identical patterns collapse onto their representative.
+  const listed = new Set(ranked.map((f) => f.id));
+  const findings = ranked.filter((f) => f.duplicateOf === undefined || !listed.has(f.duplicateOf));
+  const collapsed = ranked.length - findings.length;
   const high = model.threats.filter((t) => t.signal?.level === 'high');
   const highByCategory = {};
   for (const t of high) highByCategory[catName(t.category)] = (highByCategory[catName(t.category)] || 0) + 1;
@@ -117,7 +130,7 @@ export function stakeholderSummary(model, { signal = 'high', top = 3 } = {}) {
         `${i + 1}. ${f.title} — ${f.category}, ${f.priority} priority, ${f.state}${f.source || f.target ? `, from ${f.source || '?'} to ${f.target || '?'}` : ''}${f.evidence.length ? ` (evidence: ${f.evidence[0]})` : ''}.`,
     ),
   ];
-  return { level, nodes, flows, counts: s.bySignal, highByCategory, lines, topFindings, findings };
+  return { level, nodes, flows, counts: s.bySignal, highByCategory, lines, topFindings, findings, collapsed };
 }
 
 function findingsHeading(level) {
@@ -206,10 +219,19 @@ function stakeholderHtml(sh) {
   html += `</div><h2>${findingsHeading(sh.level)}</h2>`;
   if (!sh.findings.length) return html + `<p class="k">No threats at this signal level. The full register below lists every generated threat.</p>`;
   html += `<table class="findings"><tr><th>ID</th><th>Finding</th><th>Category</th><th>Priority</th><th>Signal</th><th>Evidence</th><th>Mitigation</th></tr>${sh.findings
-    .map(
-      (f) => `<tr><td>${f.id}</td><td class="t"><a href="#threat-${f.id}">${escapeHtml(f.title)}</a><span class="k">${escapeHtml(f.state)} · ${escapeHtml(f.orphan ? `${f.interaction} (no longer present)` : f.interaction)}</span></td><td>${escapeHtml(f.category)}</td><td><span class="pill p-${escapeHtml(f.priority)}">${escapeHtml(f.priority)}</span></td><td><span class="pill g-${escapeHtml(f.signal)}" title="${escapeHtml(f.reasons.join(', '))}">${escapeHtml(SIGNAL_LABELS[f.signal])} · ${f.score}</span></td><td>${f.evidence.map((e) => `<code>${escapeHtml(e)}</code>`).join('<br>') || '<span class="k">—</span>'}</td><td>${escapeHtml(f.mitigation) || '<span class="k">—</span>'}</td></tr>`,
-    )
+    .map((f) => {
+      const test = [
+        f.whyTest ? `<span class="k"><b>Why test:</b> ${escapeHtml(f.whyTest)}</span>` : '',
+        f.confidence ? `<span class="k"><b>Confidence:</b> ${escapeHtml(f.confidence)}</span>` : '',
+        f.relatedFlows > 1 ? `<span class="k"><b>Related flows:</b> ${f.relatedFlows}${f.relatedThreats.length ? ` (also threats ${f.relatedThreats.map((id) => `<a href="#threat-${id}">${id}</a>`).join(', ')})` : ''}</span>` : '',
+      ].join('');
+      const ev = f.evidenceDetail.length
+        ? f.evidenceDetail.map((e) => `<code>${escapeHtml(`${e.file}${e.line ? `:${e.line}` : ''}`)}</code>${e.sink ? ` <span class="k" style="display:inline">${escapeHtml(e.sink)}</span>` : ''}`).join('<br>')
+        : '<span class="k">—</span>';
+      return `<tr><td>${f.id}</td><td class="t"><a href="#threat-${f.id}">${escapeHtml(f.title)}</a><span class="k">${escapeHtml(f.state)} · ${escapeHtml(f.orphan ? `${f.interaction} (no longer present)` : f.interaction)}</span>${test}</td><td>${escapeHtml(f.category)}</td><td><span class="pill p-${escapeHtml(f.priority)}">${escapeHtml(f.priority)}</span></td><td><span class="pill g-${escapeHtml(f.signal)}" title="${escapeHtml(f.reasons.join(', '))}">${escapeHtml(SIGNAL_LABELS[f.signal])} · ${f.score}</span></td><td>${ev}</td><td>${escapeHtml(f.mitigation) || '<span class="k">—</span>'}</td></tr>`;
+    })
     .join('')}</table>`;
+  if (sh.collapsed) html += `<p class="k">${sh.collapsed} duplicate finding${sh.collapsed === 1 ? '' : 's'} collapsed into ${sh.collapsed === 1 ? 'its' : 'their'} representative (listed under Related flows).</p>`;
   return html;
 }
 
@@ -220,7 +242,7 @@ function stakeholderHtml(sh) {
 export function renderHtmlReport(model, { states, includeMessages = true, signal = 'high' } = {}) {
   const level = normalizeSignalLevel(signal) || 'high';
   const sh = level === 'off' ? null : stakeholderSummary(model, { signal: level });
-  if (!sh) annotateSignals(model);
+  if (!sh) annotateThreats(model);
   const kb = kbOf(model);
   const m = model.meta;
   const s = summarize(model);
@@ -290,7 +312,7 @@ ${SIGNAL_LEVELS.map((l) => `<div class="card"><b>${s.bySignal[l] || 0}</b><span>
 export function renderMarkdownReport(model, { states, signal = 'high' } = {}) {
   const level = normalizeSignalLevel(signal) || 'high';
   const sh = level === 'off' ? null : stakeholderSummary(model, { signal: level });
-  if (!sh) annotateSignals(model);
+  if (!sh) annotateThreats(model);
   const kb = kbOf(model);
   const s = summarize(model);
   const md = (v) => String(v ?? '').replace(/([\\`*_{}[\]<>|#])/g, '\\$1').replace(/\r?\n/g, ' ');
@@ -304,11 +326,19 @@ export function renderMarkdownReport(model, { states, signal = 'high' } = {}) {
     out += `\n## ${findingsHeading(sh.level)}\n\n`;
     if (!sh.findings.length) out += `No threats at this signal level.\n\n`;
     else {
-      out += `| ID | Finding | Category | Priority | State | Signal | Evidence | Mitigation |\n|---:|---|---|---|---|---|---|---|\n`;
       for (const f of sh.findings) {
-        out += `| ${f.id} | ${md(f.title)} | ${md(f.category)} | ${md(f.priority)} | ${md(f.state)} | ${md(SIGNAL_LABELS[f.signal])} (${f.score}) | ${f.evidence.map((e) => md(e)).join(', ') || '—'} | ${md(f.mitigation) || '—'} |\n`;
+        out += `### ${f.id}. ${md(f.title)}\n\n`;
+        const ev = f.evidenceDetail.map((e) => `${md(`${e.file}${e.line ? `:${e.line}` : ''}`)}${e.sink ? ` (${md(e.sink)})` : ''}`);
+        out += `- **Evidence:** ${ev.join(', ') || '—'}\n`;
+        if (f.whyTest) out += `- **Why test:** ${md(f.whyTest)}\n`;
+        if (f.confidence) out += `- **Confidence:** ${md(f.confidence)}\n`;
+        if (f.relatedFlows > 1) out += `- **Related flows:** ${f.relatedFlows}${f.relatedThreats.length ? ` (also threats ${f.relatedThreats.join(', ')})` : ''}\n`;
+        out += `- ${md(f.category)} · ${md(f.priority)} priority · ${md(f.state)} · ${md(SIGNAL_LABELS[f.signal])} (${f.score})\n`;
+        out += `- ${md(f.interaction)}${f.orphan ? ' (no longer present)' : ''}\n`;
+        if (f.mitigation) out += `- **Mitigation:** ${md(f.mitigation)}\n`;
+        out += '\n';
       }
-      out += '\n';
+      if (sh.collapsed) out += `${sh.collapsed} duplicate finding${sh.collapsed === 1 ? '' : 's'} collapsed into ${sh.collapsed === 1 ? 'its' : 'their'} representative.\n\n`;
     }
     out += `## Full threat register\n\n`;
   }
