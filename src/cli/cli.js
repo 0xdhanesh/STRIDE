@@ -4,11 +4,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createModel, kbOf } from '../core/index.js';
-import { loadModelFile, loadTemplateFile, saveModelFile, writeTextAtomic } from './files.js';
+import { loadModelFile, loadTemplateFile, readText, saveModelFile, writeTextAtomic } from './files.js';
 import * as ops from './ops.js';
 import { runMcpServer } from './mcp.js';
 
-const BOOLEAN = new Set(['json', 'dry-run', 'cascade', 'no-generate', 'in-scope', 'strict', 'force', 'help', 'all']);
+const BOOLEAN = new Set(['json', 'dry-run', 'cascade', 'no-generate', 'in-scope', 'strict', 'force', 'help', 'all', 'no-prune']);
 const REPEATABLE = new Set(['prop', 'custom', 'state', 'category', 'priority', 'around']);
 const SHORT = { o: 'out', h: 'help', t: 'template', n: 'name', d: 'diagram' };
 
@@ -59,6 +59,11 @@ Models
   info <model.json> [--json]                     Summary, diagrams and elements
   meta <model.json> [--name --owner --reviewer --description --assumptions ...]
   diagram <model.json> list|add|rename|rm [diagram] [--name N]
+
+From source-code analysis
+  sync <model.json> <spec.json> [--diagram D] [--layout auto|keep] [--no-prune]
+        Create/update the model from an architecture spec (zones, elements, flows,
+        evidence). Creates the model if missing; keeps triage across re-syncs.
 
 Diagram elements (threats are regenerated after every change unless --no-generate)
   types [--template T] [--family process|external|store|flow|line-boundary|box-boundary]
@@ -198,6 +203,23 @@ export async function main(argv, io = { stdout: process.stdout, stderr: process.
         const d = ops.describeModel(loadModelFile(need(rest[0], 'model file')));
         out(io, json ? d : formatInfo(d), json);
         return 0;
+      }
+      case 'sync': {
+        const file = need(rest[0], 'model file');
+        const spec = JSON.parse(readText(need(rest[1], 'spec file')));
+        const model = fs.existsSync(file) ? loadModelFile(file) : createModel({ template: loadTemplateFile(opts.template), name: spec.name || path.basename(file).replace(/(\.stride)?\.json$/i, '') });
+        const r = ops.opSync(model, spec, { diagram: opts.diagram, prune: !opts['no-prune'], layout: opts.layout || 'auto' });
+        saveModelFile(file, model);
+        if (json) out(io, r, true);
+        else {
+          let t = `Synced ${file}: ${r.elements.created} created, ${r.elements.updated} updated, ${r.elements.removed} removed\n`;
+          t += `Threats: ${r.threats.total} (added ${r.threats.added}, removed ${r.threats.removed}, orphaned ${r.threats.orphaned})\n`;
+          t += `Validation: ${r.validation.errors} error(s), ${r.validation.warnings} warning(s)`;
+          for (const w of r.layoutWarnings) t += `\nLayout: "${w.flow}" should cross [${w.expectedZones.join(', ')}] but crosses [${w.crossedZones.join(', ')}]`;
+          for (const m of r.validation.messages) t += `\n${m.severity.toUpperCase()}: ${m.message}`;
+          out(io, t);
+        }
+        return r.validation.errors || r.threats.ruleErrors.length ? 1 : 0;
       }
       case 'meta': {
         const file = need(rest[0], 'model file');

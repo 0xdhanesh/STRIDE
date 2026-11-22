@@ -5,20 +5,21 @@
 import fs from 'node:fs';
 import readline from 'node:readline';
 import { createModel } from '../core/index.js';
-import { loadModelFile, loadTemplateFile, sandboxPath, saveModelFile, writeTextAtomic } from './files.js';
+import { loadModelFile, loadTemplateFile, readText, sandboxPath, saveModelFile, writeTextAtomic } from './files.js';
 import * as ops from './ops.js';
 
 export const SERVER_INFO = { name: 'stride-threat-modeler', version: '1.0.0' };
 export const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
-const INSTRUCTIONS = `STRIDE threat modeling tools (Microsoft Threat Modeling Tool compatible).
-Workflow: stride_create_model -> stride_list_element_types -> stride_add_element for processes,
-external interactors and data stores -> stride_add_element for data flows (type "flow" or a
-specific flow type, with from/to) -> trust boundaries ("box-boundary" with around=[elements], or
-"line-boundary" with points) -> stride_validate_model -> stride_list_threats -> stride_update_threat
-to triage -> stride_export_report. Threats are generated automatically after each change and only
-for data flows; many threats require the flow to cross a trust boundary. Model paths are relative
-to the server root.`;
+const INSTRUCTIONS = `STRIDE threat modeling (Microsoft Threat Modeling Tool compatible).
+Primary workflow after analyzing a codebase: describe the architecture you found as a spec of
+trust zones, elements (processes, external interactors, data stores) and data flows, each with
+file:line evidence, and call stride_sync_model. It lays out the diagram so flows cross exactly
+the zone boundaries they leave/enter, generates threats, validates, and keeps triage when you
+re-sync after code changes. Then stride_list_threats, verify each threat against the code, and
+triage with stride_update_threat citing evidence; add code-specific findings with
+stride_add_user_threat; export with stride_export_report. Use stride_list_element_types for exact
+type ids and property values. Paths are relative to the server root. See MCPUsage.md.`;
 
 const str = (description, extra = {}) => ({ type: 'string', description, ...extra });
 const num = (description) => ({ type: 'number', description });
@@ -27,6 +28,73 @@ const MODEL = str('Path to the model JSON file, relative to the server root (e.g
 const GENERATE = { type: 'boolean', description: 'Regenerate threats after the change (default true).' };
 
 const TOOLS = [
+  {
+    name: 'stride_sync_model',
+    description:
+      'PRIMARY TOOL after analyzing source code. Create or update a threat model from an architecture spec: trust zones (become box trust boundaries), elements (processes, external interactors, data stores; omit "zone" for anything outside your trust zones such as users and third parties) and data flows, each with optional properties and file:line evidence. The diagram is laid out automatically so each flow crosses exactly the zones it leaves/enters (verified; mismatches are returned as layoutWarnings). Threats are generated and the model validated. Ids are derived from names, so re-syncing the same spec after code changes keeps all triage. Creates the model file if it does not exist.',
+    inputSchema: {
+      type: 'object',
+      required: ['model'],
+      properties: {
+        model: MODEL,
+        spec: {
+          type: 'object',
+          description: 'Architecture spec. Provide this or specFile.',
+          properties: {
+            name: str('Model name.'),
+            description: str('High-level system description.'),
+            assumptions: str('Assumptions (what is trusted / out of scope).'),
+            externalDependencies: str(''),
+            zones: {
+              type: 'array',
+              description: 'Trust zones, ordered from least to most trusted (laid out left to right).',
+              items: { type: 'object', required: ['name'], properties: { id: str('Stable key (default: name).'), name: str(''), type: str('Box boundary type, e.g. GE.TB.B, SE.TB.B.TMCore.CorpNet, SE.TB.B.TMCore.Sandbox.'), evidence: { type: 'array', items: { type: 'string' } } } },
+            },
+            elements: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['name', 'type'],
+                properties: {
+                  id: str('Stable key (default: name). Keep it stable across syncs.'),
+                  name: str('Display name used in threat titles.'),
+                  type: str('Type id (e.g. SE.P.TMCore.WebSvc), type name, or family (process, external, store).'),
+                  zone: str('Zone id or name. Omit for elements outside all trust zones.'),
+                  props: kv('Template properties (exact names/values from stride_list_element_types).'),
+                  custom: kv('Free-form facts, e.g. {"framework":"FastAPI","dataClass":"PII"}.'),
+                  evidence: { type: 'array', items: { type: 'string' }, description: 'Source references, e.g. "api/app.py:12".' },
+                  outOfScope: { type: 'boolean' },
+                  outOfScopeReason: str(''),
+                },
+              },
+            },
+            flows: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['from', 'to', 'name'],
+                properties: {
+                  id: str('Stable key (default: name).'),
+                  name: str('What data moves, e.g. "Invoice queries".'),
+                  from: str('Element id or name.'),
+                  to: str('Element id or name.'),
+                  type: str('Flow type: HTTPS, HTTP, GE.DF (default), SE.DF.TMCore.* ...'),
+                  props: kv('Flow properties, e.g. {"JSON":"Yes","providesConfidentiality":"Yes"}.'),
+                  custom: kv(''),
+                  evidence: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+        specFile: str('Path to a spec JSON file (relative to root), e.g. "threatmodel/spec.json". Alternative to spec.'),
+        diagram: str('Diagram name (created if missing). Default: first diagram.'),
+        layout: str('"auto" (default) recomputes positions; "keep" keeps positions of existing shapes (e.g. after a human rearranged them).', { enum: ['auto', 'keep'] }),
+        prune: { type: 'boolean', description: 'Remove elements from a previous sync that are no longer in the spec (default true). Hand-drawn elements are never removed.' },
+        template: str('Template file used only when creating a new model.'),
+      },
+    },
+  },
   {
     name: 'stride_list_element_types',
     description: 'List element types (stencils) of a template with their configurable properties and allowed values.',
@@ -261,6 +329,16 @@ function createHandlers(root) {
   };
 
   return {
+    stride_sync_model: (a) => {
+      const file = modelPath(a.model);
+      let spec = a.spec;
+      if (!spec && a.specFile) spec = JSON.parse(readText(readPath(a.specFile, ['.json'])));
+      if (!spec || typeof spec !== 'object') throw new ToolError('Provide "spec" (object) or "specFile" (path to a .json spec).');
+      const model = fs.existsSync(file) ? loadModelFile(file) : createModel({ template: loadTemplateFile(tplPath(a.template)), name: spec.name || 'Threat model' });
+      const result = ops.opSync(model, spec, { diagram: a.diagram, prune: a.prune !== false, layout: a.layout || 'auto' });
+      saveModelFile(file, model);
+      return { model: a.model, ...result };
+    },
     stride_list_element_types: (a) => {
       const template = a.model ? loadModelFile(modelPath(a.model)).template : loadTemplateFile(tplPath(a.template));
       return ops.listTypes(template, { family: a.family });

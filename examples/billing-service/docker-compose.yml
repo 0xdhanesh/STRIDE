@@ -1,0 +1,31 @@
+# Deployment topology (used by the agent to identify trust zones)
+services:
+  gateway:          # public entry point, terminates TLS
+    image: nginx:1.27
+    ports: ["443:443"]
+    volumes: ["./gateway/nginx.conf:/etc/nginx/nginx.conf:ro"]
+    networks: [edge, backend]
+  api:
+    build: ./api
+    environment:
+      DATABASE_URL: postgres://billing@db:5432/billing
+      REDIS_URL: redis://cache:6379
+      STRIPE_API_KEY: ${STRIPE_API_KEY}
+      AUTH0_ISSUER: https://acme.eu.auth0.com/
+    networks: [backend]
+  worker:
+    build: ./worker
+    environment:
+      DATABASE_URL: postgres://billing@db:5432/billing
+      REDIS_URL: redis://cache:6379
+      SMTP_URL: smtp://smtp.sendgrid.net:587
+    networks: [backend]
+  db:
+    image: postgres:16
+    networks: [backend]
+  cache:
+    image: redis:7
+    networks: [backend]
+networks:
+  edge: {}
+  backend: { internal: true }

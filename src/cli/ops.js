@@ -30,6 +30,7 @@ import {
   requireElement,
   resolveTypeId,
   summarize,
+  syncModel,
   threatsToCsv,
   unionRect,
   updateElement,
@@ -84,6 +85,7 @@ export function describeElement(model, el, idx = elementIndex(model)) {
   else if (el.generic === GENERIC.LINE_BOUNDARY) out.line = { x0: el.x0, y0: el.y0, x1: el.x1, y1: el.y1, bend: el.bend };
   if (Object.keys(el.props || {}).length) out.props = el.props;
   if (Object.keys(el.custom || {}).length) out.custom = el.custom;
+  if (el.evidence?.length) out.evidence = el.evidence;
   return out;
 }
 
@@ -291,4 +293,23 @@ export function opSetMeta(model, args) {
   }
   if (args.threatGeneration !== undefined) model.settings.threatGeneration = !!args.threatGeneration;
   return model.meta;
+}
+
+/**
+ * Create or update a diagram from an architecture spec (see src/core/sync.js),
+ * regenerate threats and validate. Triage is preserved across re-syncs.
+ */
+export function opSync(model, spec, { diagram, prune = true, layout = 'auto' } = {}) {
+  const sync = syncModel(model, spec, { diagram, prune, layout });
+  const threats = generateThreats(model);
+  const validation = opValidate(model);
+  return {
+    diagram: sync.diagram,
+    elements: { created: sync.created.length, updated: sync.updated.length, removed: sync.removed.length, handDrawnKept: sync.unmanaged },
+    emptyZones: sync.emptyZones,
+    layoutWarnings: sync.layoutWarnings,
+    threats: { total: threats.total, added: threats.added, removed: threats.removed, orphaned: threats.orphaned, restored: threats.restored, ruleErrors: threats.errors },
+    validation: { errors: validation.errors, warnings: validation.warnings, info: validation.info, messages: validation.messages.filter((m) => m.severity !== 'info') },
+    summary: summarize(model),
+  };
 }

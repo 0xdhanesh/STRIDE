@@ -169,6 +169,8 @@ ${kb.priorities().map((p) => `<div class="card"><b>${s.byPriority[p] || 0}</b><s
     for (const [flowId, list] of byFlow) {
       const flow = idx.get(flowId)?.element;
       html += `<h3>Interaction: ${escapeHtml(flow?.name || list[0].interaction)}</h3><p class="k">${escapeHtml(list[0].interaction)}</p>`;
+      const ev = [flow, idx.get(list[0].sourceId)?.element, idx.get(list[0].targetId)?.element].filter((e) => e?.evidence?.length);
+      if (ev.length) html += `<p class="k">Source evidence: ${ev.map((e) => `${escapeHtml(e.name)} — ${e.evidence.map((x) => `<code>${escapeHtml(x)}</code>`).join(', ')}`).join('; ')}</p>`;
       html += list.map((t) => threatHtml(model, kb, t)).join('');
     }
   }

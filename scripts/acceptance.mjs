@@ -65,6 +65,20 @@ step('CLI: model a three-tier system and triage it', () => {
   return `${t.length} threats across ${new Set(t.map((x) => x.category)).size} categories`;
 });
 
+step('MCP: source-code spec → threat model (examples/billing-service)', () => {
+  const specFile = path.join(ROOT, 'examples', 'billing-service', 'threatmodel', 'spec.json');
+  fs.copyFileSync(specFile, path.join(dir, 'spec.json'));
+  const first = JSON.parse(cli('sync', 'billing.json', 'spec.json', '--json').stdout);
+  assert(first.layoutWarnings.length === 0, `layout warnings: ${JSON.stringify(first.layoutWarnings)}`);
+  assert(first.validation.errors === 0 && first.validation.warnings === 0, `validation: ${JSON.stringify(first.validation.messages)}`);
+  const t = JSON.parse(cli('threats', 'billing.json', '--json').stdout).threats;
+  assert(t.some((x) => x.type === 'I2' && x.interaction.includes('Billing API to Invoices DB')), 'authorization bypass on API → DB (the IDOR in api/app.py)');
+  assert(t.some((x) => x.type === 'I6' && x.interaction.includes('Gateway to Billing API')), 'sniffing on the plain-HTTP proxy hop');
+  const again = JSON.parse(cli('sync', 'billing.json', 'spec.json', '--json').stdout);
+  assert(again.elements.created === 0 && again.threats.added === 0 && again.threats.removed === 0, 're-sync is idempotent');
+  return `${first.elements.created} elements, ${first.threats.total} threats, 0 layout warnings`;
+});
+
 const ui = spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'ui-check.mjs'), '--page', 'dist/STRIDE.html', '--file', ...process.argv.slice(2)], { cwd: ROOT, encoding: 'utf8' });
 process.stdout.write(ui.stdout.split('\n').map((l) => (l ? `     ${l}` : l)).join('\n'));
 if (ui.status !== 0) {

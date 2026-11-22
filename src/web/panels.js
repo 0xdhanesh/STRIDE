@@ -163,6 +163,9 @@ export class Inspector {
       );
     }
     if (def?.description) box.append(h('p', { class: 'small muted' }, def.description));
+    if (el.evidence?.length) {
+      box.append(h('h4', null, 'Source evidence'), h('ul', { class: 'small', style: { margin: '0 0 8px', paddingLeft: '18px' } }, el.evidence.map((x) => h('li', null, h('code', null, x)))));
+    }
 
     if (el.generic === GENERIC.FLOW) {
       const idx = elementIndex(store.model);

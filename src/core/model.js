@@ -240,6 +240,12 @@ export function findFreeSpot(model, diagram, w, h) {
 
 // ---------------------------------------------------------------- mutation
 
+/** Normalize source-code evidence references (e.g. "src/api/routes.ts:42"). */
+export function normalizeEvidence(list) {
+  if (!Array.isArray(list)) list = list === undefined || list === null || list === '' ? [] : [list];
+  return [...new Set(list.map((x) => String(x).trim().slice(0, 500)).filter(Boolean))].slice(0, 25);
+}
+
 function num(v, fallback) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -290,6 +296,8 @@ export function addElement(model, diagramRef, spec = {}) {
     outOfScopeReason: String(spec.outOfScopeReason || ''),
     order: num(spec.order, 0),
   };
+  const evidence = normalizeEvidence(spec.evidence);
+  if (evidence.length) el.evidence = evidence;
   if (isShapeGeneric(generic)) {
     const size = DEFAULT_SIZE[generic];
     el.w = Math.max(20, num(spec.w, size.w));
@@ -359,6 +367,11 @@ export function updateElement(model, ref, patch = {}) {
   if (patch.outOfScope !== undefined) el.outOfScope = !!patch.outOfScope;
   if (patch.outOfScopeReason !== undefined) el.outOfScopeReason = String(patch.outOfScopeReason);
   if (patch.order !== undefined) el.order = num(patch.order, el.order);
+  if (patch.evidence !== undefined) {
+    const ev = normalizeEvidence(patch.evidence);
+    if (ev.length) el.evidence = ev;
+    else delete el.evidence;
+  }
   if (patch.type !== undefined || patch.typeId !== undefined) changeType(model, el, patch.type ?? patch.typeId);
   for (const k of ['x', 'y', 'w', 'h']) if (patch[k] !== undefined && el.w !== undefined) el[k] = num(patch[k], el[k]);
   for (const k of ['x0', 'y0', 'x1', 'y1', 'bend']) if (patch[k] !== undefined && el.w === undefined) el[k] = num(patch[k], el[k]);
@@ -603,6 +616,8 @@ function sanitizeElement(raw, kb) {
     outOfScopeReason: String(raw.outOfScopeReason || ''),
     order: num(raw.order, 0),
   };
+  const evidence = normalizeEvidence(raw.evidence);
+  if (evidence.length) el.evidence = evidence;
   if (isShapeGeneric(generic)) {
     const size = DEFAULT_SIZE[generic];
     el.x = num(raw.x, 0);

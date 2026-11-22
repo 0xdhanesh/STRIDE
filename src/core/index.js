@@ -12,3 +12,4 @@ export { parseTb7, parseTemplateText, Tb7Error } from './tb7.js';
 export { parseXml, XmlError } from './xml.js';
 export { DEFAULT_TEMPLATE } from '../templates/default.js';
 export { createSampleModel } from './sample.js';
+export { syncModel, normalizeSpec, isSpecManaged, specId } from './sync.js';

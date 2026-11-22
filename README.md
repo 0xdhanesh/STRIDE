@@ -112,17 +112,32 @@ stride report shop.json -o report.html    # html | md | csv | json | svg
 stride rule check "source is 'GE.P' and flow crosses 'GE.TB.L'"
 ```
 
-Elements can be referenced by id or by unique name. After every change the CLI regenerates threats;
+`stride sync <model.json> <spec.json>` creates or updates a model from an architecture spec (see
+[MCPUsage.md](MCPUsage.md) §8). Elements can be referenced by id or by unique name. After every change the CLI regenerates threats;
 pass `--no-generate` to skip this. Add `--json` to any command for machine-readable output.
 `stride types --family flow` lists the element types and their properties.
 
 ## MCP server
 
-`stride mcp` speaks the Model Context Protocol over stdio and exposes 19 tools. They cover creating
+`stride mcp` speaks the Model Context Protocol over stdio and exposes 20 tools, led by `stride_sync_model`. They cover creating
 models, listing element types, adding and updating elements, generating and validating, listing and
 triaging threats, explaining a flow, checking rules, importing and applying templates, and exporting
 reports. File paths are restricted to `--root`, which defaults to the working directory. Writes are
 limited to `.json`, `.html`, `.csv`, `.md` and `.svg`.
+
+The main use is **agent-driven threat modeling from source code**. An AI agent analyzes a
+repository and describes what it found as a spec: trust zones, components, data flows, properties
+and `path:line` evidence. It then calls **`stride_sync_model`**, which lays out the diagram so flows
+cross exactly the right trust boundaries, generates and validates the threats, and keeps triage when
+the agent re-syncs after code changes.
+
+- **[MCPUsage.md](MCPUsage.md)** is the guide to give the agent as context. It covers what to look
+  for in code, mapping code to element types and properties, triage with code evidence, and a
+  verified worked example.
+- [`examples/billing-service/`](examples/billing-service/) is a sample codebase with the spec an
+  agent derived from it, plus the resulting model and reports.
+- The same sync runs without an agent: `stride sync threatmodel/model.json threatmodel/spec.json`
+  (useful in CI).
 
 ```bash
 claude mcp add stride -- node /path/to/STRIDE/bin/stride.mjs mcp --root /path/to/models
