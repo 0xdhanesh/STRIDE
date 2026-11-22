@@ -373,6 +373,14 @@ Category ids: `S` Spoofing, `T` Tampering, `R` Repudiation, `I` Information disc
 { "model": "threatmodel/model.json", "format": "md",   "output": "threatmodel/report.md" }
 ```
 
+HTML, Markdown and JSON reports open with an executive summary and a **high-signal findings**
+table: threats backed by evidence, dangerous sinks or weak controls, ranked by signal score and
+titled after the sink they hit (e.g. *Command injection via shell_exec of user-controlled IP*). The
+full register follows. Pass `"signal": "medium"` to widen the table, or `"off"` for the classic
+layout. Attach precise `evidence` (file, line and the offending call) to flows in the spec: it is
+what earns the high-signal rating. `stride_list_threats` with `"signal": "high"` gives the same
+ranked list.
+
 In your answer to the user, give:
 - the counts: threats by state, and how many are High priority and open;
 - the **confirmed** issues first, with file references;
@@ -459,12 +467,12 @@ unchanged.
 | **`stride_sync_model`** | `model`, and `spec` or `specFile` | `diagram`, `layout` (`auto`/`keep`), `prune`, `template` | **Primary.** Create or update the model from your spec. |
 | `stride_list_element_types` | — | `family`, `template`, `model` | Exact type ids, properties and allowed values. |
 | `stride_explain_flow` | `model`, `flow` | — | Boundaries crossed, plus applies/does-not-apply for each rule. |
-| `stride_list_threats` | `model` | `state`, `category`, `priority`, `diagram`, `text`, `limit` | Review queue. |
+| `stride_list_threats` | `model` | `state`, `category`, `priority`, `diagram`, `text`, `limit`, `signal` | Review queue (`signal: high` = evidence-backed first). |
 | `stride_update_threat` | `model`, `threat` | `state`, `priority`, `justification`, `title`, `description`, `mitigation` | Triage with evidence. |
 | `stride_add_user_threat` | `model`, `flow`, `title` | `category`, `description`, `mitigation`, `priority` | Code-specific findings. |
 | `stride_validate_model` | `model` | — | Re-check after manual edits. |
 | `stride_describe_model` | `model` | — | Every element with id, type, properties and evidence. |
-| `stride_export_report` | `model` | `format` (`md`, `html`, `csv`, `json`, `svg`), `output`, `diagram` | Reports. |
+| `stride_export_report` | `model` | `format` (`md`, `html`, `csv`, `json`, `svg`), `output`, `diagram`, `signal` (`high`, `medium`, `all`, `off`) | Reports. |
 | `stride_set_model_info` | `model` | `name`, `owner`, `reviewer`, `contributors`, `description`, `assumptions`, `externalDependencies`, `threatGeneration` | Metadata. |
 | `stride_add_note` | `model`, `text` | `author` | Decisions and accepted warnings. |
 | `stride_add_element`, `stride_update_element`, `stride_remove_elements` | `model`, … | see schemas | Fine-grained edits (for example, `bend` to fix a layout warning). Prefer editing the spec and re-syncing. |

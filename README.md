@@ -44,6 +44,24 @@ MTMT is a rule engine that runs over a diagram. This tool follows the same model
    flows between two data stores, rule errors, and so on.
 5. **Report.** You can export a full HTML report with diagrams, Markdown, CSV (protected against
    formula injection) or SVG.
+6. **Signal.** After generation every threat gets a signal score from the evidence behind it, with no
+   LLM and no change to the rules or triage:
+
+   | Points | When |
+   |---:|---|
+   | +40 | source-code evidence on the source, flow or target |
+   | +30 | the flow name or evidence hits a dangerous sink (`shell_exec`, `system(`, `include($_GET`, `'$id'` in SQL, `move_uploaded_file`, `md5(uniqid())`, `eval(`, `unserialize(` …) relevant to the threat's category |
+   | +20 | custom properties indicating weak controls (`hardcoded`, `md5`, `unvalidated`, `unsalted`, `sanitized: no` …) |
+   | +15 | the target is an OS process, a configuration file or a web-served file system |
+   | +10 | High priority and Not Started |
+   | −30 | Not Applicable |
+
+   50 or more is **High Signal**, 25–49 **Medium**, the rest **Generic**. Each sink on a flow becomes one
+   finding with a specific title, such as *Command injection via shell_exec of user-controlled IP*,
+   shown in the web threat list, the CLI and reports. The rule title is kept, and a title you edit
+   always wins. HTML, Markdown and JSON reports start with an executive summary and the high-signal
+   findings table, followed by the full threat register. The web threat list has a **High-signal
+   view** toggle.
 
 ### Rule language
 
@@ -109,6 +127,8 @@ stride threats shop.json --state NotStarted --priority High
 stride threat shop.json 3 --state mitigated --justification "Parameterized queries"
 stride explain shop.json "Place order"    # which rules fire, which boundaries are crossed
 stride report shop.json -o report.html    # html | md | csv | json | svg
+stride report shop.json --signal medium   # stakeholder table: high (default) | medium | all | off
+stride threats shop.json --signal high    # only high-signal threats, best first
 stride rule check "source is 'GE.P' and flow crosses 'GE.TB.L'"
 ```
 

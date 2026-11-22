@@ -2,12 +2,14 @@
 
 import {
   GENERIC,
+  SIGNAL_LABELS,
   THREAT_STATES,
   THREAT_STATE_LABELS,
   addUserThreat,
   attributeValue,
   changeType,
   deleteThreat,
+  displayTitle,
   elementIndex,
   filterThreats,
   findThreat,
@@ -366,7 +368,7 @@ export class Drawer {
     this.root = root;
     this.app = app;
     this.tab = 'threats';
-    this.filters = { text: '', state: '', category: '', priority: '', element: '', scope: 'diagram' };
+    this.filters = { text: '', state: '', category: '', priority: '', element: '', scope: 'diagram', highSignal: false };
     this.sort = { key: 'id', dir: 1 };
     this.showSuppressed = false;
     this.build();
@@ -471,11 +473,24 @@ export class Drawer {
       states: f.state ? [f.state] : undefined,
       categories: f.category ? [f.category] : undefined,
       priorities: f.priority ? [f.priority] : undefined,
+      signals: f.highSignal ? ['high'] : undefined,
       diagramId: f.scope === 'diagram' ? diagram.id : undefined,
     });
     if (f.element) list = list.filter((t) => t.flowId === f.element || t.sourceId === f.element || t.targetId === f.element);
-    const { key, dir } = this.sort;
-    const val = (t) => (key === 'id' ? t.id : key === 'state' ? THREAT_STATES.indexOf(t.state) : key === 'priority' ? this.store.kb.priorities().indexOf(t.priority) : String(t[key] ?? '').toLowerCase());
+    // The high-signal view ranks by score unless the user picked another column.
+    const { key, dir } = f.highSignal && this.sort.key === 'id' ? { key: 'signal', dir: -1 } : this.sort;
+    const val = (t) =>
+      key === 'id'
+        ? t.id
+        : key === 'state'
+          ? THREAT_STATES.indexOf(t.state)
+          : key === 'priority'
+            ? this.store.kb.priorities().indexOf(t.priority)
+            : key === 'signal'
+              ? (t.signal?.score ?? 0)
+              : key === 'title'
+                ? displayTitle(t).toLowerCase()
+                : String(t[key] ?? '').toLowerCase();
     return [...list].sort((a, b) => (val(a) < val(b) ? -dir : val(a) > val(b) ? dir : a.id - b.id));
   }
 
@@ -497,9 +512,18 @@ export class Drawer {
       }, 180);
     });
     const idx = elementIndex(store.model);
+    const highCount = store.model.threats.filter((x) => x.signal?.level === 'high').length;
+    const hs = h('input', { type: 'checkbox', checked: f.highSignal, id: 'hsview' });
+    hs.addEventListener('change', () => setF('highSignal')(hs.checked));
     const filters = h(
       'div',
       { class: 'filters' },
+      h(
+        'label',
+        { class: 'check hs-toggle', for: 'hsview', title: 'Only threats backed by source evidence, dangerous sinks or weak controls, ranked by signal score' },
+        hs,
+        `High-signal view (${highCount})`,
+      ),
       search,
       select([{ value: 'diagram', label: 'This diagram' }, { value: 'all', label: 'All diagrams' }], f.scope, setF('scope'), { 'aria-label': 'Scope' }),
       select([{ value: '', label: 'All states' }, ...THREAT_STATES.map((s) => ({ value: s, label: THREAT_STATE_LABELS[s] }))], f.state, setF('state'), { 'aria-label': 'State filter' }),
@@ -541,6 +565,7 @@ export class Drawer {
       ['state', 'State'],
       ['priority', 'Priority'],
       ['category', 'Category'],
+      ['signal', 'Signal'],
       ['title', 'Title'],
       ['interaction', 'Interaction'],
     ];
@@ -577,7 +602,18 @@ export class Drawer {
         h('td', null, h('span', { class: `pill s-${t.state}` }, THREAT_STATE_LABELS[t.state])),
         h('td', { class: `p-${t.priority}` }, t.priority),
         h('td', null, kb.category(t.category)?.name || t.category),
-        h('td', { class: 'title' }, t.title, t.userDefined ? h('span', { class: 'muted small' }, '  (user-defined)') : null),
+        h(
+          'td',
+          { title: (t.signal?.reasons || []).join(', ') || 'No evidence-backed signal' },
+          h('span', { class: `pill g-${t.signal?.level || 'generic'}` }, `${SIGNAL_LABELS[t.signal?.level] || SIGNAL_LABELS.generic} · ${t.signal?.score ?? 0}`),
+        ),
+        h(
+          'td',
+          { class: 'title' },
+          displayTitle(t),
+          t.signal?.title ? h('span', { class: 'muted small' }, `  (rule: ${t.title})`) : null,
+          t.userDefined ? h('span', { class: 'muted small' }, '  (user-defined)') : null,
+        ),
         h('td', { class: 'small muted' }, t.orphan ? 'No longer present in the diagram' : t.interaction),
       );
       return tr;
@@ -614,6 +650,17 @@ export class Drawer {
         h('button', { class: 'btn small', type: 'button', 'aria-label': 'Close details', onClick: () => store.selectThreat(null) }, icon('x', 15)),
       ),
       h('p', { class: 'small muted' }, t.orphan ? 'This interaction no longer exists in the diagram; kept because it was triaged.' : t.interaction),
+      t.signal
+        ? h(
+            'div',
+            { class: 'signal-box' },
+            h('span', { class: `pill g-${t.signal.level}` }, `${SIGNAL_LABELS[t.signal.level]} · score ${t.signal.score}`),
+            t.signal.title ? h('p', { class: 'small' }, h('b', null, 'Finding: '), t.signal.title) : null,
+            t.signal.reasons.length ? h('p', { class: 'small muted' }, `Why: ${t.signal.reasons.join(', ')}`) : null,
+            t.signal.evidence?.length ? h('p', { class: 'small muted' }, `Evidence: ${t.signal.evidence.join(', ')}`) : null,
+            t.signal.fix ? h('p', { class: 'small' }, h('b', null, 'Fix: '), t.signal.fix) : null,
+          )
+        : null,
       field('Title', textInput(t.title, (v) => upd({ title: v }))),
       h(
         'div',

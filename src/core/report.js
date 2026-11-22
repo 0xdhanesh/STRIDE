@@ -5,16 +5,19 @@ import { THREAT_STATES, THREAT_STATE_LABELS, elementIndex, kbOf } from './model.
 import { renderDiagramSvg } from './svg.js';
 import { validateModel } from './validate.js';
 import { csvCell, escapeHtml } from './util.js';
+import { GENERIC } from './kb.js';
+import { SIGNAL_LABELS, SIGNAL_LEVELS, annotateSignals, displayTitle, levelsAtLeast, normalizeSignalLevel, oneLine } from './signal.js';
 
-export function filterThreats(model, { states, categories, priorities, diagramId, text, includeOrphans = true } = {}) {
+export function filterThreats(model, { states, categories, priorities, signals, diagramId, text, includeOrphans = true } = {}) {
   const q = text ? String(text).toLowerCase() : '';
   return model.threats.filter((t) => {
     if (states?.length && !states.includes(t.state)) return false;
+    if (signals?.length && !signals.includes(t.signal?.level || 'generic')) return false;
     if (categories?.length && !categories.includes(t.category)) return false;
     if (priorities?.length && !priorities.includes(t.priority)) return false;
     if (diagramId && t.diagramId !== diagramId) return false;
     if (!includeOrphans && t.orphan) return false;
-    if (q && !`${t.id} ${t.title} ${t.description} ${t.interaction} ${t.typeId}`.toLowerCase().includes(q)) return false;
+    if (q && !`${t.id} ${t.title} ${t.signal?.title || ''} ${t.description} ${t.interaction} ${t.typeId}`.toLowerCase().includes(q)) return false;
     return true;
   });
 }
@@ -24,7 +27,9 @@ export function summarize(model) {
   const byState = Object.fromEntries(THREAT_STATES.map((s) => [s, 0]));
   const byCategory = Object.fromEntries(kb.categories.map((c) => [c.id, 0]));
   const byPriority = Object.fromEntries(kb.priorities().map((p) => [p, 0]));
+  const bySignal = Object.fromEntries(SIGNAL_LEVELS.map((l) => [l, 0]));
   for (const t of model.threats) {
+    bySignal[t.signal?.level || 'generic']++;
     byState[t.state] = (byState[t.state] || 0) + 1;
     byCategory[t.category] = (byCategory[t.category] || 0) + 1;
     byPriority[t.priority] = (byPriority[t.priority] || 0) + 1;
@@ -42,7 +47,81 @@ export function summarize(model) {
     byState,
     byCategory,
     byPriority,
+    bySignal,
   };
+}
+
+// ---------------------------------------------------------------- stakeholder view
+
+/**
+ * Stakeholder view of a model: an executive summary and the evidence-backed findings,
+ * ranked by signal score. `signal` sets the minimum level listed: high | medium | all.
+ * Returns plain data so HTML, Markdown and JSON reports share one source of truth.
+ */
+export function stakeholderSummary(model, { signal = 'high', top = 3 } = {}) {
+  annotateSignals(model);
+  const kb = kbOf(model);
+  const s = summarize(model);
+  const idx = elementIndex(model);
+  const level = normalizeSignalLevel(signal) || 'high';
+  const levels = levelsAtLeast(level === 'off' ? 'high' : level);
+  const nodes = model.diagrams.reduce((n, d) => n + d.elements.filter((e) => [GENERIC.PROCESS, GENERIC.EXTERNAL, GENERIC.STORE].includes(e.generic)).length, 0);
+  const flows = model.diagrams.reduce((n, d) => n + d.elements.filter((e) => e.generic === GENERIC.FLOW).length, 0);
+  const catName = (id) => kb.category(id)?.name || id;
+  const findings = model.threats
+    .filter((t) => levels.includes(t.signal?.level || 'generic'))
+    .sort((a, b) => (b.signal?.score ?? 0) - (a.signal?.score ?? 0) || a.id - b.id)
+    .map((t) => ({
+      id: t.id,
+      key: t.key,
+      title: displayTitle(t),
+      ruleTitle: t.title,
+      category: catName(t.category),
+      priority: t.priority,
+      state: THREAT_STATE_LABELS[t.state] || t.state,
+      stateId: t.state,
+      signal: t.signal?.level || 'generic',
+      score: t.signal?.score ?? 0,
+      reasons: t.signal?.reasons || [],
+      evidence: t.signal?.evidence || [],
+      mitigation: t.signal?.fix || oneLine(t.mitigation),
+      interaction: t.interaction,
+      source: idx.get(t.sourceId)?.element.name || '',
+      target: idx.get(t.targetId)?.element.name || '',
+      orphan: !!t.orphan,
+    }));
+  const high = model.threats.filter((t) => t.signal?.level === 'high');
+  const highByCategory = {};
+  for (const t of high) highByCategory[catName(t.category)] = (highByCategory[catName(t.category)] || 0) + 1;
+  // Top findings: high signal, still open, one per distinct title.
+  const seen = new Set();
+  const topFindings = [];
+  for (const f of findings) {
+    if (f.signal !== 'high' || f.stateId === 'Mitigated' || f.stateId === 'NotApplicable' || seen.has(f.title)) continue;
+    seen.add(f.title);
+    topFindings.push(f);
+    if (topFindings.length >= top) break;
+  }
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const lines = [
+    `${model.meta.name} models ${plural(nodes, 'element')} and ${plural(flows, 'data flow')} across ${plural(s.diagrams, 'diagram')}; the template produced ${plural(s.threats, 'threat')}, ${s.open} still open.`,
+    high.length
+      ? `${plural(high.length, 'threat')} ${high.length === 1 ? 'is' : 'are'} high signal (backed by source evidence, dangerous sinks or weak controls): ${Object.entries(highByCategory)
+          .sort((a, b) => b[1] - a[1])
+          .map(([c, n]) => `${c} ${n}`)
+          .join(', ')}.`
+      : 'No threat is high signal yet: none is backed by source-code evidence or a dangerous sink. Attach evidence to elements and flows to sharpen the findings.',
+    `${plural(s.bySignal.medium, 'medium-signal threat')} and ${plural(s.bySignal.generic, 'generic threat')} remain in the full register for architectural review.`,
+    ...topFindings.map(
+      (f, i) =>
+        `${i + 1}. ${f.title} — ${f.category}, ${f.priority} priority, ${f.state}${f.source || f.target ? `, from ${f.source || '?'} to ${f.target || '?'}` : ''}${f.evidence.length ? ` (evidence: ${f.evidence[0]})` : ''}.`,
+    ),
+  ];
+  return { level, nodes, flows, counts: s.bySignal, highByCategory, lines, topFindings, findings };
+}
+
+function findingsHeading(level) {
+  return level === 'high' ? 'High-signal findings' : level === 'medium' ? 'High- and medium-signal findings' : 'All findings by signal';
 }
 
 const COLUMNS = ['ID', 'Diagram', 'Changed By', 'Last Modified', 'State', 'Title', 'Category', 'Description', 'Justification', 'Interaction', 'Priority', 'Mitigation', 'References', 'Type'];
@@ -96,6 +175,9 @@ th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);verti
 .pill{display:inline-block;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:600;margin-right:6px;background:#e9ecef}
 .s-NotStarted{background:#ffe3e3;color:#c92a2a}.s-NeedsInvestigation{background:#fff3bf;color:#a76b00}.s-NotApplicable{background:#e9ecef;color:#495057}.s-Mitigated{background:#d3f9d8;color:#2b8a3e}
 .p-High{background:#ffe8cc;color:#d9480f}.p-Medium{background:#e7f5ff;color:#1971c2}.p-Low{background:#f1f3f5;color:#495057}
+.g-high{background:#e5dbff;color:#5f3dc4}.g-medium{background:#e7f5ff;color:#1864ab}.g-generic{background:#f1f3f5;color:#868e96}
+.exec{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 20px}.exec p{margin:4px 0}.exec ol{margin:6px 0 0;padding-left:22px}
+.findings td.t{font-weight:600}.findings td.t a{color:inherit;text-decoration:none}.findings td.t .k{font-weight:400;display:block}.findings code{font-size:12px;word-break:break-all}
 .msg-error{color:#c92a2a}.msg-warning{color:#a76b00}.msg-info{color:var(--muted)}
 footer{margin-top:60px;color:var(--muted);font-size:13px}
 @media print{body{background:#fff}.threat,figure,table,.meta,.card{break-inside:avoid}}
@@ -105,8 +187,8 @@ function threatHtml(model, kb, t) {
   const cat = kb.category(t.category)?.name || t.category;
   const refs = (t.references || []).length ? `<p class="k">References: ${t.references.map(escapeHtml).join(', ')}</p>` : '';
   return `<div class="threat" id="threat-${t.id}">
-<h4>${t.id}. ${escapeHtml(t.title)}</h4>
-<p><span class="pill s-${escapeHtml(t.state)}">${escapeHtml(THREAT_STATE_LABELS[t.state] || t.state)}</span><span class="pill p-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span><span class="pill">${escapeHtml(cat)}</span>${t.userDefined ? '<span class="pill">User-defined</span>' : ''}</p>
+<h4>${t.id}. ${escapeHtml(displayTitle(t))}</h4>${t.signal?.title ? `<p class="k">Rule: ${escapeHtml(t.title)}</p>` : ''}
+<p><span class="pill g-${escapeHtml(t.signal?.level || 'generic')}" title="Signal score ${t.signal?.score ?? 0}">${escapeHtml(SIGNAL_LABELS[t.signal?.level] || SIGNAL_LABELS.generic)}</span><span class="pill s-${escapeHtml(t.state)}">${escapeHtml(THREAT_STATE_LABELS[t.state] || t.state)}</span><span class="pill p-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span><span class="pill">${escapeHtml(cat)}</span>${t.userDefined ? '<span class="pill">User-defined</span>' : ''}</p>
 <p class="k">${escapeHtml(t.interaction)}</p>
 <p>${escapeHtml(t.description)}</p>
 ${t.mitigation ? `<p><b>Mitigation:</b> ${escapeHtml(t.mitigation)}</p>` : ''}
@@ -115,11 +197,30 @@ ${refs}${t.changedBy ? `<p class="k">Last changed by ${escapeHtml(t.changedBy)}$
 </div>`;
 }
 
+function stakeholderHtml(sh) {
+  const [overview, ...rest] = sh.lines;
+  const tops = rest.filter((l) => /^\d+\. /.test(l));
+  const plain = rest.filter((l) => !/^\d+\. /.test(l));
+  let html = `<h2>Executive summary</h2><div class="exec"><p>${escapeHtml(overview)}</p>${plain.map((l) => `<p>${escapeHtml(l)}</p>`).join('')}`;
+  if (tops.length) html += `<p><b>Top findings</b></p><ol>${tops.map((l) => `<li>${escapeHtml(l.replace(/^\d+\. /, ''))}</li>`).join('')}</ol>`;
+  html += `</div><h2>${findingsHeading(sh.level)}</h2>`;
+  if (!sh.findings.length) return html + `<p class="k">No threats at this signal level. The full register below lists every generated threat.</p>`;
+  html += `<table class="findings"><tr><th>ID</th><th>Finding</th><th>Category</th><th>Priority</th><th>Signal</th><th>Evidence</th><th>Mitigation</th></tr>${sh.findings
+    .map(
+      (f) => `<tr><td>${f.id}</td><td class="t"><a href="#threat-${f.id}">${escapeHtml(f.title)}</a><span class="k">${escapeHtml(f.state)} · ${escapeHtml(f.orphan ? `${f.interaction} (no longer present)` : f.interaction)}</span></td><td>${escapeHtml(f.category)}</td><td><span class="pill p-${escapeHtml(f.priority)}">${escapeHtml(f.priority)}</span></td><td><span class="pill g-${escapeHtml(f.signal)}" title="${escapeHtml(f.reasons.join(', '))}">${escapeHtml(SIGNAL_LABELS[f.signal])} · ${f.score}</span></td><td>${f.evidence.map((e) => `<code>${escapeHtml(e)}</code>`).join('<br>') || '<span class="k">—</span>'}</td><td>${escapeHtml(f.mitigation) || '<span class="k">—</span>'}</td></tr>`,
+    )
+    .join('')}</table>`;
+  return html;
+}
+
 /**
- * Full HTML report: metadata, summary, notes, per-diagram image, validation messages,
+ * Full HTML report: stakeholder summary (executive summary + high-signal findings) first, then metadata, summary, notes, per-diagram image, validation messages,
  * threats grouped by interaction, and threats no longer associated with an interaction.
  */
-export function renderHtmlReport(model, { states, includeMessages = true } = {}) {
+export function renderHtmlReport(model, { states, includeMessages = true, signal = 'high' } = {}) {
+  const level = normalizeSignalLevel(signal) || 'high';
+  const sh = level === 'off' ? null : stakeholderSummary(model, { signal: level });
+  if (!sh) annotateSignals(model);
   const kb = kbOf(model);
   const m = model.meta;
   const s = summarize(model);
@@ -141,10 +242,12 @@ export function renderHtmlReport(model, { states, includeMessages = true } = {})
 <title>${escapeHtml(m.name)} — Threat Model Report</title><style>${REPORT_CSS}</style></head><body><main>
 <h1>${escapeHtml(m.name)}</h1><p class="k" style="color:var(--muted)">Threat model report · generated ${escapeHtml(new Date().toISOString())}</p>
 <dl class="meta">${metaRows.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>
-<h2>Summary</h2><div class="cards">
+${sh ? stakeholderHtml(sh) : ''}
+<h2>${sh ? 'Full threat register — summary' : 'Summary'}</h2><div class="cards">
 <div class="card"><b>${s.threats}</b><span>Total threats</span></div>
 ${THREAT_STATES.map((st) => `<div class="card"><b>${s.byState[st] || 0}</b><span>${escapeHtml(THREAT_STATE_LABELS[st])}</span></div>`).join('')}
 ${kb.priorities().map((p) => `<div class="card"><b>${s.byPriority[p] || 0}</b><span>${escapeHtml(p)} priority</span></div>`).join('')}
+${SIGNAL_LEVELS.map((l) => `<div class="card"><b>${s.bySignal[l] || 0}</b><span>${escapeHtml(SIGNAL_LABELS[l])}</span></div>`).join('')}
 </div>`;
 
   if (model.notes.length) {
@@ -184,17 +287,37 @@ ${kb.priorities().map((p) => `<div class="card"><b>${s.byPriority[p] || 0}</b><s
 }
 
 /** Markdown report, convenient for pull requests, chat and agents. */
-export function renderMarkdownReport(model, { states } = {}) {
+export function renderMarkdownReport(model, { states, signal = 'high' } = {}) {
+  const level = normalizeSignalLevel(signal) || 'high';
+  const sh = level === 'off' ? null : stakeholderSummary(model, { signal: level });
+  if (!sh) annotateSignals(model);
   const kb = kbOf(model);
   const s = summarize(model);
   const md = (v) => String(v ?? '').replace(/([\\`*_{}[\]<>|#])/g, '\\$1').replace(/\r?\n/g, ' ');
   let out = `# ${md(model.meta.name)}\n\n`;
+  if (sh) {
+    const [overview, ...rest] = sh.lines;
+    out += `## Executive summary\n\n${md(overview)}\n`;
+    for (const l of rest.filter((x) => !/^\d+\. /.test(x))) out += `\n${md(l)}\n`;
+    const tops = rest.filter((x) => /^\d+\. /.test(x));
+    if (tops.length) out += `\n**Top findings**\n\n${tops.map((l) => `${l.match(/^\d+/)[0]}. ${md(l.replace(/^\d+\. /, ''))}`).join('\n')}\n`;
+    out += `\n## ${findingsHeading(sh.level)}\n\n`;
+    if (!sh.findings.length) out += `No threats at this signal level.\n\n`;
+    else {
+      out += `| ID | Finding | Category | Priority | State | Signal | Evidence | Mitigation |\n|---:|---|---|---|---|---|---|---|\n`;
+      for (const f of sh.findings) {
+        out += `| ${f.id} | ${md(f.title)} | ${md(f.category)} | ${md(f.priority)} | ${md(f.state)} | ${md(SIGNAL_LABELS[f.signal])} (${f.score}) | ${f.evidence.map((e) => md(e)).join(', ') || '—'} | ${md(f.mitigation) || '—'} |\n`;
+      }
+      out += '\n';
+    }
+    out += `## Full threat register\n\n`;
+  }
   out += `Template: ${md(s.template)} · Diagrams: ${s.diagrams} · Elements: ${s.elements} · Threats: ${s.threats}\n\n`;
   out += `| State | Count |\n|---|---:|\n${THREAT_STATES.map((st) => `| ${THREAT_STATE_LABELS[st]} | ${s.byState[st] || 0} |`).join('\n')}\n\n`;
   const threats = filterThreats(model, { states });
-  out += `| ID | Category | Priority | State | Title | Interaction |\n|---:|---|---|---|---|---|\n`;
+  out += `| ID | Category | Priority | State | Signal | Title | Interaction |\n|---:|---|---|---|---|---|---|\n`;
   for (const t of threats) {
-    out += `| ${t.id} | ${md(kb.category(t.category)?.name || t.category)} | ${md(t.priority)} | ${md(THREAT_STATE_LABELS[t.state])} | ${md(t.title)} | ${md(t.interaction)}${t.orphan ? ' (no longer present)' : ''} |\n`;
+    out += `| ${t.id} | ${md(kb.category(t.category)?.name || t.category)} | ${md(t.priority)} | ${md(THREAT_STATE_LABELS[t.state])} | ${md(SIGNAL_LABELS[t.signal?.level] || SIGNAL_LABELS.generic)} | ${md(displayTitle(t))} | ${md(t.interaction)}${t.orphan ? ' (no longer present)' : ''} |\n`;
   }
   return out;
 }

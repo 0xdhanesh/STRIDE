@@ -242,6 +242,7 @@ const TOOLS = [
         diagram: str(''),
         text: str('Search text.'),
         limit: num('Maximum number of threats.'),
+        signal: str('Only threats at or above this signal level, best first: high | medium.', { enum: ['high', 'medium', 'all'] }),
       },
     },
     annotations: { readOnlyHint: true },
@@ -291,7 +292,13 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       required: ['model'],
-      properties: { model: MODEL, format: str('', { enum: ['html', 'md', 'csv', 'json', 'svg'] }), diagram: str('Diagram for svg.'), output: str('Output file path (relative to root).') },
+      properties: {
+        model: MODEL,
+        format: str('', { enum: ['html', 'md', 'csv', 'json', 'svg'] }),
+        diagram: str('Diagram for svg.'),
+        signal: str('Stakeholder section (html, md, json): executive summary plus findings at or above this level, before the full register. Default high; off = classic report.', { enum: ['high', 'medium', 'all', 'off'] }),
+        output: str('Output file path (relative to root).'),
+      },
     },
   },
   {
@@ -367,7 +374,7 @@ function createHandlers(root) {
     stride_explain_flow: (a) => ops.opExplain(loadModelFile(modelPath(a.model)), a),
     stride_check_rule: (a) => ops.opCheckRule(loadTemplateFile(tplPath(a.template)), a.expression),
     stride_export_report: (a) => {
-      const text = ops.opReport(loadModelFile(modelPath(a.model)), { format: a.format || 'md', diagram: a.diagram });
+      const text = ops.opReport(loadModelFile(modelPath(a.model)), { format: a.format || 'md', diagram: a.diagram, signal: a.signal });
       if (!a.output) return text;
       writeTextAtomic(writePath(a.output), text);
       return { written: a.output, bytes: Buffer.byteLength(text) };
