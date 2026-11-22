@@ -1,78 +1,154 @@
 # STRIDE Threat Modeler
 
-**Threat modeling entirely in your browser. No backend. No uploads. No desktop installation.**
+Client-first STRIDE threat modeling. You draw a data flow diagram on an Excalidraw-style canvas, and
+threats are generated as you draw. The rule engine, templates and diagram semantics are compatible
+with the **Microsoft Threat Modeling Tool** (MTMT). The same engine is also available as a **CLI**
+and an **MCP server**, so you can model from scripts and AI agents.
 
-A web-based alternative to Microsoft Threat Modeling Tool, with an Excalidraw-style canvas,
-150+ technology stencils and 97 STRIDE threat rules. Built for environments where architecture
-and security data must stay on the machine.
+- **Runs locally.** No account, no server, no telemetry. The web app is static files, or a single
+  offline HTML file.
+- **No runtime dependencies.** Plain ES modules on Node ≥ 20 and in modern browsers.
+- **MTMT-compatible.** It imports `.tb7` templates, uses the same element types, properties and rule
+  language, decides whether a flow crosses a boundary by geometry, and keeps your triage when threats
+  are regenerated.
 
-**[Open the app](https://0xdhanesh.github.io/STRIDE/)**
+## Quick start
 
-[Feature reference](USAGE.md) · [Step-by-step modeling guide](GUIDE.md) · [Black-box demos](DEMO.md)
-
-## Client-side by design
-
-- Diagrams, threat generation, reviews, imports and report exports are processed locally in the browser.
-- Models autosave to **IndexedDB**, with a local recovery journal. Save the complete model as a
-  **`.stride` file** and reopen it with diagrams, review decisions and custom rules intact.
-- No telemetry, cloud storage, external fonts or CDN assets. A Content Security Policy blocks
-  network connections.
-- The hosted app fetches its static files on startup. The standalone file below needs **zero
-  network traffic, including startup and refresh**.
-
-## Use it offline
-
-From a local copy of this repository, a maintainer with Node.js can create the standalone file:
-
-```sh
-npm run build:offline
+```bash
+npm start                  # http://127.0.0.1:8000 — the web app
+npm run build:offline      # dist/STRIDE.html — one file, works from file://
+npx stride help            # CLI (or: node bin/stride.mjs help)
+npx stride mcp             # MCP server on stdio
 ```
 
-Distribute **`dist/STRIDE.html`**. Users open it directly in a modern browser—no installation,
-server or internet connection needed. Scripts, styles, icons, rules and PDF fonts are embedded.
-No package installation is required to generate it. Rebuild after source changes.
+The first run opens an example model. **File → New model** starts an empty one.
 
-For a GitHub release, create and publish a release with a tag pointing to the commit you want
-to distribute. GitHub Actions runs the tests, builds the standalone file from that tag, and
-attaches **`STRIDE.html`** to the release assets. The workflow also runs the tests on pushes
-and pull requests to `main`.
+## How it works
 
-## Model → review → export
+MTMT is a rule engine that runs over a diagram. This tool follows the same model; see
+`.localdev/Microsoft_ThreatModellingTool.md` for the reverse-engineered reference.
 
-1. **Draw:** add processes, external entities, stores and flows; mark trust boundaries and set
-   security properties. Use `/` to search stencils or `Y` to open the symbol library.
-2. **Review:** generated threats include suggested mitigations. Set Open, Mitigated, Accepted or
-   Not Applicable, with owner, severity, notes and mitigation. The dashboard counts by status
-   and STRIDE category. New flows into a reviewed group require another review; previous
-   decisions and evidence remain visible.
-3. **Save:** use **Ctrl/Cmd+S** for a local `.stride` file; **Ctrl/Cmd+O** reopens it. Autosave
-   recovers work after refresh. Keep local files as durable backups: browser storage can be cleared
-   and multiple tabs share one recovery slot.
-4. **Export:** PDF, Markdown and lossless report JSON include diagram images, an elements table
-   and threats grouped by STRIDE category and interaction. HTML, CSV, SVG and PNG are also available.
+1. **Draw** processes, external interactors and data stores. Connect them with **data flows**, then
+   draw **trust boundaries** across the flows that change trust level. A boundary can be an arc
+   (line) or a box (border).
+2. **Generate.** For every data flow (*source → flow → target*), each threat type in the template is
+   evaluated. A threat is created when its **Include** rule matches and its **Exclude** rule does not.
+   This re-runs automatically about 200 ms after each edit.
+3. **Triage.** Set the state (Not Started, Needs Investigation, Not Applicable, Mitigation
+   Implemented), the priority and a justification. A threat is identified by
+   `type + source + flow + target`:
+   - your triage survives renames, moves and regeneration;
+   - threats that no longer apply are dropped if nobody touched them;
+   - threats you triaged are kept as "no longer present".
+4. **Validate.** The Messages tab reports unconnected flows, missing or partial trust boundaries,
+   flows between two data stores, rule errors, and so on.
+5. **Report.** You can export a full HTML report with diagrams, Markdown, CSV (protected against
+   formula injection) or SVG.
 
-The canvas supports multiple diagrams, snapping connectors, undo/redo, pan/zoom and dark mode.
-**Open** also imports Microsoft TMT **`.tm7`** files: known stencils are mapped, original XML and
-reviews are preserved, and unmapped content is flagged for review. Custom templates can be edited
-through **Menu → Threat template**.
+### Rule language
 
-Direct PDF supports Latin, Greek and Cyrillic; use **Printable HTML → Print → Save as PDF** for
-other scripts. Markdown images need a viewer that permits embedded SVG data URLs.
-
-## Develop and verify
-
-Plain HTML, CSS and JavaScript modules. No package installation or build step is required to
-serve the source app. Development checks use Node.js 20+ and Python 3.
-
-```sh
-npm start                 # Static server at http://localhost:8000 (Python 3)
-npm test                  # Rules, reviews, persistence, imports, exports and offline packaging
-npm run test:acceptance   # Local save/reopen and report checks with network APIs blocked
+```text
+source is 'GE.P' and (target is 'GE.P' or target is 'GE.DS') and flow crosses 'GE.TB.B'
+flow.providesConfidentiality is 'Yes' or source.implementsAuthenticationScheme is 'Yes'
+not target is 'SE.DS.TMCore.SQL'
 ```
 
-Source `index.html` needs a static HTTP server; use `dist/STRIDE.html` for opening directly from disk.
-PDF rendering code and fonts are bundled locally; see [third-party notices](THIRD_PARTY.md).
+- `X is 'Type'` matches subtypes. For example, a *Web Application* is a `GE.P`.
+- `X.property is 'value'` compares the selected value. Property names are case-insensitive.
+- `flow crosses 'Boundary'` is true when the drawn flow intersects a boundary of that type, including
+  subtypes of that type.
+- `and` binds tighter than `or`, and both short-circuit. `not` applies to a single rule only.
+- Titles and descriptions can use `{source.Name}`, `{flow.Name}`, `{target.Name}` or any property.
 
-- [Stencils and security properties](js/stencils.js)
-- [Threat rules and template schema](js/rules.js)
-- [Architecture, review notes and browser verification steps](REVIEW.md)
+### Templates
+
+The built-in **STRIDE Core** template uses MTMT's core element types and property names
+(`GE.P`, `SE.DS.TMCore.SQL`, `providesConfidentiality`, …) and the same rule logic. The threat
+descriptions and mitigations are written for this project and include CWE references.
+
+To use Microsoft's own templates, choose **File → Import template** in the app, or run
+`stride template import Default.tb7 -o mtmt.json`. Both bundled MTMT templates import cleanly
+(Core: 47 threat types; Azure: 191). Under the core template, the test scenario gives exactly the
+same threats as STRIDE Core.
+
+**Template & rules…** opens the template editor. In it you can:
+- edit threat types, with live rule validation and a "does this fire on the selected flow?" check;
+- add derived element types and attributes;
+- export a template as JSON.
+
+## Web app
+
+| Action | How |
+|---|---|
+| Place a shape | Toolbar or keys `2` process, `3` external, `4` store, `8` annotation; or drag a stencil from the palette |
+| Data flow | `5`/`F`, then drag from the source element to the target |
+| Trust boundary | `6`/`L` arc: drag across flows · `7`/`B` box: drag a rectangle |
+| Rename | Double-click or `Enter` |
+| Bend a flow / re-attach an end | Drag its middle or end handle |
+| Pan / zoom | Wheel, `Space`+drag, `H` · `Ctrl/⌘`+wheel, `+`/`−`, `Shift+1` to fit |
+| Undo, copy, duplicate | `⌘Z`/`⌘⇧Z`, `⌘C`/`⌘V`, `⌘D` or Alt-drag |
+| Analyze | **Analyze** switches to a larger threat list. Selecting a threat highlights its interaction |
+
+Models autosave to browser storage. **File → Save** writes a `.stride.json` file, using the File
+System Access API where the browser supports it. Imported files are treated as untrusted: they are
+validated, keys that could pollute object prototypes are dropped, and all text is escaped when
+rendered. The offline build has a strict Content Security Policy with no network access.
+
+## CLI
+
+```bash
+stride new shop.json --name "Shop"
+stride add shop.json "Human User" --name Customer
+stride add shop.json SE.P.TMCore.WebApp --name Storefront --prop hasInputSanitizers=Yes
+stride add shop.json "SQL Database" --name "Orders DB"
+stride add shop.json HTTPS --name "Place order" --from Customer --to Storefront
+stride add shop.json flow --name "Write order" --from Storefront --to "Orders DB"
+stride add shop.json SE.TB.B.TMCore.CorpNet --name Backend --around Storefront,"Orders DB"
+stride validate shop.json                 # exit 1 on errors (--strict: also on warnings)
+stride threats shop.json --state NotStarted --priority High
+stride threat shop.json 3 --state mitigated --justification "Parameterized queries"
+stride explain shop.json "Place order"    # which rules fire, which boundaries are crossed
+stride report shop.json -o report.html    # html | md | csv | json | svg
+stride rule check "source is 'GE.P' and flow crosses 'GE.TB.L'"
+```
+
+Elements can be referenced by id or by unique name. After every change the CLI regenerates threats;
+pass `--no-generate` to skip this. Add `--json` to any command for machine-readable output.
+`stride types --family flow` lists the element types and their properties.
+
+## MCP server
+
+`stride mcp` speaks the Model Context Protocol over stdio and exposes 19 tools. They cover creating
+models, listing element types, adding and updating elements, generating and validating, listing and
+triaging threats, explaining a flow, checking rules, importing and applying templates, and exporting
+reports. File paths are restricted to `--root`, which defaults to the working directory. Writes are
+limited to `.json`, `.html`, `.csv`, `.md` and `.svg`.
+
+```bash
+claude mcp add stride -- node /path/to/STRIDE/bin/stride.mjs mcp --root /path/to/models
+```
+
+```json
+{ "mcpServers": { "stride": { "command": "node", "args": ["/path/to/STRIDE/bin/stride.mjs", "mcp", "--root", "/path/to/models"] } } }
+```
+
+## Development
+
+```text
+src/core/        engine: knowledge base, rule language, geometry, model, generation, validation, reports, SVG, .tb7 import
+src/templates/   built-in STRIDE Core template
+src/web/         Excalidraw-style app: canvas, panels, template editor, state/undo
+src/cli/         CLI, MCP server, shared operations, sandboxed file I/O
+scripts/         dev server, offline build, acceptance and browser UI checks
+tests/           node:test suites
+```
+
+```bash
+npm test                        # unit and integration tests
+npm run test:acceptance         # offline build + CLI session + browser UI check (needs Chrome; skipped otherwise)
+node scripts/ui-check.mjs       # drives the real UI over the Chrome DevTools Protocol
+MTMT_TB7=path/to/Default.tb7 npm test   # also checks parity with Microsoft's template
+```
+
+Generated threats are a starting point for expert review. They do not guarantee that a system is
+secure.

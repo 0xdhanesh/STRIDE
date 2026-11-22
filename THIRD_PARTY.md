@@ -1,23 +1,24 @@
-Bundled PDF assets
-==================
+# Third-party notices
 
-The PDF renderer and fonts are distributed inside the app, including its standalone HTML build. No
-runtime installation, CDN, URL font loading, or external image loading is used. The application supplies
-only its own report definition, embedded font data and locally rendered SVG. pdfmake's URL access policy
-is set to reject every URL; the application's CSP independently blocks network connections.
+STRIDE Threat Modeler has **no runtime or build dependencies**. All code in this repository was
+written for this project.
 
-- **pdfmake 0.3.11**, MIT: https://github.com/bpampuch/pdfmake
-  - Source: `https://registry.npmjs.org/pdfmake/-/pdfmake-0.3.11.tgz`
-  - Registry integrity: `sha512-Uc49J9hUMyuqJk+U+PxlpBpPr96A4HOOfesGx609EPr2ue82+5/Smq/KTAkEqh0/jUGSi1fumvqZ5yAWijJTJg==`
-  - `build/pdfmake.min.js` is wrapped in a local CommonJS scope and exported as an ES module in
-    `js/vendor/pdfmake.js`. The unused source-map reference is removed. Rendering code is unchanged.
-  - License: `js/vendor/PDFMAKE-LICENSE.txt`.
-- **Roboto**, Apache 2.0: https://github.com/googlefonts/roboto-2
-  - Font bytes come from the same pinned pdfmake distribution's `build/vfs_fonts.js`.
-  - `js/vendor/fonts.js` exports the VFS dictionary without global registration.
-  - License: `js/vendor/ROBOTO-LICENSE.txt`.
-  - `js/vendor/font-coverage.js` records the Regular font's Unicode coverage for missing-glyph checks.
+## Microsoft Threat Modeling Tool compatibility
 
-The local asset SHA-256 hashes are recorded in `js/vendor/manifest.json` and checked by `npm test`.
-Updating the library requires regenerating those hashes and rerunning PDF rendering, offline-network,
-pagination and model round-trip checks.
+This project is independent and is not affiliated with or endorsed by Microsoft. "Microsoft Threat
+Modeling Tool" is a trademark of Microsoft Corporation.
+
+- The built-in template reuses MTMT's element type identifiers, property names and values, and
+  threat rule expressions. It does this so that templates and rules interoperate. Threat titles,
+  descriptions and mitigations are original text.
+- No Microsoft binaries, templates, icons or images are included. Users can import `.tb7` templates
+  they obtained themselves, including those Microsoft publishes at
+  <https://github.com/microsoft/threat-modeling-templates>.
+- `.localdev/Microsoft_ThreatModellingTool.md` describes MTMT's behaviour. It was produced by static
+  analysis of the publicly distributed tool for interoperability purposes, and it is not part of the
+  published repository.
+
+## Fonts
+
+The UI asks for the system fonts "Virgil"/"Excalifont" when they are installed, and otherwise falls
+back to the platform's handwriting or system fonts. No font files are bundled.

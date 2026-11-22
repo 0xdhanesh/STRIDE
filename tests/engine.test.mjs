@@ -1,147 +1,178 @@
-// Run with: node tests/engine.test.mjs
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sampleModel } from '../js/sample.js';
-import { syncThreats, threatList, validate, generateThreats, evalCond } from '../js/engine.js';
-import { DEFAULT_RULES, validateRules } from '../js/rules.js';
-import { updateThreat } from '../js/threats.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+  DEFAULT_TEMPLATE,
+  addElement,
+  addUserThreat,
+  createModel,
+  createSampleModel,
+  crossedBoundaries,
+  explainFlow,
+  generateThreats,
+  parseTb7,
+  removeElements,
+  updateElement,
+  updateThreat,
+} from '../src/core/index.js';
 
-validateRules(DEFAULT_RULES);
-
-assert.equal(evalCond([['a', 'eq', 1], { any: [['b', 'eq', 2], ['c', 'eq', 3]] }], { a: 1, c: 3 }), true);
-assert.equal(evalCond({ not: ['a', 'eq', 1] }, { a: 1 }), false);
-assert.equal(evalCond([['x.props.k', 'ne', 'Yes']], { x: { props: {} } }), true);
-
-const m = sampleModel();
-syncThreats(m);
-const list = threatList(m);
-assert.ok(list.length > 20, `expected many threats, got ${list.length}`);
-// Boundary crossing: Customer -> Web crosses the VNet box, Web -> API does not.
-const keys = Object.keys(m.threats);
-assert.ok(keys.some((k) => k.includes('|f_1|D02')), 'f_1 crosses boundary');
-assert.ok(!keys.some((k) => k.includes('|f_3|D02')), 'f_3 does not cross boundary');
-// Encrypted flow -> no sniffing threat; SQL DB -> injection threat.
-assert.ok(!keys.some((k) => k.includes('|f_1|I01')));
-assert.ok(keys.some((k) => k.includes('|f_4|T03')));
-// Unresolved placeholders should not remain.
-for (const t of list) assert.ok(!/\{[a-z]+\.[a-z.]+\}/i.test(t.title + t.description), `placeholder left in ${t.title}`);
-
-// Edits survive regeneration; untouched stale threats disappear; edited become orphans.
-const t = m.threats[keys.find((k) => k.includes('|f_1|S01'))];
-updateThreat(t, 'status', 'mitigated'); t.justification = 'MFA enforced';
-const id = t.id;
-syncThreats(m);
-assert.equal(m.threats[t.key].id, id);
-m.diagrams[0].elements = m.diagrams[0].elements.filter((e) => e.id !== 'f_1');
-syncThreats(m);
-assert.equal(m.threats[t.key].orphan, true);
-assert.ok(!Object.keys(m.threats).some((k) => k.includes('|f_1|') && k !== t.key));
-
-// Out-of-scope target suppresses its threats.
-const m2 = sampleModel();
-m2.diagrams[0].elements.find((e) => e.id === 's_db').outOfScope = true;
-assert.ok(!generateThreats(m2).some((g) => g.elementId === 's_db'));
-
-console.log('validation:', validate(sampleModel()).map((x) => x.text));
-console.log(`OK – ${list.length} threats in sample`);
-
-// Curved trust-boundary lines count as crossings too.
-{
-  const m = sampleModel();
-  const d = m.diagrams[0];
-  d.elements = d.elements.filter((e) => e.type !== 'boundary');
-  d.elements.push({ id: 'bl', type: 'boundaryLine', name: 'Edge', x1: 280, y1: 0, x2: 280, y2: 600, bend: 20, props: {}, style: {} });
-  const keys = generateThreats(m).map((g) => g.key);
-  assert.ok(keys.some((k) => k.endsWith('|f_1|D02')), 'flow crossing a boundary line is boundary-crossing');
-  assert.ok(!keys.some((k) => k.endsWith('|f_3|D02')), 'flow not crossing the line is not');
-  console.log('OK – boundary line crossing');
+/** User → Web (HTTPS), Web → User (HTTPS), Web → DB (generic), arc Internet boundary between User and Web. */
+export function webScenario(template = DEFAULT_TEMPLATE) {
+  const m = createModel({ template });
+  const user = addElement(m, null, { type: 'SE.EI.TMCore.User', name: 'User', x: 40, y: 200 });
+  const web = addElement(m, null, { type: 'SE.P.TMCore.WebApp', name: 'Web App', x: 360, y: 190 });
+  const db = addElement(m, null, { type: 'SE.DS.TMCore.SQL', name: 'Orders DB', x: 680, y: 200 });
+  const req = addElement(m, null, { type: 'SE.DF.TMCore.HTTPS', name: 'Request', source: user.id, target: web.id });
+  const resp = addElement(m, null, { type: 'SE.DF.TMCore.HTTPS', name: 'Response', source: web.id, target: user.id });
+  const sql = addElement(m, null, { type: 'GE.DF', name: 'SQL query', source: web.id, target: db.id });
+  const tb = addElement(m, null, { type: 'SE.TB.L.TMCore.Internet', name: 'Internet', x0: 260, y0: 100, x1: 260, y1: 400 });
+  return { m, user, web, db, req, resp, sql, tb };
 }
 
-// Technology-specific rules and orthogonal anchoring.
-{
-  const { lineGeom } = await import('../js/util.js');
-  const { defaultProps } = await import('../js/stencils.js');
-  const n = (id, type, subtype, x, y, w = 130, h = 130) => ({ id, type, name: id, subtype, x, y, w, h, props: defaultProps(type), style: {} });
-  const f = (id, s, t) => ({ id, type: 'flow', name: id, subtype: 'MCP (JSON-RPC)', sourceId: s, targetId: t, bend: 0, props: defaultProps('flow'), style: {} });
-  const m = { diagrams: [{ id: 'd', elements: [
-    n('mcp', 'process', 'MCP Server', 0, 0), n('agent', 'process', 'AI Agent / LLM App', 300, 40),
-    n('kafka', 'store', 'Kafka Topic / Event Log', 300, 400, 190, 70), n('caller', 'external', 'Phone Caller (PSTN)', -400, 0, 160, 80),
-    n('ivr', 'process', 'IVR System', -200, 0), n('pod', 'process', 'Kubernetes Pod', 600, 0),
-    f('f1', 'mcp', 'agent'), f('f2', 'agent', 'mcp'), f('f3', 'agent', 'kafka'), f('f4', 'caller', 'ivr'),
-  ] }], threats: {} };
-  const rules = new Set(generateThreats(m).map((g) => g.ruleId));
-  for (const r of ['M01', 'M02', 'M03', 'K01', 'K02', 'V01', 'V03', 'C01']) assert.ok(rules.has(r), `rule ${r} fires`);
+const ids = (m) => m.threats.map((t) => `${t.typeId}@${t.interaction}`).sort();
 
-  // Shapes overlapping vertically → horizontal connector (same y at both ends).
-  const byId = new Map(m.diagrams[0].elements.map((e) => [e.id, e]));
-  const g = lineGeom(byId.get('f1'), byId);
-  assert.ok(Math.abs(g.s.y - g.t.y) < 0.01, 'horizontal connector');
-  assert.ok(g.s.x > 129 && g.t.x < 301, 'ends sit on the shape outlines');
-  console.log('OK – technology rules & orthogonal anchors');
-}
+test('generates the expected threats for the web scenario', () => {
+  const { m } = webScenario();
+  const r = generateThreats(m);
+  assert.equal(r.errors.length, 0);
+  assert.deepEqual(ids(m), [
+    'D2@From Web App to Orders DB via SQL query',
+    'D3@From User to Web App via Request',
+    'D4@From User to Web App via Request',
+    'D4@From Web App to User via Response',
+    'E5@From User to Web App via Request',
+    'E6@From User to Web App via Request',
+    'E7@From User to Web App via Request',
+    'E8@From User to Web App via Request',
+    'R6@From User to Web App via Request',
+    'R7@From Web App to User via Response',
+    'S3@From User to Web App via Request',
+    'S7.1@From Web App to Orders DB via SQL query',
+    'S8@From Web App to User via Response',
+    'T13.1@From User to Web App via Request',
+    'T7@From Web App to Orders DB via SQL query',
+  ]);
+  assert.equal(new Set(m.threats.map((t) => t.id)).size, m.threats.length, 'sequential unique ids');
+});
 
-// WebSocket rules.
-{
-  const { defaultProps } = await import('../js/stencils.js');
-  const { applySubtype } = await import('../js/ops.js');
-  const node = (id, type, subtype, x) => ({ id, type, name: id, subtype, x, y: 0, w: 130, h: 130, props: defaultProps(type), style: {} });
-  const flow = (subtype) => { const f = { id: 'ws', type: 'flow', name: 'socket', subtype: 'Generic Data Flow', sourceId: 'b', targetId: 's', bend: 0, props: defaultProps('flow'), style: {} }; applySubtype(f, subtype); return f; };
-  const run = (f) => new Set(generateThreats({ diagrams: [{ id: 'd', elements: [node('b', 'external', 'Browser', 0), node('s', 'process', 'WebSocket Server / Gateway', 300), f] }], threats: {} }).map((g) => g.ruleId));
-  const plain = run(flow('WebSocket (ws://)'));
-  for (const r of ['W02', 'W03', 'W04', 'W05', 'W06']) assert.ok(plain.has(r), `ws:// fires ${r}`);
-  const cookie = flow('WebSocket (ws://)');
-  cookie.props.authentication = 'Cookie / Session';
-  assert.ok(run(cookie).has('W01'), 'cookie-auth sockets trigger CSWSH');
-  const secure = flow('WebSocket Secure (wss://)');
-  secure.props.authentication = 'Token (OAuth / JWT)';
-  secure.props.rateLimited = 'Yes';
-  const sec = run(secure);
-  assert.ok(!sec.has('W02') && !sec.has('W03') && !sec.has('W06'), 'wss:// with auth + rate limiting suppresses W02/W03/W06');
-  assert.ok(!sec.has('W01') && sec.has('W05'), 'token-auth sockets skip CSWSH; message injection still applies');
-  console.log('OK – WebSocket rules');
-}
+test('threat text is expanded from element names', () => {
+  const { m } = webScenario();
+  generateThreats(m);
+  const t = m.threats.find((x) => x.typeId === 'T7');
+  assert.equal(t.title, 'Potential SQL injection vulnerability for Orders DB');
+  assert.match(t.description, /Web App/);
+});
 
-// Penetration-testing rules: each fires in a matching scenario.
-{
-  const { defaultProps } = await import('../js/stencils.js');
-  const { applySubtype } = await import('../js/ops.js');
-  let k = 0;
-  const node = (type, subtype, props = {}, x = 0) => { const e = { id: `n${k++}`, type, name: subtype, subtype: 'x', x, y: 0, w: 130, h: 130, props: defaultProps(type), style: {} }; applySubtype(e, subtype); Object.assign(e.props, props); return e; };
-  const fired = (els) => new Set(generateThreats({ diagrams: [{ id: 'd', elements: els }], threats: {} }).map((g) => g.ruleId));
-  const pair = (a, b, subtype, flowProps = {}, boundary = false) => {
-    const f = { id: `f${k++}`, type: 'flow', name: 'f', subtype: 'x', sourceId: a.id, targetId: b.id, bend: 0, props: defaultProps('flow'), style: {} };
-    applySubtype(f, subtype); Object.assign(f.props, flowProps);
-    b.x = 400;
-    const els = [a, b, f];
-    if (boundary) els.push({ id: `b${k++}`, type: 'boundary', name: 'Zone', subtype: 'DMZ', x: 350, y: -50, w: 300, h: 250, props: {}, style: {} });
-    return fired(els);
-  };
-  const expect = (id, set) => assert.ok(set.has(id), `${id} should fire`);
-  expect('P01', pair(node('external', 'Administrator'), node('process', 'Generic Process'), 'Telnet'));
-  expect('P02', pair(node('external', 'Administrator'), node('process', 'Virtual Machine'), 'RDP', {}, true));
-  expect('P03', pair(node('process', 'Generic Process'), node('process', 'File Transfer Server'), 'NTLM'));
-  expect('P04', pair(node('process', 'Generic Process'), node('process', 'Active Directory Domain Controller'), 'Kerberos'));
-  expect('P05', pair(node('external', 'OAuth / Social Login Provider'), node('process', 'Web Application'), 'SAML'));
-  expect('P06', pair(node('process', 'Generic Process'), node('process', 'DNS Server'), 'DNS'));
-  expect('P07', pair(node('external', 'Payment Gateway'), node('process', 'Web API / Service'), 'Webhook Callback'));
-  expect('P08', pair(node('external', 'Browser'), node('process', 'GraphQL API'), 'GraphQL'));
-  expect('P09', pair(node('process', 'Load Balancer'), node('process', 'Web Application'), 'HTTPS'));
-  expect('P10', pair(node('process', 'Web API / Service'), node('store', 'Cloud Instance Metadata'), 'HTTP'));
-  expect('P11', pair(node('store', 'Container Registry'), node('process', 'Kubernetes Pod'), 'HTTPS'));
-  expect('P12', pair(node('process', 'Mail Server'), node('external', 'Email Recipient'), 'SMTP'));
-  expect('P13', pair(node('process', 'SCADA / HMI'), node('process', 'PLC / Controller'), 'Modbus'));
-  expect('P14', pair(node('external', 'IoT Device'), node('process', 'IoT Gateway'), 'Bluetooth / BLE'));
-  expect('P15', pair(node('external', 'Privileged Insider'), node('process', 'Desktop / Thick Client'), 'USB / Physical Media'));
-  expect('P16', pair(node('external', 'Malicious Insider'), node('process', 'Admin Console / Management Plane'), 'HTTPS'));
-  expect('P17', pair(node('external', 'External Attacker (Internet)'), node('process', 'CDN / Edge'), 'HTTPS'));
-  expect('P18', pair(node('process', 'Web API / Service'), node('process', 'SIEM / Log Collector'), 'Syslog'));
-  expect('P19', fired([node('process', 'Web Application', { internetFacing: 'Yes' })]));
-  expect('P20', fired([node('process', 'CI/CD Pipeline')]));
-  expect('P21', fired([node('store', 'Source Code Repository')]));
-  expect('P22', fired([node('process', 'Bastion / Jump Host')]));
-  expect('P23', fired([node('store', 'Browser Storage', { storesCredentials: 'Yes' })]));
-  expect('P24', fired([node('store', 'Mobile Device Storage')]));
-  // Secure variants suppress protocol threats.
-  assert.ok(!pair(node('external', 'Administrator'), node('process', 'Generic Process'), 'SSH').has('P01'), 'SSH is not a cleartext legacy protocol');
-  assert.ok(!pair(node('process', 'Generic Process'), node('process', 'DNS Server'), 'DNS over HTTPS / TLS').has('P06'), 'DoH suppresses DNS spoofing');
-  console.log('OK – penetration-testing rules (P01–P24)');
-}
+test('crossing is geometric: moving the boundary changes the threats', () => {
+  const { m, req, tb } = webScenario();
+  assert.equal(crossedBoundaries(m, m.diagrams[0], req).length, 1);
+  updateElement(m, tb.id, { x0: 1200, x1: 1200 });
+  assert.equal(crossedBoundaries(m, m.diagrams[0], req).length, 0);
+  generateThreats(m);
+  assert.ok(!m.threats.some((t) => t.typeId === 'D3'));
+});
+
+test('box boundaries cross flows that cut their border, not ones fully inside', () => {
+  const { m, sql } = webScenario();
+  const box = addElement(m, null, { type: 'GE.TB.B', name: 'Backend', x: 330, y: 150, w: 600, h: 200 });
+  assert.equal(crossedBoundaries(m, m.diagrams[0], sql).length, 0, 'web→db both inside the box');
+  updateElement(m, box.id, { w: 250 });
+  assert.equal(crossedBoundaries(m, m.diagrams[0], sql).length, 1, 'db now outside the box');
+});
+
+test('merge keeps triage, refreshes text, removes untouched and orphans triaged threats', () => {
+  const { m, user, req, sql } = webScenario();
+  generateThreats(m);
+  const s3 = m.threats.find((t) => t.typeId === 'S3');
+  updateThreat(m, s3.key, { state: 'Mitigated', justification: 'MFA' }, 'alice');
+  // Rename refreshes generated text but keeps triage.
+  updateElement(m, user.id, { name: 'Customer' });
+  let r = generateThreats(m);
+  const s3b = m.threats.find((t) => t.key === s3.key);
+  assert.equal(s3b.state, 'Mitigated');
+  assert.equal(s3b.title, 'Spoofing the Customer external entity');
+  assert.ok(r.updated > 0);
+  // A user-edited title is not overwritten.
+  updateThreat(m, s3.key, { title: 'Custom title' });
+  updateElement(m, user.id, { name: 'Buyer' });
+  generateThreats(m);
+  assert.equal(m.threats.find((t) => t.key === s3.key).title, 'Custom title');
+  // Property change that excludes S3: the triaged threat becomes an orphan, untouched ones vanish.
+  updateElement(m, req.id, { props: { authenticatesSource: 'Yes' } });
+  r = generateThreats(m);
+  assert.equal(m.threats.find((t) => t.key === s3.key).orphan, true);
+  assert.equal(r.orphaned, 1);
+  // Deleting a flow removes its untouched threats.
+  const before = m.threats.filter((t) => t.flowId === sql.id).length;
+  removeElements(m, [sql.id]);
+  r = generateThreats(m);
+  assert.equal(r.removed, before);
+  // Restoring the property restores the orphan.
+  updateElement(m, req.id, { props: { authenticatesSource: 'Not Selected' } });
+  r = generateThreats(m);
+  assert.equal(m.threats.find((t) => t.key === s3.key).orphan, false);
+  assert.equal(r.restored, 1);
+});
+
+test('regeneration is idempotent', () => {
+  const { m } = webScenario();
+  generateThreats(m);
+  const snapshot = JSON.stringify(m.threats);
+  const r = generateThreats(m);
+  assert.equal(r.added + r.removed + r.updated + r.orphaned, 0);
+  assert.equal(JSON.stringify(m.threats), snapshot);
+});
+
+test('out of scope elements produce no threats', () => {
+  const { m, db, sql } = webScenario();
+  updateElement(m, db.id, { outOfScope: true });
+  generateThreats(m);
+  assert.ok(!m.threats.some((t) => t.flowId === sql.id));
+});
+
+test('user-defined threats survive regeneration and orphan when their flow is deleted', () => {
+  const { m, sql } = webScenario();
+  generateThreats(m);
+  const t = addUserThreat(m, sql.id, { title: 'Backup exposure', category: 'I' });
+  generateThreats(m);
+  assert.ok(m.threats.includes(t));
+  removeElements(m, [sql.id]);
+  generateThreats(m);
+  assert.equal(m.threats.find((x) => x.key === t.key).orphan, true);
+});
+
+test('disabled generation leaves threats alone', () => {
+  const { m } = webScenario();
+  m.settings.threatGeneration = false;
+  const r = generateThreats(m);
+  assert.equal(r.enabled, false);
+  assert.equal(m.threats.length, 0);
+});
+
+test('explainFlow reports crossings and per-rule results', () => {
+  const { m, req } = webScenario();
+  const e = explainFlow(m, req.id);
+  assert.equal(e.crosses[0].typeId, 'SE.TB.L.TMCore.Internet');
+  assert.equal(e.results.find((r) => r.id === 'S3').applies, true);
+  assert.equal(e.results.find((r) => r.id === 'S2').applies, false, 'HTTPS authenticates the destination');
+});
+
+test('sample model generates threats without rule errors', () => {
+  const m = createSampleModel();
+  const r = generateThreats(m);
+  assert.equal(r.errors.length, 0);
+  assert.ok(m.threats.length > 20);
+});
+
+// Optional parity check against Microsoft's own template.
+const tb7 = process.env.MTMT_TB7;
+test('parity with Microsoft Threat Modeling Tool Default.tb7 (set MTMT_TB7)', { skip: !tb7 && 'MTMT_TB7 not set' }, () => {
+  const mtmt = parseTb7(fs.readFileSync(path.resolve(tb7), 'utf8'));
+  const a = webScenario();
+  const b = webScenario(mtmt);
+  generateThreats(a.m);
+  generateThreats(b.m);
+  const norm = (m) => ids(m).map((x) => x.replace(/^8404dcf5-bdd8-4902-abc2-3b6c967b0261/, 'E8')).sort();
+  assert.deepEqual(norm(b.m), norm(a.m));
+});

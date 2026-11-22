@@ -1,12 +1,20 @@
 {
   "name": "stride-threat-modeler",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Client-side STRIDE threat modeling tool with an Excalidraw-like canvas",
+  "description": "Client-first STRIDE threat modeling with Microsoft Threat Modeling Tool parity: Excalidraw-style web canvas, CLI, and MCP server.",
+  "bin": {
+    "stride": "bin/stride.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "start": "python3 -m http.server 8000",
+    "start": "node scripts/serve.mjs",
     "build:offline": "node scripts/build-offline.mjs",
-    "test:acceptance": "node scripts/report-qa.mjs",
-    "test": "node tests/engine.test.mjs && node --test tests/persistence.test.mjs tests/offline.test.mjs tests/threats.test.mjs tests/reports.test.mjs tests/rule-fixes.test.mjs tests/rule-validation.test.mjs tests/rule-security.test.mjs tests/tm7.test.mjs tests/ai-rules.test.mjs tests/rule-refs.test.mjs"
+    "test": "node --test tests/",
+    "test:acceptance": "node scripts/acceptance.mjs",
+    "mcp": "node bin/stride.mjs mcp"
   }
 }
