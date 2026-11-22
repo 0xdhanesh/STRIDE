@@ -57,7 +57,7 @@ test('shell_exec flow surfaces as a specific command injection finding', () => {
   assert.equal(t.signal.sink, 'command-injection');
   assert.deepEqual(t.signal.evidence, ['vulnerabilities/exec/source/low.php']);
   assert.match(m.threats.find((x) => x.key === t.key).title, /^(?!Command injection)/, 'rule title is untouched');
-  assert.equal(displayTitle(t), t.signal.title);
+  assert.equal(displayTitle(t), t.enriched.specificTitle, 'the enriched title takes over for display');
 });
 
 test('every DVWA sink becomes exactly one titled finding', () => {
@@ -125,7 +125,7 @@ test('HTML and Markdown put the stakeholder view first; --signal off keeps the c
   const html = renderHtmlReport(m);
   assert.ok(html.indexOf('Executive summary') < html.indexOf('High-signal findings'));
   assert.ok(html.indexOf('High-signal findings') < html.indexOf('Diagram: '));
-  assert.ok(html.includes('Command injection via shell_exec of user-controlled IP'));
+  assert.ok(html.includes('Command / code injection sink (shell_exec) in vulnerabilities/exec/source/low.php'));
   const md = renderMarkdownReport(m);
   assert.ok(md.indexOf('## Executive summary') < md.indexOf('## High-signal findings'));
   assert.ok(md.indexOf('## High-signal findings') < md.indexOf('## Full threat register'));

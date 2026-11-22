@@ -251,7 +251,9 @@ export function computeSignals(model) {
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k).push({ t, signal, hit });
   }
-  const better = (a, b) => (a.signal.score !== b.signal.score ? a.signal.score > b.signal.score : a.t.id < b.t.id);
+  // Rank without the triage-dependent bonus so triaging the finding never moves it to a sibling.
+  const base = (x) => x.signal.score - (x.signal.reasons.includes('high priority, not started') ? SIGNAL_WEIGHTS.highUntriaged : 0);
+  const better = (a, b) => (base(a) !== base(b) ? base(a) > base(b) : a.t.id < b.t.id);
   for (const list of groups.values()) {
     const eligible = list.filter((x) => x.t.state !== 'NotApplicable');
     const relevant = eligible.filter((x) => x.hit.relevant);
@@ -279,8 +281,13 @@ export function annotateSignals(model) {
   return model;
 }
 
-/** Title for display and reports: the evidence-aware title when there is one. */
+/**
+ * Title for display and reports: a user-edited title always wins; then the enriched specific
+ * title (see enrich/); then the signal's evidence-aware title; then the rule title.
+ */
 export function displayTitle(t) {
+  if (t.edited?.includes('title')) return t.title;
+  if (t.enriched && t.enriched.class !== 'generic' && t.enriched.specificTitle) return t.enriched.specificTitle;
   return t.signal?.title || t.title;
 }
 
