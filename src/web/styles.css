@@ -189,6 +189,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .s-NeedsInvestigation { background: #fff3bf; color: #946200; }
 .s-NotApplicable { background: #e9ecef; color: #495057; }
 .s-Mitigated { background: #d3f9d8; color: #2b8a3e; }
+.g-high { background: #e5dbff; color: #5f3dc4; }
+.g-medium { background: #e7f5ff; color: #1864ab; }
+.g-generic { background: var(--panel-2); color: var(--muted); }
+.filters .hs-toggle { margin: 0 6px 0 2px; font-size: 13px; font-weight: 600; }
+.signal-box { border: 1px solid var(--line); border-left: 3px solid #7950f2; border-radius: 8px; padding: 6px 10px; margin: 6px 0 10px; }
+.signal-box p { margin: 4px 0; }
 .p-High { color: #d9480f; } .p-Medium { color: #1971c2; } .p-Low { color: var(--muted); }
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .stat { background: var(--panel-2); border-radius: 9px; padding: 8px 10px; }

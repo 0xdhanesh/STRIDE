@@ -218,6 +218,20 @@ async function main() {
     await sleep(200);
     check((await evaluate('document.getElementById("app").dataset.view')) === 'analyze', 'Analyze view toggles');
 
+    // High-signal view: an evidence-backed shell_exec flow ranks first with a specific title.
+    await evaluate(`(() => {
+      const c = __stride.core; const m = c.createModel({ template: c.DEFAULT_TEMPLATE, name: 'Signal check' });
+      c.syncModel(m, { elements: [{ name: 'User', type: 'SE.EI.TMCore.User' }, { name: 'App', type: 'SE.P.TMCore.WebApp' }, { name: 'Shell', type: 'SE.P.TMCore.OSProcess' }],
+        flows: [{ name: 'Ping', from: 'User', to: 'App' }, { name: 'shell_exec of user-controlled IP', from: 'App', to: 'Shell', evidence: ['exec/low.php:14'] }] });
+      __stride.store.setModel(m); __stride.store.processNow(); __stride.ui.drawer.filters.scope = 'all'; __stride.ui.drawer.show('threats');
+    })()`);
+    await sleep(300);
+    const allRows = await evaluate(`document.querySelectorAll('.table-wrap tbody tr').length`);
+    await evaluate(`document.getElementById('hsview').click()`);
+    await sleep(200);
+    const hs = await evaluate(`(() => ({ rows: document.querySelectorAll('.table-wrap tbody tr').length, high: __stride.store.model.threats.filter(t => t.signal?.level === 'high').length, first: document.querySelector('.table-wrap tbody tr td.title')?.textContent || '' }))()`);
+    check(hs.rows === hs.high && hs.rows > 0 && hs.rows < allRows && hs.first.startsWith('Command injection via shell_exec'), `high-signal view filters and ranks threats (${allRows} → ${hs.rows}, first: ${hs.first.slice(0, 60)})`);
+
     if (SHOT) {
       await evaluate(`(() => { __stride.store.setModel(__stride.core.createSampleModel()); __stride.ui.canvas.zoomToFit(); })()`);
       await sleep(500);

@@ -17,8 +17,11 @@ import {
   generateThreats,
   kbFor,
   kbOf,
+  levelsAtLeast,
+  normalizeSignalLevel,
   normalizeState,
   normalizeTemplate,
+  stakeholderSummary,
   rectOf,
   removeDiagram,
   removeElements,
@@ -210,15 +213,28 @@ export function threatView(model, t) {
     userDefined: t.userDefined || undefined,
     orphan: t.orphan || undefined,
     changedBy: t.changedBy || undefined,
+    signal: t.signal
+      ? { level: t.signal.level, score: t.signal.score, title: t.signal.title, sink: t.signal.sink, evidence: t.signal.evidence, reasons: t.signal.reasons }
+      : undefined,
   };
 }
 
-export function opListThreats(model, { state, category, priority, diagram, text, limit } = {}) {
+/** Parse a --signal option; throws a ModelError for unknown values. */
+export function parseSignal(v, fallback) {
+  const level = normalizeSignalLevel(v, fallback);
+  if (!level) throw new ModelError(`Invalid signal level '${v}'. Use high, medium, all or off.`);
+  return level;
+}
+
+export function opListThreats(model, { state, category, priority, diagram, text, limit, signal } = {}) {
   const kb = kbOf(model);
   const states = state ? [].concat(state).map((s) => normalizeState(s) || s) : undefined;
   const cats = category ? [].concat(category).map((c) => kb.categories.find((x) => x.id === c || x.name.toLowerCase() === String(c).toLowerCase())?.id || c) : undefined;
   const diagramId = diagram ? requireDiagram(model, diagram).id : undefined;
-  let list = filterThreats(model, { states, categories: cats, priorities: priority ? [].concat(priority) : undefined, diagramId, text });
+  const level = signal ? parseSignal(signal) : undefined;
+  const signals = level && level !== 'off' && level !== 'all' ? levelsAtLeast(level) : undefined;
+  let list = filterThreats(model, { states, categories: cats, priorities: priority ? [].concat(priority) : undefined, signals, diagramId, text });
+  if (signals) list = [...list].sort((a, b) => (b.signal?.score ?? 0) - (a.signal?.score ?? 0) || a.id - b.id);
   const total = list.length;
   if (limit) list = list.slice(0, Number(limit));
   return { total, threats: list.map((t) => threatView(model, t)) };
@@ -255,17 +271,27 @@ export function opExplain(model, { flow }) {
   return explainFlow(model, id);
 }
 
-export function opReport(model, { format = 'html', diagram } = {}) {
+export function opReport(model, { format = 'html', diagram, signal } = {}) {
+  const level = parseSignal(signal, 'high');
   switch (String(format).toLowerCase()) {
     case 'html':
-      return renderHtmlReport(model);
+      return renderHtmlReport(model, { signal: level });
     case 'md':
     case 'markdown':
-      return renderMarkdownReport(model);
+      return renderMarkdownReport(model, { signal: level });
     case 'csv':
       return threatsToCsv(model);
     case 'json':
-      return JSON.stringify({ summary: summarize(model), threats: model.threats.map((t) => threatView(model, t)), validation: opValidate(model) }, null, 2);
+      return JSON.stringify(
+        {
+          summary: summarize(model),
+          stakeholder: level === 'off' ? undefined : (({ level: l, counts, highByCategory, lines, findings }) => ({ level: l, counts, highByCategory, executiveSummary: lines, findings }))(stakeholderSummary(model, { signal: level })),
+          threats: model.threats.map((t) => threatView(model, t)),
+          validation: opValidate(model),
+        },
+        null,
+        2,
+      );
     case 'svg':
       return renderDiagramSvg(model, requireDiagram(model, diagram));
     default:

@@ -7,6 +7,7 @@ export * from './model.js';
 export * from './engine.js';
 export * from './validate.js';
 export * from './report.js';
+export * from './signal.js';
 export * from './svg.js';
 export { parseTb7, parseTemplateText, Tb7Error } from './tb7.js';
 export { parseXml, XmlError } from './xml.js';

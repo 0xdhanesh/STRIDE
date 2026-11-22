@@ -7,6 +7,7 @@ import { GENERIC } from './kb.js';
 import { polylineCrossesRect, polylinesIntersect, rectOf } from './geometry.js';
 import { effectiveProperties, elementIndex, interactionString, kbOf, lineGeometry, touch } from './model.js';
 import { compileRule, evaluate, expandTemplate } from './rules.js';
+import { annotateSignals } from './signal.js';
 
 export function threatKey(typeId, sourceId, flowId, targetId) {
   return `${typeId}:${sourceId}:${flowId}:${targetId}`;
@@ -149,6 +150,7 @@ function isUntouched(t) {
 export function generateThreats(model, { diagramId } = {}) {
   const summary = { enabled: model.settings.threatGeneration !== false, added: 0, updated: 0, removed: 0, orphaned: 0, restored: 0, total: 0, errors: [] };
   if (!summary.enabled) {
+    annotateSignals(model);
     summary.total = model.threats.length;
     return summary;
   }
@@ -221,6 +223,7 @@ export function generateThreats(model, { diagramId } = {}) {
   kept.sort((a, b) => a.id - b.id);
   const changed = summary.added || summary.removed || summary.orphaned || summary.updated || summary.restored;
   model.threats = kept;
+  annotateSignals(model); // post-processing only: never feeds back into rule matching or merge
   if (changed) touch(model);
   summary.total = kept.length;
   return summary;

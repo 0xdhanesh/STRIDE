@@ -16,16 +16,21 @@ th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);verti
 .pill{display:inline-block;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:600;margin-right:6px;background:#e9ecef}
 .s-NotStarted{background:#ffe3e3;color:#c92a2a}.s-NeedsInvestigation{background:#fff3bf;color:#a76b00}.s-NotApplicable{background:#e9ecef;color:#495057}.s-Mitigated{background:#d3f9d8;color:#2b8a3e}
 .p-High{background:#ffe8cc;color:#d9480f}.p-Medium{background:#e7f5ff;color:#1971c2}.p-Low{background:#f1f3f5;color:#495057}
+.g-high{background:#e5dbff;color:#5f3dc4}.g-medium{background:#e7f5ff;color:#1864ab}.g-generic{background:#f1f3f5;color:#868e96}
+.exec{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 20px}.exec p{margin:4px 0}.exec ol{margin:6px 0 0;padding-left:22px}
+.findings td.t{font-weight:600}.findings td.t a{color:inherit;text-decoration:none}.findings td.t .k{font-weight:400;display:block}.findings code{font-size:12px;word-break:break-all}
 .msg-error{color:#c92a2a}.msg-warning{color:#a76b00}.msg-info{color:var(--muted)}
 footer{margin-top:60px;color:var(--muted);font-size:13px}
 @media print{body{background:#fff}.threat,figure,table,.meta,.card{break-inside:avoid}}
 </style></head><body><main>
-<h1>Billing service</h1><p class="k" style="color:var(--muted)">Threat model report · generated 2026-11-22T05:37:55.236Z</p>
-<dl class="meta"><dt>Description</dt><dd>Customers view and pay invoices in a React SPA. An nginx gateway terminates TLS and proxies to a FastAPI service that stores invoices in Postgres, charges cards through Stripe and queues receipt jobs in Redis for a worker that emails receipts via SendGrid. Users authenticate with Auth0.</dd><dt>Assumptions</dt><dd>Derived from docker-compose.yml and source code. The backend network is internal-only (docker-compose.yml:31). Auth0, Stripe and SendGrid are trusted third parties outside our control.</dd><dt>External dependencies</dt><dd>Auth0 (identity), Stripe (payments), SendGrid (email)</dd><dt>Template</dt><dd>STRIDE Core 1.0.0</dd><dt>Last updated</dt><dd>2026-11-22T05:37:55.233Z</dd></dl>
-<h2>Summary</h2><div class="cards">
+<h1>Billing service</h1><p class="k" style="color:var(--muted)">Threat model report · generated 2026-11-22T07:51:53.845Z</p>
+<dl class="meta"><dt>Description</dt><dd>Customers view and pay invoices in a React SPA. An nginx gateway terminates TLS and proxies to a FastAPI service that stores invoices in Postgres, charges cards through Stripe and queues receipt jobs in Redis for a worker that emails receipts via SendGrid. Users authenticate with Auth0.</dd><dt>Assumptions</dt><dd>Derived from docker-compose.yml and source code. The backend network is internal-only (docker-compose.yml:31). Auth0, Stripe and SendGrid are trusted third parties outside our control.</dd><dt>External dependencies</dt><dd>Auth0 (identity), Stripe (payments), SendGrid (email)</dd><dt>Template</dt><dd>STRIDE Core 1.0.0</dd><dt>Last updated</dt><dd>2026-11-22T05:37:55.239Z</dd></dl>
+<h2>Executive summary</h2><div class="exec"><p>Billing service models 11 elements and 16 data flows across 1 diagram; the template produced 97 threats, 94 still open.</p><p>25 threats are high signal (backed by source evidence, dangerous sinks or weak controls): Elevation Of Privilege 8, Spoofing 7, Tampering 6, Information Disclosure 4.</p><p>71 medium-signal threats and 1 generic threat remain in the full register for architectural review.</p><p><b>Top findings</b></p><ol><li>Spoofing the Billing SPA process — Spoofing, High priority, Not Started, from Customer to Billing SPA (evidence: web/src/api.ts).</li><li>Spoofing the Customer external entity — Spoofing, High priority, Not Started, from Customer to Billing SPA (evidence: web/src/api.ts).</li><li>Potential lack of input validation for Billing SPA — Tampering, High priority, Not Started, from Customer to Billing SPA (evidence: web/src/api.ts).</li></ol></div><h2>High-signal findings</h2><table class="findings"><tr><th>ID</th><th>Finding</th><th>Category</th><th>Priority</th><th>Signal</th><th>Evidence</th><th>Mitigation</th></tr><tr><td>1</td><td class="t"><a href="#threat-1">Spoofing the Billing SPA process</a><span class="k">Not Started · From Customer to Billing SPA via Browser interactions</span></td><td>Spoofing</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>web/src/InvoiceView.tsx</code></td><td>Authenticate the destination, for example with TLS server certificates validated against a trusted root, certificate pinning or mutual authentication.</td></tr><tr><td>2</td><td class="t"><a href="#threat-2">Spoofing the Customer external entity</a><span class="k">Not Started · From Customer to Billing SPA via Browser interactions</span></td><td>Spoofing</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>web/src/InvoiceView.tsx</code></td><td>Require Customer to authenticate (strong passwords plus MFA for people; client certificates, signed tokens or API keys with rotation for systems).</td></tr><tr><td>3</td><td class="t"><a href="#threat-3">Potential lack of input validation for Billing SPA</a><span class="k">Not Started · From Customer to Billing SPA via Browser interactions</span></td><td>Tampering</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>web/src/InvoiceView.tsx</code></td><td>Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match.</td></tr><tr><td>5</td><td class="t"><a href="#threat-5">Data flow sniffing</a><span class="k">Not Started · From Customer to Billing SPA via Browser interactions</span></td><td>Information Disclosure</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>web/src/InvoiceView.tsx</code></td><td>Encrypt the channel (TLS 1.2+, IPsec) and do not send sensitive data that the receiver does not need.</td></tr><tr><td>9</td><td class="t"><a href="#threat-9">Billing SPA may be subject to elevation of privilege using remote code execution</a><span class="k">Not Started · From Customer to Billing SPA via Browser interactions</span></td><td>Elevation Of Privilege</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>web/src/InvoiceView.tsx</code></td><td>Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</td></tr><tr><td>14</td><td class="t"><a href="#threat-14">Weakness in SSO authorization</a><span class="k">Not Started · From Billing SPA to Auth0 via Login and token requests</span></td><td>Elevation Of Privilege</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>web/src/InvoiceView.tsx</code><br><code>api/auth.py</code></td><td>Validate token signature, issuer, audience and expiry; use exact redirect URIs; use PKCE and state; and grant only the scopes each client needs.</td></tr><tr><td>15</td><td class="t"><a href="#threat-15">Spoofing the Billing SPA process</a><span class="k">Not Started · From Billing SPA to Gateway via API requests (Bearer JWT)</span></td><td>Spoofing</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>web/src/InvoiceView.tsx</code><br><code>docker-compose.yml</code></td><td>Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Gateway.</td></tr><tr><td>22</td><td class="t"><a href="#threat-22">Gateway may be subject to elevation of privilege using remote code execution</a><span class="k">Not Started · From Billing SPA to Gateway via API requests (Bearer JWT)</span></td><td>Elevation Of Privilege</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>web/src/InvoiceView.tsx</code><br><code>docker-compose.yml</code></td><td>Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</td></tr><tr><td>24</td><td class="t"><a href="#threat-24">Spoofing the Gateway process</a><span class="k">Not Started · From Gateway to Billing SPA via API responses</span></td><td>Spoofing</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>docker-compose.yml</code><br><code>web/src/InvoiceView.tsx</code></td><td>Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Billing SPA.</td></tr><tr><td>31</td><td class="t"><a href="#threat-31">Billing SPA may be subject to elevation of privilege using remote code execution</a><span class="k">Not Started · From Gateway to Billing SPA via API responses</span></td><td>Elevation Of Privilege</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>docker-compose.yml</code><br><code>web/src/InvoiceView.tsx</code></td><td>Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</td></tr><tr><td>33</td><td class="t"><a href="#threat-33">Spoofing the Gateway process</a><span class="k">Not Started · From Gateway to Billing API via Proxied API requests</span></td><td>Spoofing</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>docker-compose.yml</code><br><code>api/app.py</code><br><code>api/auth.py</code></td><td>Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Billing API.</td></tr><tr><td>35</td><td class="t"><a href="#threat-35">Potential lack of input validation for Billing API</a><span class="k">Not Started · From Gateway to Billing API via Proxied API requests</span></td><td>Tampering</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>docker-compose.yml</code><br><code>api/app.py</code><br><code>api/auth.py</code></td><td>Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match.</td></tr><tr><td>42</td><td class="t"><a href="#threat-42">Billing API may be subject to elevation of privilege using remote code execution</a><span class="k">Not Started · From Gateway to Billing API via Proxied API requests</span></td><td>Elevation Of Privilege</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>docker-compose.yml</code><br><code>api/app.py</code><br><code>api/auth.py</code></td><td>Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</td></tr><tr><td>44</td><td class="t"><a href="#threat-44">Spoofing the Gateway process</a><span class="k">Not Started · From Billing API to Gateway via Proxied API responses</span></td><td>Spoofing</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/app.py</code><br><code>api/auth.py</code><br><code>docker-compose.yml</code></td><td>Authenticate the destination, for example with TLS server certificates validated against a trusted root, certificate pinning or mutual authentication.</td></tr><tr><td>45</td><td class="t"><a href="#threat-45">Potential lack of input validation for Gateway</a><span class="k">Not Started · From Billing API to Gateway via Proxied API responses</span></td><td>Tampering</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/app.py</code><br><code>api/auth.py</code><br><code>docker-compose.yml</code></td><td>Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match.</td></tr><tr><td>46</td><td class="t"><a href="#threat-46">Cross site scripting</a><span class="k">Not Started · From Billing API to Gateway via Proxied API responses</span></td><td>Tampering</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/app.py</code><br><code>api/auth.py</code><br><code>docker-compose.yml</code></td><td>Encode output for its context (HTML, attribute, JS, URL), validate input, and deploy a strict Content Security Policy.</td></tr><tr><td>48</td><td class="t"><a href="#threat-48">Data flow sniffing</a><span class="k">Not Started · From Billing API to Gateway via Proxied API responses</span></td><td>Information Disclosure</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/app.py</code><br><code>api/auth.py</code><br><code>docker-compose.yml</code></td><td>Encrypt the channel (TLS 1.2+, IPsec) and do not send sensitive data that the receiver does not need.</td></tr><tr><td>53</td><td class="t"><a href="#threat-53">Gateway may be subject to elevation of privilege using remote code execution</a><span class="k">Not Started · From Billing API to Gateway via Proxied API responses</span></td><td>Elevation Of Privilege</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/app.py</code><br><code>api/auth.py</code><br><code>docker-compose.yml</code></td><td>Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</td></tr><tr><td>56</td><td class="t"><a href="#threat-56">Cross site scripting</a><span class="k">Not Started · From Stripe to Gateway via Payment webhooks</span></td><td>Tampering</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/app.py</code><br><code>api/payments.py</code><br><code>docker-compose.yml</code></td><td>Encode output for its context (HTML, attribute, JS, URL), validate input, and deploy a strict Content Security Policy.</td></tr><tr><td>61</td><td class="t"><a href="#threat-61">Gateway may be subject to elevation of privilege using remote code execution</a><span class="k">Not Started · From Stripe to Gateway via Payment webhooks</span></td><td>Elevation Of Privilege</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/app.py</code><br><code>api/payments.py</code><br><code>docker-compose.yml</code></td><td>Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</td></tr><tr><td>63</td><td class="t"><a href="#threat-63">Spoofing the Auth0 external entity</a><span class="k">Not Started · From Auth0 to Billing API via JWKS fetch</span></td><td>Spoofing</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/auth.py</code><br><code>web/src/api.ts</code><br><code>api/app.py</code></td><td>Require Auth0 to authenticate (strong passwords plus MFA for people; client certificates, signed tokens or API keys with rotation for systems).</td></tr><tr><td>68</td><td class="t"><a href="#threat-68">Billing API may be subject to elevation of privilege using remote code execution</a><span class="k">Not Started · From Auth0 to Billing API via JWKS fetch</span></td><td>Elevation Of Privilege</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/auth.py</code><br><code>web/src/api.ts</code><br><code>api/app.py</code></td><td>Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</td></tr><tr><td>82</td><td class="t"><a href="#threat-82">Authorization bypass</a><span class="k">Not Started · From Billing API to Audit log via Audit events</span></td><td>Information Disclosure</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/audit.py</code><br><code>api/app.py</code><br><code>api/auth.py</code></td><td>Check authorization server-side on every request, deny by default, and add tests for every role and resource combination.</td></tr><tr><td>85</td><td class="t"><a href="#threat-85">Authorization bypass</a><span class="k">Not Started · From Billing API to Job queue via Receipt jobs</span></td><td>Information Disclosure</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>api/app.py</code><br><code>api/auth.py</code><br><code>docker-compose.yml</code></td><td>Check authorization server-side on every request, deny by default, and add tests for every role and resource combination.</td></tr><tr><td>97</td><td class="t"><a href="#threat-97">Stored XSS via invoice memo rendered as HTML</a><span class="k">Not Started · From Gateway to Billing SPA via API responses</span></td><td>Tampering</td><td><span class="pill p-High">High</span></td><td><span class="pill g-high" title="source-code evidence, high priority, not started">High Signal · 50</span></td><td><code>web/src/api.ts</code><br><code>docker-compose.yml</code><br><code>web/src/InvoiceView.tsx</code></td><td>Render memo as text, or sanitize with DOMPurify before insertion; add a strict CSP.</td></tr></table>
+<h2>Full threat register — summary</h2><div class="cards">
 <div class="card"><b>97</b><span>Total threats</span></div>
 <div class="card"><b>92</b><span>Not Started</span></div><div class="card"><b>2</b><span>Needs Investigation</span></div><div class="card"><b>1</b><span>Not Applicable</span></div><div class="card"><b>2</b><span>Mitigation Implemented</span></div>
 <div class="card"><b>30</b><span>High priority</span></div><div class="card"><b>46</b><span>Medium priority</span></div><div class="card"><b>21</b><span>Low priority</span></div>
+<div class="card"><b>25</b><span>High Signal</span></div><div class="card"><b>71</b><span>Medium Signal</span></div><div class="card"><b>1</b><span>Generic</span></div>
 </div><h2>Notes</h2><table><tr><th>Date</th><th>Author</th><th>Note</th></tr><tr><td>2026-11-22T05:37:55.233Z</td><td>agent</td><td style="white-space:pre-wrap">Model derived from source code by an AI agent; see threatmodel/spec.json for evidence. Assumes Postgres/Redis are not reachable outside the internal Docker network.</td></tr></table><h2>Diagram: Diagram 1</h2><figure><svg xmlns="http://www.w3.org/2000/svg" class="dg" viewBox="50 30 1400 814" width="1400" height="814" role="img" aria-label="Diagram 1"><style>
 .dg text{font-family:"Virgil","Excalifont","Segoe Print","Bradley Hand","Comic Sans MS","Chalkboard SE",cursive;fill:var(--ink,#1e1e1e)}
 .dg .stroke{fill:none;stroke:var(--ink,#1e1e1e);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
@@ -46,7 +51,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 .dg .loose .flow{stroke:var(--error,#e03131)}
 </style><rect x="50" y="30" width="1400" height="814" fill="var(--paper,#fff)"/><g class="el" data-id="spec_zone_customer-device"><rect class="box-fill" x="80" y="60" width="290" height="254"/><path class="boundary" d="M79.11 59.58Q219.07 61.63 370.07 60.73M79.68 59.97Q216.08 57.77 369.9 59.81M370.62 60.92Q368.5 176.88 371.03 314.46M369.36 60.74Q370.35 171.65 371.09 313.83M370.58 314.83Q217.18 313.27 80.88 314.79M370.82 314.68Q237.99 316.06 78.99 313.66M80.22 314.5Q80.74 181.02 79.2 60.11M79.09 314.4Q80.08 200.02 80.47 60.73"/><path class="hit" d="M80 60h290v254h-290Z"/><text class="blabel" x="88" y="76">Customer device</text></g><g class="el" data-id="spec_zone_edge"><rect class="box-fill" x="500" y="60" width="290" height="254"/><path class="boundary" d="M501.17 60.19Q662.35 57.87 790.85 59.83M498.84 59.82Q635.05 59.98 790.4 58.77M788.95 59.34Q788.47 171.49 789.95 313M791.09 58.94Q788.53 192.63 789.22 314.58M789.11 314.27Q641.39 312.71 499.58 313.76M788.83 312.8Q663.33 311.68 500.75 314.92M499.6 314.01Q497.62 199.5 500.32 59.4M500.18 313.14Q499.94 201.82 499.94 60.48"/><path class="hit" d="M500 60h290v254h-290Z"/><text class="blabel" x="508" y="76">Edge</text></g><g class="el" data-id="spec_zone_backend-network"><rect class="box-fill" x="920" y="60" width="500" height="554"/><path class="boundary" d="M918.85 61.21Q1128.29 60.21 1420.03 60.62M921.04 60.31Q1140.07 57.77 1420.62 60.54M1419.27 59.02Q1422.37 325.44 1419.1 615.22M1419.5 61.29Q1418.87 302.69 1420 614.14M1420.17 615.2Q1172.77 615.92 918.73 613.79M1419.48 614.07Q1153.49 615.21 921.01 615M921.12 614.9Q917.92 385.23 920.65 59.05M919.7 614.12Q921.27 362.04 920.07 60.61"/><path class="hit" d="M920 60h500v554h-500Z"/><text class="blabel" x="928" y="76">Backend network</text></g><g class="el" data-id="spec_fl_customer__billing-spa__browser-interactions"><path class="hit" d="M225 742Q225 495 225 248"/><path class="flow" d="M224.78 741.49Q223.78 492.94 226.27 246.53M223.51 741.53Q224.31 496.53 225.77 248.99"/><path class="flow" d="M229.89 258.96L225 248L220.11 258.96"/><rect class="label-bg" x="141.6" y="484.6" width="166.8" height="20.8" rx="4"/><text x="225.0" y="495.0" font-size="14" text-anchor="middle" dominant-baseline="central">Browser interactions</text></g><g class="el" data-id="spec_fl_billing-spa__auth0__login-and-token-requests"><path class="hit" d="M240.75 244.66Q326.19 492.44 411.63 740.22"/><path class="flow" d="M242.11 244.6Q323.38 494.58 410.1 739.29M240.29 243.7Q325.86 490.73 412.87 739.62"/><path class="flow" d="M403.43 731.46L411.63 740.22L412.68 728.26"/><rect class="label-bg" x="262.4" y="473.6" width="127.6" height="37.6" rx="4"/><text x="326.2" y="484.0" font-size="14" text-anchor="middle" dominant-baseline="central">Login and token</text><text x="326.2" y="500.8" font-size="14" text-anchor="middle" dominant-baseline="central">requests</text></g><g class="el" data-id="spec_fl_billing-spa__gateway__api-requests-bearer-jwt"><path class="hit" d="M285.78 218.68Q433.91 286.99 582.32 219.3"/><path class="flow" d="M286.03 218.87Q436.45 285.03 582.03 218.23M285.16 219.94Q432.46 288.07 581.8 219.48"/><path class="flow" d="M574.38 228.3L582.32 219.3L570.32 219.39"/><rect class="label-bg" x="350.6" y="234.2" width="166.8" height="37.6" rx="4"/><text x="434.0" y="244.6" font-size="14" text-anchor="middle" dominant-baseline="central">API requests (Bearer</text><text x="434.0" y="261.4" font-size="14" text-anchor="middle" dominant-baseline="central">JWT)</text></g><g class="el" data-id="spec_fl_gateway__billing-spa__api-responses"><path class="hit" d="M595.85 167.17Q436.3 30.63 275.83 166.08"/><path class="flow" d="M594.6 167.2Q434.94 31.37 276.72 165.71M596.14 166.45Q435.71 33.18 276.59 166.52"/><path class="flow" d="M281.04 155.28L275.83 166.08L287.36 162.76"/><rect class="label-bg" x="380.1" y="88.2" width="111.9" height="20.8" rx="4"/><text x="436.1" y="98.6" font-size="14" text-anchor="middle" dominant-baseline="central">API responses</text></g><g class="el" data-id="spec_fl_gateway__billing-api__proxied-api-requests"><path class="hit" d="M705.78 218.68Q853.91 286.99 1002.32 219.3"/><path class="flow" d="M706.94 217.77Q853.96 285.03 1003.61 218.21M705.54 218.28Q851.65 287.77 1001.43 220.14"/><path class="flow" d="M994.38 228.3L1002.32 219.3L990.32 219.39"/><rect class="label-bg" x="770.6" y="242.6" width="166.8" height="20.8" rx="4"/><text x="854.0" y="253.0" font-size="14" text-anchor="middle" dominant-baseline="central">Proxied API requests</text></g><g class="el" data-id="spec_fl_billing-api__gateway__proxied-api-responses"><path class="hit" d="M1015.85 167.17Q856.3 30.63 695.83 166.08"/><path class="flow" d="M1016.58 166.73Q855.16 28.41 696.19 165.54M1016.7 166.1Q855.16 29 696.56 166.96"/><path class="flow" d="M701.04 155.28L695.83 166.08L707.36 162.76"/><rect class="label-bg" x="808.0" y="79.8" width="96.2" height="37.6" rx="4"/><text x="856.1" y="90.2" font-size="14" text-anchor="middle" dominant-baseline="central">Proxied API</text><text x="856.1" y="107.0" font-size="14" text-anchor="middle" dominant-baseline="central">responses</text></g><g class="el" data-id="spec_fl_stripe__gateway__payment-webhooks"><path class="hit" d="M645 742Q645 495 645 248"/><path class="flow" d="M646.39 742.21Q645.46 496.96 645.95 249.42M646.31 741.17Q646.79 492.69 644.09 247.79"/><path class="flow" d="M649.89 258.96L645 248L640.11 258.96"/><rect class="label-bg" x="577.3" y="484.6" width="135.4" height="20.8" rx="4"/><text x="645.0" y="495.0" font-size="14" text-anchor="middle" dominant-baseline="central">Payment webhooks</text></g><g class="el" data-id="spec_fl_auth0__billing-api__jwks-fetch"><path class="hit" d="M465.1 742.66Q743.84 490.05 1022.58 237.45"/><path class="flow" d="M466.45 742.57Q741.98 488.56 1022.66 236.15M464.98 743.98Q746.65 487.83 1022.27 236.45"/><path class="flow" d="M1017.74 248.43L1022.58 237.45L1011.17 241.18"/><rect class="label-bg" x="699.6" y="479.7" width="88.4" height="20.8" rx="4"/><text x="743.8" y="490.1" font-size="14" text-anchor="middle" dominant-baseline="central">JWKS fetch</text></g><g class="el" data-id="spec_fl_billing-api__invoices-db__invoice-queries"><path class="hit" d="M1114.15 230.83Q1166.71 299.99 1222.23 233.17"/><path class="flow" d="M1114.47 230.18Q1167.14 300.74 1222.88 233.32M1113.75 231.32Q1165.94 300.37 1222.49 233.26"/><path class="flow" d="M1218.99 244.73L1222.23 233.17L1211.46 238.47"/><rect class="label-bg" x="1103.7" y="255.6" width="127.6" height="20.8" rx="4"/><text x="1167.5" y="266.0" font-size="14" text-anchor="middle" dominant-baseline="central">Invoice queries</text></g><g class="el" data-id="spec_fl_invoices-db__billing-api__invoice-rows"><path class="hit" d="M1249.07 165.42Q1181.91 25.04 1098.08 156.15"/><path class="flow" d="M1249.76 166.26Q1181.76 24.47 1097.25 155.98M1249.84 165.4Q1183.44 26.63 1098.4 155.78"/><path class="flow" d="M1099.86 144.28L1098.08 156.15L1108.11 149.55"/><rect class="label-bg" x="1125.7" y="82.5" width="104.1" height="20.8" rx="4"/><text x="1177.7" y="92.9" font-size="14" text-anchor="middle" dominant-baseline="central">Invoice rows</text></g><g class="el" data-id="spec_fl_billing-api__audit-log__audit-events"><path class="hit" d="M1111.87 232.48Q1169.41 273.58 1226.95 314.68"/><path class="flow" d="M1111.36 233.02Q1170.54 272.63 1226.9 314.57M1111.38 231.76Q1168.61 272.81 1226.84 314.56"/><path class="flow" d="M1215.18 312.29L1226.95 314.68L1220.87 304.32"/><rect class="label-bg" x="1117.4" y="263.2" width="104.1" height="20.8" rx="4"/><text x="1169.4" y="273.6" font-size="14" text-anchor="middle" dominant-baseline="central">Audit events</text></g><g class="el" data-id="spec_fl_billing-api__job-queue__receipt-jobs"><path class="hit" d="M1094.49 241.13Q1172.4 352.43 1250.31 463.72"/><path class="flow" d="M1093.29 240.15Q1171.55 351.46 1249.51 463.69M1094.38 240.48Q1171.2 350.43 1249.34 462.76"/><path class="flow" d="M1240.01 457.55L1250.31 463.72L1248.03 451.94"/><rect class="label-bg" x="1120.4" y="342.0" width="104.1" height="20.8" rx="4"/><text x="1172.4" y="352.4" font-size="14" text-anchor="middle" dominant-baseline="central">Receipt jobs</text></g><g class="el" data-id="spec_fl_job-queue__receipt-worker__receipt-jobs-pulled"><path class="hit" d="M1228.57 465.84Q1171.03 424.74 1113.49 383.64"/><path class="flow" d="M1228.3 465.61Q1171.79 423.46 1112.66 383.57M1228.44 466.13Q1171.3 423.31 1113.41 383.62"/><path class="flow" d="M1125.25 386.02L1113.49 383.64L1119.57 393.99"/><rect class="label-bg" x="1091.6" y="414.3" width="159.0" height="20.8" rx="4"/><text x="1171.0" y="424.7" font-size="14" text-anchor="middle" dominant-baseline="central">Receipt jobs pulled</text></g><g class="el" data-id="spec_fl_invoices-db__receipt-worker__invoice-data"><path class="hit" d="M1228.57 232.16Q1171.03 273.26 1113.49 314.36"/><path class="flow" d="M1228.25 231.66Q1172.59 273.63 1114.28 314.75M1227.98 232.46Q1171.38 274.78 1113.23 314.35"/><path class="flow" d="M1119.57 304.01L1113.49 314.36L1125.25 311.98"/><rect class="label-bg" x="1119.0" y="262.9" width="104.1" height="20.8" rx="4"/><text x="1171.0" y="273.3" font-size="14" text-anchor="middle" dominant-baseline="central">Invoice data</text></g><g class="el" data-id="spec_fl_billing-api__stripe__payment-intents"><path class="hit" d="M1034.7 240.85Q853.69 490.8 672.69 740.76"/><path class="flow" d="M1035.06 241.56Q854.06 489.09 673.12 742.02M1034.9 241.22Q855.41 493.29 671.35 740.92"/><path class="flow" d="M675.15 729.02L672.69 740.76L683.08 734.76"/><rect class="label-bg" x="789.9" y="480.4" width="127.6" height="20.8" rx="4"/><text x="853.7" y="490.8" font-size="14" text-anchor="middle" dominant-baseline="central">Payment intents</text></g><g class="el" data-id="spec_fl_receipt-worker__sendgrid__receipt-emails"><path class="hit" d="M1065 396Q1065 568 1065 740"/><path class="flow" d="M1065.44 397.03Q1064.62 566.63 1065.24 740.6M1064.46 397.22Q1062.48 569.1 1065.65 740.77"/><path class="flow" d="M1060.11 729.04L1065 740L1069.89 729.04"/><rect class="label-bg" x="1005.1" y="557.6" width="119.8" height="20.8" rx="4"/><text x="1065.0" y="568.0" font-size="14" text-anchor="middle" dominant-baseline="central">Receipt emails</text></g><g class="el" data-id="spec_el_customer"><rect x="155" y="744" width="140" height="70" fill="transparent"/><rect class="fill-EI" x="155" y="744" width="140" height="70" rx="3"/><path class="stroke" d="M154.4 742.74Q227.48 744.65 293.92 744.46M156.01 744.34Q211.23 743.74 293.86 745.07M294.57 744.35Q294.04 782.7 294.27 813.67M294.09 744.69Q295.73 774.58 294.72 814.14M295.57 814.76Q222.63 816.24 155.47 813.13M294.59 813.48Q213.94 816.11 153.74 812.73M155.45 814.83Q156.09 774.57 155.26 743.24M155.12 814.54Q154.31 785.25 154.69 744.45"/><text x="225.0" y="773.0" font-size="16" text-anchor="middle" dominant-baseline="central">Customer</text><text x="225.0" y="792.6" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">Human User</text></g><g class="el" data-id="spec_el_billing-spa"><rect x="160" y="154" width="130" height="90" fill="transparent"/><path class="fill-P" d="M160 199a65 45 0 1 0 130 0a65 45 0 1 0 -130 0Z"/><path class="stroke" d="M159.31 197.1C160.09 187.26 166.9 175.2 176.46 168.32C186.02 161.45 202.9 156.93 216.67 155.84C230.45 154.75 247.5 156.85 259.09 161.8C270.68 166.75 281.66 176.43 286.21 185.55C290.76 194.67 291.61 207.69 286.38 216.51C281.15 225.33 267.46 233.85 254.83 238.49C242.2 243.12 224.46 246.17 210.62 244.32C196.77 242.47 180.32 235.26 171.77 227.39C163.22 219.52 158.53 206.94 159.31 197.1M190.88 236.86C178.96 231.89 166.61 222.19 162.41 213.12C158.2 204.05 160.23 191.28 165.67 182.44C171.11 173.6 182.91 164.61 195.04 160.06C207.16 155.51 225.04 153.18 238.42 155.13C251.8 157.08 266.54 164.18 275.31 171.75C284.07 179.32 291.47 191.08 291.02 200.56C290.57 210.04 282.11 221.56 272.6 228.63C263.09 235.69 247.59 241.57 233.97 242.94C220.35 244.31 202.81 241.83 190.88 236.86"/><text x="225.0" y="183.4" font-size="16" text-anchor="middle" dominant-baseline="central">Billing</text><text x="225.0" y="202.6" font-size="16" text-anchor="middle" dominant-baseline="central">SPA</text><text x="225.0" y="222.2" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">Browser Client</text></g><g class="el" data-id="spec_el_gateway"><rect x="580" y="154" width="130" height="90" fill="transparent"/><path class="fill-P" d="M580 199a65 45 0 1 0 130 0a65 45 0 1 0 -130 0Z"/><path class="stroke" d="M659.3 243.5C645.69 245.72 627.02 244.04 614.6 239.51C602.18 234.98 589.95 225.29 584.77 216.31C579.59 207.33 579.21 194.69 583.54 185.62C587.88 176.55 599.12 167.19 610.79 161.88C622.45 156.57 640.1 152.51 653.55 153.78C666.99 155.05 682.25 162.28 691.44 169.49C700.63 176.7 707.89 187.59 708.7 197.04C709.5 206.49 704.52 218.46 696.29 226.2C688.06 233.95 672.92 241.29 659.3 243.5M583.92 210.72C580.31 201.63 581.71 189.43 587.28 180.78C592.85 172.14 604.97 163.22 617.35 158.86C629.73 154.5 648.39 152.19 661.58 154.64C674.77 157.1 688.51 165.6 696.5 173.58C704.48 181.55 710.33 193.01 709.49 202.52C708.65 212.02 701.2 223.97 691.46 230.61C681.71 237.25 664.78 241.58 651.03 242.37C637.27 243.15 620.13 240.59 608.94 235.31C597.76 230.04 587.53 219.81 583.92 210.72"/><text x="645.0" y="193.0" font-size="16" text-anchor="middle" dominant-baseline="central">Gateway</text><text x="645.0" y="212.6" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">Web Server</text></g><g class="el" data-id="spec_el_billing-api"><rect x="1000" y="154" width="130" height="90" fill="transparent"/><path class="fill-P" d="M1000 199a65 45 0 1 0 130 0a65 45 0 1 0 -130 0Z"/><path class="stroke" d="M1124.51 177.55C1131.24 186.19 1133.67 199.51 1130.34 209.03C1127.01 218.55 1115.89 229.05 1104.54 234.67C1093.19 240.29 1076.38 242.97 1062.25 242.73C1048.11 242.49 1030.09 239.52 1019.71 233.22C1009.33 226.92 1001.75 214.75 999.97 204.93C998.19 195.11 1001.36 182.25 1009.03 174.32C1016.71 166.39 1032.53 160.21 1046.03 157.35C1059.52 154.49 1076.93 153.82 1090.01 157.19C1103.09 160.55 1117.79 168.91 1124.51 177.55M1046.83 155.09C1060.04 152.56 1078.33 154.73 1090.84 158.85C1103.34 162.97 1115.7 171.32 1121.84 179.82C1127.99 188.31 1130.98 200.7 1127.73 209.84C1124.48 218.97 1113.58 228.86 1102.36 234.61C1091.14 240.36 1074.18 244.86 1060.41 244.34C1046.63 243.82 1029.52 238.26 1019.69 231.47C1009.86 224.68 1002.8 213.19 1001.45 203.62C1000.1 194.04 1004.02 182.13 1011.58 174.05C1019.15 165.96 1033.62 157.62 1046.83 155.09"/><text x="1065.0" y="183.4" font-size="16" text-anchor="middle" dominant-baseline="central">Billing</text><text x="1065.0" y="202.6" font-size="16" text-anchor="middle" dominant-baseline="central">API</text><text x="1065.0" y="222.2" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">Web Service</text></g><g class="el" data-id="spec_el_receipt-worker"><rect x="1000" y="304" width="130" height="90" fill="transparent"/><path class="fill-P" d="M1000 349a65 45 0 1 0 130 0a65 45 0 1 0 -130 0Z"/><path class="stroke" d="M1014.6 322.32C1022.76 314.54 1037.13 306.63 1050.59 304.33C1064.04 302.03 1082.73 303.99 1095.33 308.5C1107.94 313.01 1120.98 322.38 1126.21 331.37C1131.45 340.35 1130.94 352.97 1126.74 362.4C1122.53 371.83 1112.63 382.93 1100.98 387.96C1089.33 392.99 1071.05 393.81 1056.82 392.56C1042.6 391.3 1024.82 387.35 1015.63 380.42C1006.43 373.49 1001.81 360.67 1001.64 350.99C1001.47 341.3 1006.45 330.09 1014.6 322.32M1051.31 392.68C1037.54 390.96 1020.11 385.04 1011.9 377.47C1003.68 369.91 1001 356.96 1002.02 347.29C1003.04 337.63 1008.96 326.4 1018.04 319.48C1027.12 312.56 1042.92 307.17 1056.5 305.78C1070.07 304.39 1088.08 306.16 1099.49 311.15C1110.89 316.14 1120.98 326.66 1124.92 335.71C1128.87 344.77 1128.25 356.79 1123.18 365.47C1118.11 374.16 1106.49 383.29 1094.52 387.83C1082.54 392.36 1065.08 394.41 1051.31 392.68"/><text x="1065.0" y="333.4" font-size="16" text-anchor="middle" dominant-baseline="central">Receipt</text><text x="1065.0" y="352.6" font-size="16" text-anchor="middle" dominant-baseline="central">worker</text><text x="1065.0" y="372.2" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">Win32 Service</text></g><g class="el" data-id="spec_el_invoices-db"><rect x="1200" y="167" width="150" height="64" fill="transparent"/><rect class="fill-DS" x="1200" y="167" width="150" height="64"/><path class="stroke" d="M1198.95 166.54Q1283.55 164.92 1349.78 168.08M1199.38 168.05Q1273.34 169.4 1350.46 166.75M1201.12 232.24Q1275.67 229.91 1349.01 230.68M1200.08 231.85Q1262 230.77 1350.12 232.26"/><text x="1275.0" y="193.0" font-size="16" text-anchor="middle" dominant-baseline="central">Invoices DB</text><text x="1275.0" y="212.6" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">SQL Database</text></g><g class="el" data-id="spec_el_audit-log"><rect x="1200" y="317" width="150" height="64" fill="transparent"/><rect class="fill-DS" x="1200" y="317" width="150" height="64"/><path class="stroke" d="M1199.42 317.95Q1267.44 315.96 1349.08 317.26M1198.66 317.91Q1273.69 316.86 1350.58 316.53M1200.79 381.82Q1283.39 380.92 1349.88 379.7M1201.14 379.89Q1287.57 383.16 1350.98 379.69"/><text x="1275.0" y="349.0" font-size="16" text-anchor="middle" dominant-baseline="central">Audit log</text></g><g class="el" data-id="spec_el_job-queue"><rect x="1200" y="467" width="150" height="64" fill="transparent"/><rect class="fill-DS" x="1200" y="467" width="150" height="64"/><path class="stroke" d="M1199.09 465.89Q1273.23 465.82 1349.07 466.64M1200.19 467.59Q1288.6 467.6 1349.5 467.3M1200.37 532.32Q1286.03 529.02 1350.32 531.7M1200.43 530.39Q1264.71 532.44 1349.75 530"/><text x="1275.0" y="493.0" font-size="16" text-anchor="middle" dominant-baseline="central">Job queue</text><text x="1275.0" y="512.6" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">Cache</text></g><g class="el" data-id="spec_el_auth0"><rect x="355" y="744" width="140" height="70" fill="transparent"/><rect class="fill-EI" x="355" y="744" width="140" height="70" rx="3"/><path class="stroke" d="M355.57 742.7Q418.58 743.27 494.34 743.73M355.17 743.55Q423.89 745.46 495.74 743.1M494.84 744.79Q495.7 773.94 494.33 813.97M494.32 743.95Q494.25 783.87 494.86 814.79M495.16 812.87Q420.16 813.36 356.25 814.99M495.24 814.33Q436 812.77 354.66 814.55M355.38 813.07Q356.15 785.72 355.38 744.75M354.53 813.99Q354.23 777.83 354.24 744.8"/><text x="425.0" y="773.0" font-size="16" text-anchor="middle" dominant-baseline="central">Auth0</text><text x="425.0" y="792.6" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">Authorization Provider</text></g><g class="el" data-id="spec_el_stripe"><rect x="575" y="744" width="140" height="70" fill="transparent"/><rect class="fill-EI" x="575" y="744" width="140" height="70" rx="3"/><path class="stroke" d="M574.89 743.61Q658.9 742.34 715.16 745.06M575.16 744.5Q640.28 741.86 713.9 744.59M714.33 743.31Q714.71 782.63 714.18 814.94M715.92 743.5Q713.91 775.13 714.91 814.83M715.12 813.5Q632.69 816.18 575 813.86M715.31 814.63Q632.23 813.79 574.63 815.22M574.48 813.61Q575.42 784.56 574.43 744.38M574.29 813.65Q576.06 783.9 574.07 744.69"/><text x="645.0" y="773.0" font-size="16" text-anchor="middle" dominant-baseline="central">Stripe</text><text x="645.0" y="792.6" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">External Web Service</text></g><g class="el" data-id="spec_el_sendgrid"><rect x="995" y="744" width="140" height="70" fill="transparent"/><rect class="fill-EI" x="995" y="744" width="140" height="70" rx="3"/><path class="stroke" d="M994.07 742.71Q1059.66 742.81 1135.93 743.77M995.72 743.57Q1073.35 745.12 1134.53 744.91M1135.51 743.46Q1134.42 783.32 1134.41 814.52M1134.9 743.28Q1134.98 780.81 1135.01 814.05M1134.81 814.91Q1055.51 813.44 995.52 812.73M1135.95 813.14Q1065.28 812.62 995.08 813.58M994.84 814.13Q993.92 779.32 994.13 744.65M995.5 813.25Q994.92 781.57 994.57 743.46"/><text x="1065.0" y="773.0" font-size="16" text-anchor="middle" dominant-baseline="central">SendGrid</text><text x="1065.0" y="792.6" font-size="11" text-anchor="middle" dominant-baseline="central" class="caption">External Web Service</text></g></svg></figure><h3>Interaction: Browser interactions</h3><p class="k">From Customer to Billing SPA via Browser interactions</p><p class="k">Source evidence: Billing SPA — <code>web/src/api.ts:1</code>, <code>web/src/InvoiceView.tsx:3</code></p><div class="threat" id="threat-1">
 <h4>1. Spoofing the Billing SPA process</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>Customer cannot tell whether it is really talking to Billing SPA. An attacker who stands up a look-alike endpoint can collect the data sent over Browser interactions or return malicious responses.</p>
 <p><b>Mitigation:</b> Authenticate the destination, for example with TLS server certificates validated against a trusted root, certificate pinning or mutual authentication.</p>
@@ -54,7 +59,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-923, CAPEC-194</p>
 </div><div class="threat" id="threat-2">
 <h4>2. Spoofing the Customer external entity</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>An attacker can pose as Customer and send requests to Billing SPA on its behalf.</p>
 <p><b>Mitigation:</b> Require Customer to authenticate (strong passwords plus MFA for people; client certificates, signed tokens or API keys with rotation for systems).</p>
@@ -62,7 +67,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-287, CAPEC-151</p>
 </div><div class="threat" id="threat-3">
 <h4>3. Potential lack of input validation for Billing SPA</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>Data arriving at Billing SPA over Browser interactions can be changed in transit. Input that is not validated can lead to denial of service, elevation of privilege or information disclosure in Billing SPA.</p>
 <p><b>Mitigation:</b> Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match. Protect the channel with TLS.</p>
@@ -70,7 +75,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-20, OWASP-A03</p>
 </div><div class="threat" id="threat-4">
 <h4>4. Potential data repudiation by Billing SPA</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>Billing SPA may later deny having received or acted on data from Customer, because nothing records the transaction.</p>
 <p><b>Mitigation:</b> Log receipt of security-relevant requests with timestamps and request identifiers. Consider signed receipts for high-value transactions.</p>
@@ -78,7 +83,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-5">
 <h4>5. Data flow sniffing</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>Data on Browser interactions crosses a trust boundary without encryption, so anyone on the network path can read it.</p>
 <p><b>Mitigation:</b> Encrypt the channel (TLS 1.2+, IPsec) and do not send sensitive data that the receiver does not need.</p>
@@ -86,7 +91,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-319</p>
 </div><div class="threat" id="threat-6">
 <h4>6. Potential process crash or stop for Billing SPA</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>Malformed or excessive input from Customer could crash Billing SPA or make it stop responding.</p>
 <p><b>Mitigation:</b> Validate input, handle errors without crashing, apply rate limiting, and run the process under a supervisor that restarts it.</p>
@@ -94,7 +99,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400, CWE-248</p>
 </div><div class="threat" id="threat-7">
 <h4>7. Data flow Browser interactions is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>An attacker on the path can block or drop traffic on Browser interactions, so Billing SPA never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>
@@ -102,7 +107,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><div class="threat" id="threat-8">
 <h4>8. Elevation using impersonation</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>Customer may be able to make Billing SPA act with its own privileges or another principal&#39;s, for example through confused-deputy calls or impersonation.</p>
 <p><b>Mitigation:</b> Carry the caller&#39;s identity through calls, authorize on behalf of the original caller, and run Billing SPA with least privilege.</p>
@@ -110,7 +115,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-441</p>
 </div><div class="threat" id="threat-9">
 <h4>9. Billing SPA may be subject to elevation of privilege using remote code execution</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>If Customer can trigger code execution in Billing SPA (injection, deserialization, memory corruption), it gains Billing SPA&#39;s privileges.</p>
 <p><b>Mitigation:</b> Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</p>
@@ -118,7 +123,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-94, CWE-502</p>
 </div><div class="threat" id="threat-10">
 <h4>10. Elevation by changing the execution flow in Billing SPA</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Customer to Billing SPA via Browser interactions</p>
 <p>Input from Customer might change how Billing SPA runs, for example by skipping checks or selecting privileged code paths.</p>
 <p><b>Mitigation:</b> Validate every control input, check state transitions server-side, and do not let client-supplied data select code paths.</p>
@@ -126,7 +131,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-691</p>
 </div><h3>Interaction: Login and token requests</h3><p class="k">From Billing SPA to Auth0 via Login and token requests</p><p class="k">Source evidence: Login and token requests — <code>web/src/api.ts:4</code>; Billing SPA — <code>web/src/api.ts:1</code>, <code>web/src/InvoiceView.tsx:3</code>; Auth0 — <code>api/auth.py:4</code>, <code>web/src/api.ts:2</code></p><div class="threat" id="threat-11">
 <h4>11. Spoofing of the Auth0 external destination entity</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
 <p class="k">From Billing SPA to Auth0 via Login and token requests</p>
 <p>An attacker can impersonate Auth0 and receive data that Billing SPA meant only for that entity.</p>
 <p><b>Mitigation:</b> Verify the identity of Auth0 before sending data, for example by validating its TLS certificate, pinning the certificate or using signed callbacks.</p>
@@ -134,7 +139,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-923</p>
 </div><div class="threat" id="threat-12">
 <h4>12. External entity Auth0 potentially denies receiving data</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Billing SPA to Auth0 via Login and token requests</p>
 <p>Auth0 can claim it never received data from Billing SPA.</p>
 <p><b>Mitigation:</b> Record delivery and acknowledgement of important messages, for example with signed acknowledgements or delivery receipts.</p>
@@ -142,7 +147,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-13">
 <h4>13. Data flow Login and token requests is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Billing SPA to Auth0 via Login and token requests</p>
 <p>An attacker on the path can block or drop traffic on Login and token requests, so Auth0 never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>
@@ -150,7 +155,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><div class="threat" id="threat-14">
 <h4>14. Weakness in SSO authorization</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Billing SPA to Auth0 via Login and token requests</p>
 <p>Weak integration with the identity provider Auth0 (token validation, redirect handling, scope checks) can let an attacker gain access they were not granted.</p>
 <p><b>Mitigation:</b> Validate token signature, issuer, audience and expiry; use exact redirect URIs; use PKCE and state; and grant only the scopes each client needs.</p>
@@ -158,7 +163,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-287, CWE-601</p>
 </div><h3>Interaction: API requests (Bearer JWT)</h3><p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p><p class="k">Source evidence: API requests (Bearer JWT) — <code>web/src/api.ts:5</code>; Billing SPA — <code>web/src/api.ts:1</code>, <code>web/src/InvoiceView.tsx:3</code>; Gateway — <code>docker-compose.yml:3</code>, <code>docker-compose.yml:5</code></p><div class="threat" id="threat-15">
 <h4>15. Spoofing the Billing SPA process</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
 <p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p>
 <p>An attacker can impersonate Billing SPA when talking to Gateway across a trust boundary, and gain access that Gateway only means to give Billing SPA.</p>
 <p><b>Mitigation:</b> Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Gateway.</p>
@@ -166,7 +171,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-290, CAPEC-151</p>
 </div><div class="threat" id="threat-16">
 <h4>16. JavaScript Object Notation processing</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
 <p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p>
 <p>Gateway parses JSON from API requests (Bearer JWT). Unsafe parsing, deserialization to arbitrary types or prototype pollution can let an attacker run code or corrupt data.</p>
 <p><b>Mitigation:</b> Parse with a strict JSON parser (never eval), validate against a schema, and do not deserialize into polymorphic or arbitrary types.</p>
@@ -174,7 +179,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-502, CWE-1321</p>
 </div><div class="threat" id="threat-17">
 <h4>17. Cross site scripting</h4>
-<p><span class="pill s-NotApplicable">Not Applicable</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-generic" title="Signal score 10">Generic</span><span class="pill s-NotApplicable">Not Applicable</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
 <p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p>
 <p>Gateway may reflect untrusted input into pages without encoding it, which lets an attacker run script in other users&#39; browsers.</p>
 <p><b>Mitigation:</b> Encode output for its context (HTML, attribute, JS, URL), validate input, and deploy a strict Content Security Policy.</p>
@@ -182,7 +187,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-79, OWASP-A03</p><p class="k">Last changed by mcp on 2026-11-22T05:37:55.231Z</p>
 </div><div class="threat" id="threat-18">
 <h4>18. Potential data repudiation by Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p>
 <p>Gateway may later deny having received or acted on data from Billing SPA, because nothing records the transaction.</p>
 <p><b>Mitigation:</b> Log receipt of security-relevant requests with timestamps and request identifiers. Consider signed receipts for high-value transactions.</p>
@@ -190,7 +195,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-19">
 <h4>19. Potential process crash or stop for Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p>
 <p>Malformed or excessive input from Billing SPA could crash Gateway or make it stop responding.</p>
 <p><b>Mitigation:</b> Validate input, handle errors without crashing, apply rate limiting, and run the process under a supervisor that restarts it.</p>
@@ -198,7 +203,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400, CWE-248</p>
 </div><div class="threat" id="threat-20">
 <h4>20. Data flow API requests (Bearer JWT) is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p>
 <p>An attacker on the path can block or drop traffic on API requests (Bearer JWT), so Gateway never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>
@@ -206,7 +211,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><div class="threat" id="threat-21">
 <h4>21. Elevation using impersonation</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p>
 <p>Billing SPA may be able to make Gateway act with its own privileges or another principal&#39;s, for example through confused-deputy calls or impersonation.</p>
 <p><b>Mitigation:</b> Carry the caller&#39;s identity through calls, authorize on behalf of the original caller, and run Gateway with least privilege.</p>
@@ -214,7 +219,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-441</p>
 </div><div class="threat" id="threat-22">
 <h4>22. Gateway may be subject to elevation of privilege using remote code execution</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p>
 <p>If Billing SPA can trigger code execution in Gateway (injection, deserialization, memory corruption), it gains Gateway&#39;s privileges.</p>
 <p><b>Mitigation:</b> Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</p>
@@ -222,7 +227,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-94, CWE-502</p>
 </div><div class="threat" id="threat-23">
 <h4>23. Elevation by changing the execution flow in Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Billing SPA to Gateway via API requests (Bearer JWT)</p>
 <p>Input from Billing SPA might change how Gateway runs, for example by skipping checks or selecting privileged code paths.</p>
 <p><b>Mitigation:</b> Validate every control input, check state transitions server-side, and do not let client-supplied data select code paths.</p>
@@ -230,7 +235,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-691</p>
 </div><h3>Interaction: API responses</h3><p class="k">From Gateway to Billing SPA via API responses</p><p class="k">Source evidence: API responses — <code>web/src/api.ts:5</code>; Gateway — <code>docker-compose.yml:3</code>, <code>docker-compose.yml:5</code>; Billing SPA — <code>web/src/api.ts:1</code>, <code>web/src/InvoiceView.tsx:3</code></p><div class="threat" id="threat-24">
 <h4>24. Spoofing the Gateway process</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>An attacker can impersonate Gateway when talking to Billing SPA across a trust boundary, and gain access that Billing SPA only means to give Gateway.</p>
 <p><b>Mitigation:</b> Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Billing SPA.</p>
@@ -238,7 +243,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-290, CAPEC-151</p>
 </div><div class="threat" id="threat-25">
 <h4>25. Gateway process memory tampered</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>Billing SPA runs unmanaged code. Memory-corruption bugs reachable from Gateway could let an attacker change process memory and hijack execution.</p>
 <p><b>Mitigation:</b> Use memory-safe languages where possible and enable compiler and OS mitigations (ASLR, DEP/NX, CFG, stack protectors). Fuzz the input parsers.</p>
@@ -246,7 +251,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-119, CWE-787</p>
 </div><div class="threat" id="threat-26">
 <h4>26. JavaScript Object Notation processing</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>Billing SPA parses JSON from API responses. Unsafe parsing, deserialization to arbitrary types or prototype pollution can let an attacker run code or corrupt data.</p>
 <p><b>Mitigation:</b> Parse with a strict JSON parser (never eval), validate against a schema, and do not deserialize into polymorphic or arbitrary types.</p>
@@ -254,7 +259,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-502, CWE-1321</p>
 </div><div class="threat" id="threat-27">
 <h4>27. Potential data repudiation by Billing SPA</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>Billing SPA may later deny having received or acted on data from Gateway, because nothing records the transaction.</p>
 <p><b>Mitigation:</b> Log receipt of security-relevant requests with timestamps and request identifiers. Consider signed receipts for high-value transactions.</p>
@@ -262,7 +267,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-28">
 <h4>28. Potential process crash or stop for Billing SPA</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>Malformed or excessive input from Gateway could crash Billing SPA or make it stop responding.</p>
 <p><b>Mitigation:</b> Validate input, handle errors without crashing, apply rate limiting, and run the process under a supervisor that restarts it.</p>
@@ -270,7 +275,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400, CWE-248</p>
 </div><div class="threat" id="threat-29">
 <h4>29. Data flow API responses is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>An attacker on the path can block or drop traffic on API responses, so Billing SPA never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>
@@ -278,7 +283,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><div class="threat" id="threat-30">
 <h4>30. Elevation using impersonation</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>Gateway may be able to make Billing SPA act with its own privileges or another principal&#39;s, for example through confused-deputy calls or impersonation.</p>
 <p><b>Mitigation:</b> Carry the caller&#39;s identity through calls, authorize on behalf of the original caller, and run Billing SPA with least privilege.</p>
@@ -286,7 +291,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-441</p>
 </div><div class="threat" id="threat-31">
 <h4>31. Billing SPA may be subject to elevation of privilege using remote code execution</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>If Gateway can trigger code execution in Billing SPA (injection, deserialization, memory corruption), it gains Billing SPA&#39;s privileges.</p>
 <p><b>Mitigation:</b> Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</p>
@@ -294,7 +299,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-94, CWE-502</p>
 </div><div class="threat" id="threat-32">
 <h4>32. Elevation by changing the execution flow in Billing SPA</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>Input from Gateway might change how Billing SPA runs, for example by skipping checks or selecting privileged code paths.</p>
 <p><b>Mitigation:</b> Validate every control input, check state transitions server-side, and do not let client-supplied data select code paths.</p>
@@ -302,7 +307,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-691</p>
 </div><div class="threat" id="threat-97">
 <h4>97. Stored XSS via invoice memo rendered as HTML</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span><span class="pill">User-defined</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span><span class="pill">User-defined</span></p>
 <p class="k">From Gateway to Billing SPA via API responses</p>
 <p>InvoiceView renders invoice.memo with dangerouslySetInnerHTML (web/src/InvoiceView.tsx:3). A customer-controlled memo executes script in other users&#39; sessions.</p>
 <p><b>Mitigation:</b> Render memo as text, or sanitize with DOMPurify before insertion; add a strict CSP.</p>
@@ -310,7 +315,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">Last changed by mcp on 2026-11-22T05:37:55.232Z</p>
 </div><h3>Interaction: Proxied API requests</h3><p class="k">From Gateway to Billing API via Proxied API requests</p><p class="k">Source evidence: Proxied API requests — <code>docker-compose.yml:3</code>; Gateway — <code>docker-compose.yml:3</code>, <code>docker-compose.yml:5</code>; Billing API — <code>api/app.py:8</code>, <code>api/auth.py:6</code>, <code>api/auth.py:12</code></p><div class="threat" id="threat-33">
 <h4>33. Spoofing the Gateway process</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>An attacker can impersonate Gateway when talking to Billing API across a trust boundary, and gain access that Billing API only means to give Gateway.</p>
 <p><b>Mitigation:</b> Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Billing API.</p>
@@ -318,7 +323,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-290, CAPEC-151</p>
 </div><div class="threat" id="threat-34">
 <h4>34. Spoofing the Billing API process</h4>
-<p><span class="pill s-Mitigated">Mitigation Implemented</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-Mitigated">Mitigation Implemented</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>Gateway cannot tell whether it is really talking to Billing API. An attacker who stands up a look-alike endpoint can collect the data sent over Proxied API requests or return malicious responses.</p>
 <p><b>Mitigation:</b> Authenticate the destination, for example with TLS server certificates validated against a trusted root, certificate pinning or mutual authentication.</p>
@@ -326,7 +331,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-923, CAPEC-194</p><p class="k">Last changed by mcp on 2026-11-22T05:37:55.230Z</p>
 </div><div class="threat" id="threat-35">
 <h4>35. Potential lack of input validation for Billing API</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>Data arriving at Billing API over Proxied API requests can be changed in transit. Input that is not validated can lead to denial of service, elevation of privilege or information disclosure in Billing API.</p>
 <p><b>Mitigation:</b> Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match. Protect the channel with TLS.</p>
@@ -334,7 +339,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-20, OWASP-A03</p>
 </div><div class="threat" id="threat-36">
 <h4>36. Gateway process memory tampered</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>Billing API runs unmanaged code. Memory-corruption bugs reachable from Gateway could let an attacker change process memory and hijack execution.</p>
 <p><b>Mitigation:</b> Use memory-safe languages where possible and enable compiler and OS mitigations (ASLR, DEP/NX, CFG, stack protectors). Fuzz the input parsers.</p>
@@ -342,7 +347,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-119, CWE-787</p>
 </div><div class="threat" id="threat-37">
 <h4>37. Potential data repudiation by Billing API</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>Billing API may later deny having received or acted on data from Gateway, because nothing records the transaction.</p>
 <p><b>Mitigation:</b> Log receipt of security-relevant requests with timestamps and request identifiers. Consider signed receipts for high-value transactions.</p>
@@ -350,7 +355,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-38">
 <h4>38. Data flow sniffing</h4>
-<p><span class="pill s-NeedsInvestigation">Needs Investigation</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NeedsInvestigation">Needs Investigation</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>Data on Proxied API requests crosses a trust boundary without encryption, so anyone on the network path can read it.</p>
 <p><b>Mitigation:</b> Encrypt the channel (TLS 1.2+, IPsec) and do not send sensitive data that the receiver does not need.</p>
@@ -358,7 +363,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-319</p><p class="k">Last changed by mcp on 2026-11-22T05:37:55.229Z</p>
 </div><div class="threat" id="threat-39">
 <h4>39. Potential process crash or stop for Billing API</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>Malformed or excessive input from Gateway could crash Billing API or make it stop responding.</p>
 <p><b>Mitigation:</b> Validate input, handle errors without crashing, apply rate limiting, and run the process under a supervisor that restarts it.</p>
@@ -366,7 +371,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400, CWE-248</p>
 </div><div class="threat" id="threat-40">
 <h4>40. Data flow Proxied API requests is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>An attacker on the path can block or drop traffic on Proxied API requests, so Billing API never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>
@@ -374,7 +379,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><div class="threat" id="threat-41">
 <h4>41. Elevation using impersonation</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>Gateway may be able to make Billing API act with its own privileges or another principal&#39;s, for example through confused-deputy calls or impersonation.</p>
 <p><b>Mitigation:</b> Carry the caller&#39;s identity through calls, authorize on behalf of the original caller, and run Billing API with least privilege.</p>
@@ -382,7 +387,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-441</p>
 </div><div class="threat" id="threat-42">
 <h4>42. Billing API may be subject to elevation of privilege using remote code execution</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>If Gateway can trigger code execution in Billing API (injection, deserialization, memory corruption), it gains Billing API&#39;s privileges.</p>
 <p><b>Mitigation:</b> Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</p>
@@ -390,7 +395,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-94, CWE-502</p>
 </div><div class="threat" id="threat-43">
 <h4>43. Elevation by changing the execution flow in Billing API</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Gateway to Billing API via Proxied API requests</p>
 <p>Input from Gateway might change how Billing API runs, for example by skipping checks or selecting privileged code paths.</p>
 <p><b>Mitigation:</b> Validate every control input, check state transitions server-side, and do not let client-supplied data select code paths.</p>
@@ -398,7 +403,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-691</p>
 </div><h3>Interaction: Proxied API responses</h3><p class="k">From Billing API to Gateway via Proxied API responses</p><p class="k">Source evidence: Billing API — <code>api/app.py:8</code>, <code>api/auth.py:6</code>, <code>api/auth.py:12</code>; Gateway — <code>docker-compose.yml:3</code>, <code>docker-compose.yml:5</code></p><div class="threat" id="threat-44">
 <h4>44. Spoofing the Gateway process</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>Billing API cannot tell whether it is really talking to Gateway. An attacker who stands up a look-alike endpoint can collect the data sent over Proxied API responses or return malicious responses.</p>
 <p><b>Mitigation:</b> Authenticate the destination, for example with TLS server certificates validated against a trusted root, certificate pinning or mutual authentication.</p>
@@ -406,7 +411,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-923, CAPEC-194</p>
 </div><div class="threat" id="threat-45">
 <h4>45. Potential lack of input validation for Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>Data arriving at Gateway over Proxied API responses can be changed in transit. Input that is not validated can lead to denial of service, elevation of privilege or information disclosure in Gateway.</p>
 <p><b>Mitigation:</b> Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match. Protect the channel with TLS.</p>
@@ -414,7 +419,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-20, OWASP-A03</p>
 </div><div class="threat" id="threat-46">
 <h4>46. Cross site scripting</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>Gateway may reflect untrusted input into pages without encoding it, which lets an attacker run script in other users&#39; browsers.</p>
 <p><b>Mitigation:</b> Encode output for its context (HTML, attribute, JS, URL), validate input, and deploy a strict Content Security Policy.</p>
@@ -422,7 +427,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-79, OWASP-A03</p>
 </div><div class="threat" id="threat-47">
 <h4>47. Potential data repudiation by Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>Gateway may later deny having received or acted on data from Billing API, because nothing records the transaction.</p>
 <p><b>Mitigation:</b> Log receipt of security-relevant requests with timestamps and request identifiers. Consider signed receipts for high-value transactions.</p>
@@ -430,7 +435,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-48">
 <h4>48. Data flow sniffing</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>Data on Proxied API responses crosses a trust boundary without encryption, so anyone on the network path can read it.</p>
 <p><b>Mitigation:</b> Encrypt the channel (TLS 1.2+, IPsec) and do not send sensitive data that the receiver does not need.</p>
@@ -438,7 +443,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-319</p>
 </div><div class="threat" id="threat-49">
 <h4>49. Weak authentication scheme</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>A custom or weak authentication scheme between Billing API and Gateway may be open to brute force, credential theft or bypass.</p>
 <p><b>Mitigation:</b> Use well-reviewed standard protocols (OAuth 2.1/OIDC, Kerberos, mutual TLS) rather than custom schemes, and enforce rate limiting and MFA where it applies.</p>
@@ -446,7 +451,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-1390</p>
 </div><div class="threat" id="threat-50">
 <h4>50. Potential process crash or stop for Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>Malformed or excessive input from Billing API could crash Gateway or make it stop responding.</p>
 <p><b>Mitigation:</b> Validate input, handle errors without crashing, apply rate limiting, and run the process under a supervisor that restarts it.</p>
@@ -454,7 +459,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400, CWE-248</p>
 </div><div class="threat" id="threat-51">
 <h4>51. Data flow Proxied API responses is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>An attacker on the path can block or drop traffic on Proxied API responses, so Gateway never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>
@@ -462,7 +467,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><div class="threat" id="threat-52">
 <h4>52. Elevation using impersonation</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>Billing API may be able to make Gateway act with its own privileges or another principal&#39;s, for example through confused-deputy calls or impersonation.</p>
 <p><b>Mitigation:</b> Carry the caller&#39;s identity through calls, authorize on behalf of the original caller, and run Gateway with least privilege.</p>
@@ -470,7 +475,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-441</p>
 </div><div class="threat" id="threat-53">
 <h4>53. Gateway may be subject to elevation of privilege using remote code execution</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>If Billing API can trigger code execution in Gateway (injection, deserialization, memory corruption), it gains Gateway&#39;s privileges.</p>
 <p><b>Mitigation:</b> Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</p>
@@ -478,7 +483,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-94, CWE-502</p>
 </div><div class="threat" id="threat-54">
 <h4>54. Elevation by changing the execution flow in Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Billing API to Gateway via Proxied API responses</p>
 <p>Input from Billing API might change how Gateway runs, for example by skipping checks or selecting privileged code paths.</p>
 <p><b>Mitigation:</b> Validate every control input, check state transitions server-side, and do not let client-supplied data select code paths.</p>
@@ -486,7 +491,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-691</p>
 </div><h3>Interaction: Payment webhooks</h3><p class="k">From Stripe to Gateway via Payment webhooks</p><p class="k">Source evidence: Payment webhooks — <code>api/app.py:26</code>, <code>api/payments.py:8</code>; Stripe — <code>api/payments.py:2</code>; Gateway — <code>docker-compose.yml:3</code>, <code>docker-compose.yml:5</code></p><div class="threat" id="threat-55">
 <h4>55. JavaScript Object Notation processing</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
 <p class="k">From Stripe to Gateway via Payment webhooks</p>
 <p>Gateway parses JSON from Payment webhooks. Unsafe parsing, deserialization to arbitrary types or prototype pollution can let an attacker run code or corrupt data.</p>
 <p><b>Mitigation:</b> Parse with a strict JSON parser (never eval), validate against a schema, and do not deserialize into polymorphic or arbitrary types.</p>
@@ -494,7 +499,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-502, CWE-1321</p>
 </div><div class="threat" id="threat-56">
 <h4>56. Cross site scripting</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
 <p class="k">From Stripe to Gateway via Payment webhooks</p>
 <p>Gateway may reflect untrusted input into pages without encoding it, which lets an attacker run script in other users&#39; browsers.</p>
 <p><b>Mitigation:</b> Encode output for its context (HTML, attribute, JS, URL), validate input, and deploy a strict Content Security Policy.</p>
@@ -502,7 +507,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-79, OWASP-A03</p>
 </div><div class="threat" id="threat-57">
 <h4>57. Potential data repudiation by Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Stripe to Gateway via Payment webhooks</p>
 <p>Gateway may later deny having received or acted on data from Stripe, because nothing records the transaction.</p>
 <p><b>Mitigation:</b> Log receipt of security-relevant requests with timestamps and request identifiers. Consider signed receipts for high-value transactions.</p>
@@ -510,7 +515,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-58">
 <h4>58. Potential process crash or stop for Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Stripe to Gateway via Payment webhooks</p>
 <p>Malformed or excessive input from Stripe could crash Gateway or make it stop responding.</p>
 <p><b>Mitigation:</b> Validate input, handle errors without crashing, apply rate limiting, and run the process under a supervisor that restarts it.</p>
@@ -518,7 +523,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400, CWE-248</p>
 </div><div class="threat" id="threat-59">
 <h4>59. Data flow Payment webhooks is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Stripe to Gateway via Payment webhooks</p>
 <p>An attacker on the path can block or drop traffic on Payment webhooks, so Gateway never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>
@@ -526,7 +531,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><div class="threat" id="threat-60">
 <h4>60. Elevation using impersonation</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Stripe to Gateway via Payment webhooks</p>
 <p>Stripe may be able to make Gateway act with its own privileges or another principal&#39;s, for example through confused-deputy calls or impersonation.</p>
 <p><b>Mitigation:</b> Carry the caller&#39;s identity through calls, authorize on behalf of the original caller, and run Gateway with least privilege.</p>
@@ -534,7 +539,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-441</p>
 </div><div class="threat" id="threat-61">
 <h4>61. Gateway may be subject to elevation of privilege using remote code execution</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Stripe to Gateway via Payment webhooks</p>
 <p>If Stripe can trigger code execution in Gateway (injection, deserialization, memory corruption), it gains Gateway&#39;s privileges.</p>
 <p><b>Mitigation:</b> Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</p>
@@ -542,7 +547,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-94, CWE-502</p>
 </div><div class="threat" id="threat-62">
 <h4>62. Elevation by changing the execution flow in Gateway</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Stripe to Gateway via Payment webhooks</p>
 <p>Input from Stripe might change how Gateway runs, for example by skipping checks or selecting privileged code paths.</p>
 <p><b>Mitigation:</b> Validate every control input, check state transitions server-side, and do not let client-supplied data select code paths.</p>
@@ -550,7 +555,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-691</p>
 </div><h3>Interaction: JWKS fetch</h3><p class="k">From Auth0 to Billing API via JWKS fetch</p><p class="k">Source evidence: JWKS fetch — <code>api/auth.py:4</code>; Auth0 — <code>api/auth.py:4</code>, <code>web/src/api.ts:2</code>; Billing API — <code>api/app.py:8</code>, <code>api/auth.py:6</code>, <code>api/auth.py:12</code></p><div class="threat" id="threat-63">
 <h4>63. Spoofing the Auth0 external entity</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Spoofing</span></p>
 <p class="k">From Auth0 to Billing API via JWKS fetch</p>
 <p>An attacker can pose as Auth0 and send requests to Billing API on its behalf.</p>
 <p><b>Mitigation:</b> Require Auth0 to authenticate (strong passwords plus MFA for people; client certificates, signed tokens or API keys with rotation for systems).</p>
@@ -558,7 +563,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-287, CAPEC-151</p>
 </div><div class="threat" id="threat-64">
 <h4>64. Potential data repudiation by Billing API</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Auth0 to Billing API via JWKS fetch</p>
 <p>Billing API may later deny having received or acted on data from Auth0, because nothing records the transaction.</p>
 <p><b>Mitigation:</b> Log receipt of security-relevant requests with timestamps and request identifiers. Consider signed receipts for high-value transactions.</p>
@@ -566,7 +571,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-65">
 <h4>65. Potential process crash or stop for Billing API</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Auth0 to Billing API via JWKS fetch</p>
 <p>Malformed or excessive input from Auth0 could crash Billing API or make it stop responding.</p>
 <p><b>Mitigation:</b> Validate input, handle errors without crashing, apply rate limiting, and run the process under a supervisor that restarts it.</p>
@@ -574,7 +579,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400, CWE-248</p>
 </div><div class="threat" id="threat-66">
 <h4>66. Data flow JWKS fetch is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Auth0 to Billing API via JWKS fetch</p>
 <p>An attacker on the path can block or drop traffic on JWKS fetch, so Billing API never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>
@@ -582,7 +587,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><div class="threat" id="threat-67">
 <h4>67. Elevation using impersonation</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Auth0 to Billing API via JWKS fetch</p>
 <p>Auth0 may be able to make Billing API act with its own privileges or another principal&#39;s, for example through confused-deputy calls or impersonation.</p>
 <p><b>Mitigation:</b> Carry the caller&#39;s identity through calls, authorize on behalf of the original caller, and run Billing API with least privilege.</p>
@@ -590,7 +595,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-441</p>
 </div><div class="threat" id="threat-68">
 <h4>68. Billing API may be subject to elevation of privilege using remote code execution</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Auth0 to Billing API via JWKS fetch</p>
 <p>If Auth0 can trigger code execution in Billing API (injection, deserialization, memory corruption), it gains Billing API&#39;s privileges.</p>
 <p><b>Mitigation:</b> Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.</p>
@@ -598,7 +603,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-94, CWE-502</p>
 </div><div class="threat" id="threat-69">
 <h4>69. Elevation by changing the execution flow in Billing API</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Elevation Of Privilege</span></p>
 <p class="k">From Auth0 to Billing API via JWKS fetch</p>
 <p>Input from Auth0 might change how Billing API runs, for example by skipping checks or selecting privileged code paths.</p>
 <p><b>Mitigation:</b> Validate every control input, check state transitions server-side, and do not let client-supplied data select code paths.</p>
@@ -606,7 +611,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-691</p>
 </div><h3>Interaction: Invoice queries</h3><p class="k">From Billing API to Invoices DB via Invoice queries</p><p class="k">Source evidence: Invoice queries — <code>api/db.py:2</code>, <code>api/db.py:5</code>, <code>api/db.py:8</code>, <code>api/db.py:11</code>; Billing API — <code>api/app.py:8</code>, <code>api/auth.py:6</code>, <code>api/auth.py:12</code>; Invoices DB — <code>docker-compose.yml:23</code>, <code>api/db.py:2</code></p><div class="threat" id="threat-70">
 <h4>70. Spoofing of destination data store Invoices DB</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
 <p class="k">From Billing API to Invoices DB via Invoice queries</p>
 <p>If an attacker can impersonate Invoices DB, data that Billing API writes may go to a location the attacker controls.</p>
 <p><b>Mitigation:</b> Authenticate the data store and lock down the configuration that names it. Use least-privilege credentials scoped to that store.</p>
@@ -614,7 +619,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-350</p>
 </div><div class="threat" id="threat-71">
 <h4>71. Potential SQL injection vulnerability for Invoices DB</h4>
-<p><span class="pill s-Mitigated">Mitigation Implemented</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-Mitigated">Mitigation Implemented</span><span class="pill p-High">High</span><span class="pill">Tampering</span></p>
 <p class="k">From Billing API to Invoices DB via Invoice queries</p>
 <p>If Billing API builds queries from untrusted input, an attacker can run arbitrary SQL against Invoices DB.</p>
 <p><b>Mitigation:</b> Use parameterized queries or prepared statements for all database access. Grant the database account only the permissions it needs.</p>
@@ -622,7 +627,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-89, OWASP-A03</p><p class="k">Last changed by mcp on 2026-11-22T05:37:55.227Z</p>
 </div><div class="threat" id="threat-72">
 <h4>72. Authorization bypass</h4>
-<p><span class="pill s-NeedsInvestigation">Needs Investigation</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NeedsInvestigation">Needs Investigation</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Billing API to Invoices DB via Invoice queries</p>
 <p>Billing API uses its own authorization logic for Invoices DB. Flaws in that logic, or paths that skip it, can expose data to unauthorized users.</p>
 <p><b>Mitigation:</b> Check authorization server-side on every request, deny by default, and add tests for every role and resource combination.</p>
@@ -630,7 +635,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-285, OWASP-A01</p><p class="k">Last changed by mcp on 2026-11-22T05:37:55.228Z</p>
 </div><div class="threat" id="threat-73">
 <h4>73. Potential excessive resource consumption for Billing API or Invoices DB</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Billing API to Invoices DB via Invoice queries</p>
 <p>Requests from Billing API to Invoices DB could use up CPU, memory, connections or storage and degrade service.</p>
 <p><b>Mitigation:</b> Set quotas, timeouts and connection pool limits, paginate queries, and monitor resource use.</p>
@@ -638,7 +643,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><h3>Interaction: Invoice rows</h3><p class="k">From Invoices DB to Billing API via Invoice rows</p><p class="k">Source evidence: Invoice rows — <code>api/db.py:5</code>; Invoices DB — <code>docker-compose.yml:23</code>, <code>api/db.py:2</code>; Billing API — <code>api/app.py:8</code>, <code>api/auth.py:6</code>, <code>api/auth.py:12</code></p><div class="threat" id="threat-74">
 <h4>74. Spoofing of source data store Invoices DB</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
 <p class="k">From Invoices DB to Billing API via Invoice rows</p>
 <p>If an attacker can replace or impersonate Invoices DB, Billing API will trust and process data the attacker controls.</p>
 <p><b>Mitigation:</b> Authenticate the data store connection and protect where its location comes from (configuration, DNS, file paths), so that it cannot be redirected.</p>
@@ -646,7 +651,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-350</p>
 </div><div class="threat" id="threat-75">
 <h4>75. Weak access control for a resource</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Invoices DB to Billing API via Invoice rows</p>
 <p>If the access control on Invoices DB is too permissive, data can be read by principals other than Billing API.</p>
 <p><b>Mitigation:</b> Apply least-privilege access control lists to the data store and review who can read it.</p>
@@ -654,7 +659,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-732</p>
 </div><h3>Interaction: Audit events</h3><p class="k">From Billing API to Audit log via Audit events</p><p class="k">Source evidence: Audit events — <code>api/audit.py:3</code>; Billing API — <code>api/app.py:8</code>, <code>api/auth.py:6</code>, <code>api/auth.py:12</code>; Audit log — <code>api/audit.py:3</code></p><div class="threat" id="threat-76">
 <h4>76. Spoofing of destination data store Audit log</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
 <p class="k">From Billing API to Audit log via Audit events</p>
 <p>If an attacker can impersonate Audit log, data that Billing API writes may go to a location the attacker controls.</p>
 <p><b>Mitigation:</b> Authenticate the data store and lock down the configuration that names it. Use least-privilege credentials scoped to that store.</p>
@@ -662,7 +667,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-350</p>
 </div><div class="threat" id="threat-77">
 <h4>77. Risks from logging</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Tampering</span></p>
 <p class="k">From Billing API to Audit log via Audit events</p>
 <p>An attacker can inject log entries or tamper with existing logs, which can corrupt log viewers or hide their activity.</p>
 <p><b>Mitigation:</b> Encode or neutralize log input, write logs append-only, and send them to a separate, access-controlled log store.</p>
@@ -670,7 +675,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-117</p>
 </div><div class="threat" id="threat-78">
 <h4>78. Lower trusted subject updates logs</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Repudiation</span></p>
 <p class="k">From Billing API to Audit log via Audit events</p>
 <p>If less-trusted subjects can write to the log store Audit log, an attacker can forge or erase entries, and the logs can no longer be used as evidence.</p>
 <p><b>Mitigation:</b> Separate log writers by trust level, make logs append-only, and authenticate every writer.</p>
@@ -678,7 +683,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-779</p>
 </div><div class="threat" id="threat-79">
 <h4>79. Data logs from an unknown source</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Billing API to Audit log via Audit events</p>
 <p>Audit log may accept log data without recording who sent it, so entries cannot be traced to an accountable source.</p>
 <p><b>Mitigation:</b> Authenticate log producers and record the producer identity with each entry.</p>
@@ -686,7 +691,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-80">
 <h4>80. Insufficient auditing</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Repudiation</span></p>
 <p class="k">From Billing API to Audit log via Audit events</p>
 <p>If Billing API does not log security-relevant events (logins, privilege changes, data access) to Audit log, incidents cannot be detected or investigated.</p>
 <p><b>Mitigation:</b> Define which security events must be logged, include actor, action, target and time, and alert on suspicious patterns.</p>
@@ -694,7 +699,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778, OWASP-A09</p>
 </div><div class="threat" id="threat-81">
 <h4>81. Potential weak protections for audit data</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Repudiation</span></p>
 <p class="k">From Billing API to Audit log via Audit events</p>
 <p>Audit data in Audit log may be readable or changeable by too many principals, which puts its integrity and confidentiality at risk.</p>
 <p><b>Mitigation:</b> Restrict access to audit data, sign or hash-chain entries, and keep audit logs in a separate security domain.</p>
@@ -702,7 +707,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-532</p>
 </div><div class="threat" id="threat-82">
 <h4>82. Authorization bypass</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Billing API to Audit log via Audit events</p>
 <p>Billing API uses its own authorization logic for Audit log. Flaws in that logic, or paths that skip it, can expose data to unauthorized users.</p>
 <p><b>Mitigation:</b> Check authorization server-side on every request, deny by default, and add tests for every role and resource combination.</p>
@@ -710,7 +715,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-285, OWASP-A01</p>
 </div><div class="threat" id="threat-83">
 <h4>83. Potential excessive resource consumption for Billing API or Audit log</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Billing API to Audit log via Audit events</p>
 <p>Requests from Billing API to Audit log could use up CPU, memory, connections or storage and degrade service.</p>
 <p><b>Mitigation:</b> Set quotas, timeouts and connection pool limits, paginate queries, and monitor resource use.</p>
@@ -718,7 +723,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><h3>Interaction: Receipt jobs</h3><p class="k">From Billing API to Job queue via Receipt jobs</p><p class="k">Source evidence: Receipt jobs — <code>api/app.py:23</code>; Billing API — <code>api/app.py:8</code>, <code>api/auth.py:6</code>, <code>api/auth.py:12</code>; Job queue — <code>docker-compose.yml:26</code>, <code>api/app.py:23</code></p><div class="threat" id="threat-84">
 <h4>84. Spoofing of destination data store Job queue</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
 <p class="k">From Billing API to Job queue via Receipt jobs</p>
 <p>If an attacker can impersonate Job queue, data that Billing API writes may go to a location the attacker controls.</p>
 <p><b>Mitigation:</b> Authenticate the data store and lock down the configuration that names it. Use least-privilege credentials scoped to that store.</p>
@@ -726,7 +731,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-350</p>
 </div><div class="threat" id="threat-85">
 <h4>85. Authorization bypass</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-high" title="Signal score 50">High Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-High">High</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Billing API to Job queue via Receipt jobs</p>
 <p>Billing API uses its own authorization logic for Job queue. Flaws in that logic, or paths that skip it, can expose data to unauthorized users.</p>
 <p><b>Mitigation:</b> Check authorization server-side on every request, deny by default, and add tests for every role and resource combination.</p>
@@ -734,7 +739,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-285, OWASP-A01</p>
 </div><div class="threat" id="threat-86">
 <h4>86. Potential excessive resource consumption for Billing API or Job queue</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Billing API to Job queue via Receipt jobs</p>
 <p>Requests from Billing API to Job queue could use up CPU, memory, connections or storage and degrade service.</p>
 <p><b>Mitigation:</b> Set quotas, timeouts and connection pool limits, paginate queries, and monitor resource use.</p>
@@ -742,7 +747,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><h3>Interaction: Receipt jobs pulled</h3><p class="k">From Job queue to Receipt worker via Receipt jobs pulled</p><p class="k">Source evidence: Receipt jobs pulled — <code>worker/receipts.py:5</code>; Job queue — <code>docker-compose.yml:26</code>, <code>api/app.py:23</code>; Receipt worker — <code>worker/receipts.py:5</code></p><div class="threat" id="threat-87">
 <h4>87. Spoofing of source data store Job queue</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
 <p class="k">From Job queue to Receipt worker via Receipt jobs pulled</p>
 <p>If an attacker can replace or impersonate Job queue, Receipt worker will trust and process data the attacker controls.</p>
 <p><b>Mitigation:</b> Authenticate the data store connection and protect where its location comes from (configuration, DNS, file paths), so that it cannot be redirected.</p>
@@ -750,7 +755,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-350</p>
 </div><div class="threat" id="threat-88">
 <h4>88. Weak access control for a resource</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Job queue to Receipt worker via Receipt jobs pulled</p>
 <p>If the access control on Job queue is too permissive, data can be read by principals other than Receipt worker.</p>
 <p><b>Mitigation:</b> Apply least-privilege access control lists to the data store and review who can read it.</p>
@@ -758,7 +763,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-732</p>
 </div><h3>Interaction: Invoice data</h3><p class="k">From Invoices DB to Receipt worker via Invoice data</p><p class="k">Source evidence: Invoice data — <code>worker/receipts.py:6</code>; Invoices DB — <code>docker-compose.yml:23</code>, <code>api/db.py:2</code>; Receipt worker — <code>worker/receipts.py:5</code></p><div class="threat" id="threat-89">
 <h4>89. Spoofing of source data store Invoices DB</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
 <p class="k">From Invoices DB to Receipt worker via Invoice data</p>
 <p>If an attacker can replace or impersonate Invoices DB, Receipt worker will trust and process data the attacker controls.</p>
 <p><b>Mitigation:</b> Authenticate the data store connection and protect where its location comes from (configuration, DNS, file paths), so that it cannot be redirected.</p>
@@ -766,7 +771,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-350</p>
 </div><div class="threat" id="threat-90">
 <h4>90. Weak access control for a resource</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Information Disclosure</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Information Disclosure</span></p>
 <p class="k">From Invoices DB to Receipt worker via Invoice data</p>
 <p>If the access control on Invoices DB is too permissive, data can be read by principals other than Receipt worker.</p>
 <p><b>Mitigation:</b> Apply least-privilege access control lists to the data store and review who can read it.</p>
@@ -774,7 +779,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-732</p>
 </div><h3>Interaction: Payment intents</h3><p class="k">From Billing API to Stripe via Payment intents</p><p class="k">Source evidence: Payment intents — <code>api/payments.py:5</code>; Billing API — <code>api/app.py:8</code>, <code>api/auth.py:6</code>, <code>api/auth.py:12</code>; Stripe — <code>api/payments.py:2</code></p><div class="threat" id="threat-91">
 <h4>91. Spoofing of the Stripe external destination entity</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
 <p class="k">From Billing API to Stripe via Payment intents</p>
 <p>An attacker can impersonate Stripe and receive data that Billing API meant only for that entity.</p>
 <p><b>Mitigation:</b> Verify the identity of Stripe before sending data, for example by validating its TLS certificate, pinning the certificate or using signed callbacks.</p>
@@ -782,7 +787,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-923</p>
 </div><div class="threat" id="threat-92">
 <h4>92. External entity Stripe potentially denies receiving data</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Billing API to Stripe via Payment intents</p>
 <p>Stripe can claim it never received data from Billing API.</p>
 <p><b>Mitigation:</b> Record delivery and acknowledgement of important messages, for example with signed acknowledgements or delivery receipts.</p>
@@ -790,7 +795,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-93">
 <h4>93. Data flow Payment intents is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Billing API to Stripe via Payment intents</p>
 <p>An attacker on the path can block or drop traffic on Payment intents, so Stripe never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>
@@ -798,7 +803,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-400</p>
 </div><h3>Interaction: Receipt emails</h3><p class="k">From Receipt worker to SendGrid via Receipt emails</p><p class="k">Source evidence: Receipt emails — <code>worker/receipts.py:7</code>, <code>worker/receipts.py:8</code>; Receipt worker — <code>worker/receipts.py:5</code>; SendGrid — <code>worker/receipts.py:7</code></p><div class="threat" id="threat-94">
 <h4>94. Spoofing of the SendGrid external destination entity</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Medium">Medium</span><span class="pill">Spoofing</span></p>
 <p class="k">From Receipt worker to SendGrid via Receipt emails</p>
 <p>An attacker can impersonate SendGrid and receive data that Receipt worker meant only for that entity.</p>
 <p><b>Mitigation:</b> Verify the identity of SendGrid before sending data, for example by validating its TLS certificate, pinning the certificate or using signed callbacks.</p>
@@ -806,7 +811,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-923</p>
 </div><div class="threat" id="threat-95">
 <h4>95. External entity SendGrid potentially denies receiving data</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Repudiation</span></p>
 <p class="k">From Receipt worker to SendGrid via Receipt emails</p>
 <p>SendGrid can claim it never received data from Receipt worker.</p>
 <p><b>Mitigation:</b> Record delivery and acknowledgement of important messages, for example with signed acknowledgements or delivery receipts.</p>
@@ -814,7 +819,7 @@ footer{margin-top:60px;color:var(--muted);font-size:13px}
 <p class="k">References: CWE-778</p>
 </div><div class="threat" id="threat-96">
 <h4>96. Data flow Receipt emails is potentially interrupted</h4>
-<p><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
+<p><span class="pill g-medium" title="Signal score 40">Medium Signal</span><span class="pill s-NotStarted">Not Started</span><span class="pill p-Low">Low</span><span class="pill">Denial Of Service</span></p>
 <p class="k">From Receipt worker to SendGrid via Receipt emails</p>
 <p>An attacker on the path can block or drop traffic on Receipt emails, so SendGrid never receives the data.</p>
 <p><b>Mitigation:</b> Design for retries and timeouts, use redundant paths where availability matters, and monitor the flow.</p>

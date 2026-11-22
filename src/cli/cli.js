@@ -80,6 +80,7 @@ Analysis
   generate <model.json> [--diagram D] [--dry-run]  Generate/merge threats
   validate <model.json> [--strict]                 Diagram checks (exit 1 on errors)
   threats <model.json> [--state S] [--category C] [--priority P] [--search Q]
+        [--signal high|medium]                    Only high(/medium)-signal threats, best first
   threat <model.json> <id> [--state S] [--priority P] [--justification J]
         [--title] [--description] [--mitigation]
   threat-add <model.json> --flow F --title T [--category S] [--description] [--priority]
@@ -88,6 +89,9 @@ Analysis
 
 Output
   report <model.json> [--format html|md|csv|json|svg] [--diagram D] [-o file]
+        [--signal high|medium|all|off]           Stakeholder section first: executive summary
+                                                 and findings at or above the level (default
+                                                 high); the full register follows. off = classic
 
 Templates
   template import <in.tb7> [-o out.json]           Convert an MTMT template
@@ -127,7 +131,11 @@ function need(v, what) {
 
 function formatThreats(res) {
   if (!res.threats.length) return 'No threats.';
-  const lines = res.threats.map((t) => `${String(t.id).padStart(4)}  ${t.state.padEnd(22)} ${String(t.priority).padEnd(7)} ${t.category.padEnd(23)} ${t.title}\n      ${t.interaction}${t.orphan ? ' (no longer present)' : ''}`);
+  const sig = { high: 'HIGH', medium: 'MED ', generic: '    ' };
+  const lines = res.threats.map(
+    (t) =>
+      `${String(t.id).padStart(4)}  ${sig[t.signal?.level] || '    '} ${t.state.padEnd(22)} ${String(t.priority).padEnd(7)} ${t.category.padEnd(23)} ${t.signal?.title || t.title}\n      ${t.interaction}${t.orphan ? ' (no longer present)' : ''}`,
+  );
   return `${lines.join('\n')}\n\n${res.total} threat(s)`;
 }
 
@@ -321,6 +329,7 @@ export async function main(argv, io = { stdout: process.stdout, stderr: process.
           diagram: opts.diagram,
           text: opts.search,
           limit: opts.limit,
+          signal: opts.signal,
         });
         out(io, json ? res : formatThreats(res), json);
         return 0;
@@ -368,7 +377,7 @@ export async function main(argv, io = { stdout: process.stdout, stderr: process.
         const model = loadModelFile(need(rest[0], 'model file'));
         let format = opts.format;
         if (!format && opts.out) format = { '.html': 'html', '.htm': 'html', '.md': 'md', '.csv': 'csv', '.json': 'json', '.svg': 'svg' }[path.extname(opts.out).toLowerCase()];
-        const text = ops.opReport(model, { format: format || 'html', diagram: opts.diagram });
+        const text = ops.opReport(model, { format: format || 'html', diagram: opts.diagram, signal: opts.signal });
         if (opts.out) {
           writeTextAtomic(opts.out, text);
           out(io, json ? { file: opts.out } : `Wrote ${opts.out}`, json);
