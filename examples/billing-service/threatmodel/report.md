@@ -16,33 +16,180 @@ Billing service models 11 elements and 16 data flows across 1 diagram; the templ
 
 ## High-signal findings
 
-| ID | Finding | Category | Priority | State | Signal | Evidence | Mitigation |
-|---:|---|---|---|---|---|---|---|
-| 1 | Spoofing the Billing SPA process | Spoofing | High | Not Started | High Signal (50) | web/src/api.ts, web/src/InvoiceView.tsx | Authenticate the destination, for example with TLS server certificates validated against a trusted root, certificate pinning or mutual authentication. |
-| 2 | Spoofing the Customer external entity | Spoofing | High | Not Started | High Signal (50) | web/src/api.ts, web/src/InvoiceView.tsx | Require Customer to authenticate (strong passwords plus MFA for people; client certificates, signed tokens or API keys with rotation for systems). |
-| 3 | Potential lack of input validation for Billing SPA | Tampering | High | Not Started | High Signal (50) | web/src/api.ts, web/src/InvoiceView.tsx | Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match. |
-| 5 | Data flow sniffing | Information Disclosure | High | Not Started | High Signal (50) | web/src/api.ts, web/src/InvoiceView.tsx | Encrypt the channel (TLS 1.2+, IPsec) and do not send sensitive data that the receiver does not need. |
-| 9 | Billing SPA may be subject to elevation of privilege using remote code execution | Elevation Of Privilege | High | Not Started | High Signal (50) | web/src/api.ts, web/src/InvoiceView.tsx | Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege. |
-| 14 | Weakness in SSO authorization | Elevation Of Privilege | High | Not Started | High Signal (50) | web/src/api.ts, web/src/InvoiceView.tsx, api/auth.py | Validate token signature, issuer, audience and expiry; use exact redirect URIs; use PKCE and state; and grant only the scopes each client needs. |
-| 15 | Spoofing the Billing SPA process | Spoofing | High | Not Started | High Signal (50) | web/src/api.ts, web/src/InvoiceView.tsx, docker-compose.yml | Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Gateway. |
-| 22 | Gateway may be subject to elevation of privilege using remote code execution | Elevation Of Privilege | High | Not Started | High Signal (50) | web/src/api.ts, web/src/InvoiceView.tsx, docker-compose.yml | Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege. |
-| 24 | Spoofing the Gateway process | Spoofing | High | Not Started | High Signal (50) | web/src/api.ts, docker-compose.yml, web/src/InvoiceView.tsx | Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Billing SPA. |
-| 31 | Billing SPA may be subject to elevation of privilege using remote code execution | Elevation Of Privilege | High | Not Started | High Signal (50) | web/src/api.ts, docker-compose.yml, web/src/InvoiceView.tsx | Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege. |
-| 33 | Spoofing the Gateway process | Spoofing | High | Not Started | High Signal (50) | docker-compose.yml, api/app.py, api/auth.py | Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Billing API. |
-| 35 | Potential lack of input validation for Billing API | Tampering | High | Not Started | High Signal (50) | docker-compose.yml, api/app.py, api/auth.py | Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match. |
-| 42 | Billing API may be subject to elevation of privilege using remote code execution | Elevation Of Privilege | High | Not Started | High Signal (50) | docker-compose.yml, api/app.py, api/auth.py | Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege. |
-| 44 | Spoofing the Gateway process | Spoofing | High | Not Started | High Signal (50) | api/app.py, api/auth.py, docker-compose.yml | Authenticate the destination, for example with TLS server certificates validated against a trusted root, certificate pinning or mutual authentication. |
-| 45 | Potential lack of input validation for Gateway | Tampering | High | Not Started | High Signal (50) | api/app.py, api/auth.py, docker-compose.yml | Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match. |
-| 46 | Cross site scripting | Tampering | High | Not Started | High Signal (50) | api/app.py, api/auth.py, docker-compose.yml | Encode output for its context (HTML, attribute, JS, URL), validate input, and deploy a strict Content Security Policy. |
-| 48 | Data flow sniffing | Information Disclosure | High | Not Started | High Signal (50) | api/app.py, api/auth.py, docker-compose.yml | Encrypt the channel (TLS 1.2+, IPsec) and do not send sensitive data that the receiver does not need. |
-| 53 | Gateway may be subject to elevation of privilege using remote code execution | Elevation Of Privilege | High | Not Started | High Signal (50) | api/app.py, api/auth.py, docker-compose.yml | Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege. |
-| 56 | Cross site scripting | Tampering | High | Not Started | High Signal (50) | api/app.py, api/payments.py, docker-compose.yml | Encode output for its context (HTML, attribute, JS, URL), validate input, and deploy a strict Content Security Policy. |
-| 61 | Gateway may be subject to elevation of privilege using remote code execution | Elevation Of Privilege | High | Not Started | High Signal (50) | api/app.py, api/payments.py, docker-compose.yml | Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege. |
-| 63 | Spoofing the Auth0 external entity | Spoofing | High | Not Started | High Signal (50) | api/auth.py, web/src/api.ts, api/app.py | Require Auth0 to authenticate (strong passwords plus MFA for people; client certificates, signed tokens or API keys with rotation for systems). |
-| 68 | Billing API may be subject to elevation of privilege using remote code execution | Elevation Of Privilege | High | Not Started | High Signal (50) | api/auth.py, web/src/api.ts, api/app.py | Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege. |
-| 82 | Authorization bypass | Information Disclosure | High | Not Started | High Signal (50) | api/audit.py, api/app.py, api/auth.py | Check authorization server-side on every request, deny by default, and add tests for every role and resource combination. |
-| 85 | Authorization bypass | Information Disclosure | High | Not Started | High Signal (50) | api/app.py, api/auth.py, docker-compose.yml | Check authorization server-side on every request, deny by default, and add tests for every role and resource combination. |
-| 97 | Stored XSS via invoice memo rendered as HTML | Tampering | High | Not Started | High Signal (50) | web/src/api.ts, docker-compose.yml, web/src/InvoiceView.tsx | Render memo as text, or sanitize with DOMPurify before insertion; add a strict CSP. |
+### 1. Spoofing the Billing SPA process
+
+- **Evidence:** web/src/api.ts, web/src/InvoiceView.tsx
+- Spoofing · High priority · Not Started · High Signal (50)
+- From Customer to Billing SPA via Browser interactions
+- **Mitigation:** Authenticate the destination, for example with TLS server certificates validated against a trusted root, certificate pinning or mutual authentication.
+
+### 2. Spoofing the Customer external entity
+
+- **Evidence:** web/src/api.ts, web/src/InvoiceView.tsx
+- Spoofing · High priority · Not Started · High Signal (50)
+- From Customer to Billing SPA via Browser interactions
+- **Mitigation:** Require Customer to authenticate (strong passwords plus MFA for people; client certificates, signed tokens or API keys with rotation for systems).
+
+### 3. Potential lack of input validation for Billing SPA
+
+- **Evidence:** web/src/api.ts, web/src/InvoiceView.tsx
+- Tampering · High priority · Not Started · High Signal (50)
+- From Customer to Billing SPA via Browser interactions
+- **Mitigation:** Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match.
+
+### 5. Data flow sniffing
+
+- **Evidence:** web/src/api.ts, web/src/InvoiceView.tsx
+- Information Disclosure · High priority · Not Started · High Signal (50)
+- From Customer to Billing SPA via Browser interactions
+- **Mitigation:** Encrypt the channel (TLS 1.2+, IPsec) and do not send sensitive data that the receiver does not need.
+
+### 9. Billing SPA may be subject to elevation of privilege using remote code execution
+
+- **Evidence:** web/src/api.ts, web/src/InvoiceView.tsx
+- Elevation Of Privilege · High priority · Not Started · High Signal (50)
+- From Customer to Billing SPA via Browser interactions
+- **Mitigation:** Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.
+
+### 14. Weakness in SSO authorization
+
+- **Evidence:** web/src/api.ts, web/src/InvoiceView.tsx, api/auth.py
+- Elevation Of Privilege · High priority · Not Started · High Signal (50)
+- From Billing SPA to Auth0 via Login and token requests
+- **Mitigation:** Validate token signature, issuer, audience and expiry; use exact redirect URIs; use PKCE and state; and grant only the scopes each client needs.
+
+### 15. Spoofing the Billing SPA process
+
+- **Evidence:** web/src/api.ts, web/src/InvoiceView.tsx, docker-compose.yml
+- Spoofing · High priority · Not Started · High Signal (50)
+- From Billing SPA to Gateway via API requests (Bearer JWT)
+- **Mitigation:** Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Gateway.
+
+### 22. Gateway may be subject to elevation of privilege using remote code execution
+
+- **Evidence:** web/src/api.ts, web/src/InvoiceView.tsx, docker-compose.yml
+- Elevation Of Privilege · High priority · Not Started · High Signal (50)
+- From Billing SPA to Gateway via API requests (Bearer JWT)
+- **Mitigation:** Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.
+
+### 24. Spoofing the Gateway process
+
+- **Evidence:** web/src/api.ts, docker-compose.yml, web/src/InvoiceView.tsx
+- Spoofing · High priority · Not Started · High Signal (50)
+- From Gateway to Billing SPA via API responses
+- **Mitigation:** Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Billing SPA.
+
+### 31. Billing SPA may be subject to elevation of privilege using remote code execution
+
+- **Evidence:** web/src/api.ts, docker-compose.yml, web/src/InvoiceView.tsx
+- Elevation Of Privilege · High priority · Not Started · High Signal (50)
+- From Gateway to Billing SPA via API responses
+- **Mitigation:** Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.
+
+### 33. Spoofing the Gateway process
+
+- **Evidence:** docker-compose.yml, api/app.py, api/auth.py
+- Spoofing · High priority · Not Started · High Signal (50)
+- From Gateway to Billing API via Proxied API requests
+- **Mitigation:** Authenticate the calling process with a standard mechanism such as mutual TLS, signed tokens or OS-level service identities, and verify that identity on Billing API.
+
+### 35. Potential lack of input validation for Billing API
+
+- **Evidence:** docker-compose.yml, api/app.py, api/auth.py
+- Tampering · High priority · Not Started · High Signal (50)
+- From Gateway to Billing API via Proxied API requests
+- **Mitigation:** Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match.
+
+### 42. Billing API may be subject to elevation of privilege using remote code execution
+
+- **Evidence:** docker-compose.yml, api/app.py, api/auth.py
+- Elevation Of Privilege · High priority · Not Started · High Signal (50)
+- From Gateway to Billing API via Proxied API requests
+- **Mitigation:** Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.
+
+### 44. Spoofing the Gateway process
+
+- **Evidence:** api/app.py, api/auth.py, docker-compose.yml
+- Spoofing · High priority · Not Started · High Signal (50)
+- From Billing API to Gateway via Proxied API responses
+- **Mitigation:** Authenticate the destination, for example with TLS server certificates validated against a trusted root, certificate pinning or mutual authentication.
+
+### 45. Potential lack of input validation for Gateway
+
+- **Evidence:** api/app.py, api/auth.py, docker-compose.yml
+- Tampering · High priority · Not Started · High Signal (50)
+- From Billing API to Gateway via Proxied API responses
+- **Mitigation:** Validate all input against an allow-list (type, length, format, range) at the boundary and reject anything that does not match.
+
+### 46. Cross site scripting
+
+- **Evidence:** api/app.py, api/auth.py, docker-compose.yml
+- Tampering · High priority · Not Started · High Signal (50)
+- From Billing API to Gateway via Proxied API responses
+- **Mitigation:** Encode output for its context (HTML, attribute, JS, URL), validate input, and deploy a strict Content Security Policy.
+
+### 48. Data flow sniffing
+
+- **Evidence:** api/app.py, api/auth.py, docker-compose.yml
+- Information Disclosure · High priority · Not Started · High Signal (50)
+- From Billing API to Gateway via Proxied API responses
+- **Mitigation:** Encrypt the channel (TLS 1.2+, IPsec) and do not send sensitive data that the receiver does not need.
+
+### 53. Gateway may be subject to elevation of privilege using remote code execution
+
+- **Evidence:** api/app.py, api/auth.py, docker-compose.yml
+- Elevation Of Privilege · High priority · Not Started · High Signal (50)
+- From Billing API to Gateway via Proxied API responses
+- **Mitigation:** Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.
+
+### 56. Cross site scripting
+
+- **Evidence:** api/app.py, api/payments.py, docker-compose.yml
+- Tampering · High priority · Not Started · High Signal (50)
+- From Stripe to Gateway via Payment webhooks
+- **Mitigation:** Encode output for its context (HTML, attribute, JS, URL), validate input, and deploy a strict Content Security Policy.
+
+### 61. Gateway may be subject to elevation of privilege using remote code execution
+
+- **Evidence:** api/app.py, api/payments.py, docker-compose.yml
+- Elevation Of Privilege · High priority · Not Started · High Signal (50)
+- From Stripe to Gateway via Payment webhooks
+- **Mitigation:** Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.
+
+### 63. Spoofing the Auth0 external entity
+
+- **Evidence:** api/auth.py, web/src/api.ts, api/app.py
+- Spoofing · High priority · Not Started · High Signal (50)
+- From Auth0 to Billing API via JWKS fetch
+- **Mitigation:** Require Auth0 to authenticate (strong passwords plus MFA for people; client certificates, signed tokens or API keys with rotation for systems).
+
+### 68. Billing API may be subject to elevation of privilege using remote code execution
+
+- **Evidence:** api/auth.py, web/src/api.ts, api/app.py
+- Elevation Of Privilege · High priority · Not Started · High Signal (50)
+- From Auth0 to Billing API via JWKS fetch
+- **Mitigation:** Remove dangerous sinks (eval, shell, unsafe deserialization), validate input, sandbox the process and run it with least privilege.
+
+### 82. Authorization bypass
+
+- **Evidence:** api/audit.py, api/app.py, api/auth.py
+- Information Disclosure · High priority · Not Started · High Signal (50)
+- From Billing API to Audit log via Audit events
+- **Mitigation:** Check authorization server-side on every request, deny by default, and add tests for every role and resource combination.
+
+### 85. Authorization bypass
+
+- **Evidence:** api/app.py, api/auth.py, docker-compose.yml
+- Information Disclosure · High priority · Not Started · High Signal (50)
+- From Billing API to Job queue via Receipt jobs
+- **Mitigation:** Check authorization server-side on every request, deny by default, and add tests for every role and resource combination.
+
+### 97. Stored XSS via invoice memo rendered as HTML
+
+- **Evidence:** web/src/api.ts, docker-compose.yml, web/src/InvoiceView.tsx
+- Tampering · High priority · Not Started · High Signal (50)
+- From Gateway to Billing SPA via API responses
+- **Mitigation:** Render memo as text, or sanitize with DOMPurify before insertion; add a strict CSP.
 
 ## Full threat register
 
