@@ -86,6 +86,11 @@ class Cdp {
 
 async function main() {
   const chrome = findChrome();
+  if (typeof globalThis.WebSocket !== 'function') {
+    // Global WebSocket is built in from Node 22 (needed to talk to Chrome over CDP).
+    console.log(`ui-check: this Node.js (${process.version}) has no global WebSocket; use Node 22+ to run the browser check. Skipping.`);
+    process.exit(REQUIRE ? 1 : 0);
+  }
   if (!chrome) {
     console.log('ui-check: no Chrome/Chromium found (set CHROME_PATH); skipping.');
     process.exit(REQUIRE ? 1 : 0);
