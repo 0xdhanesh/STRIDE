@@ -1,7 +1,10 @@
 // Palette, inspector and drawer (threat list, threat editor, messages, notes).
 
 import {
+  FLOW_PALETTE,
   GENERIC,
+  entityColor,
+  flowColor,
   SIGNAL_LABELS,
   THREAT_STATES,
   THREAT_STATE_LABELS,
@@ -15,6 +18,7 @@ import {
   findThreat,
   suppressMessage,
   threatsForElement,
+  updateElement,
   updateThreat,
 } from '../core/index.js';
 import { clear, confirmDialog, field, h, icon, select, textInput, toast } from './dom.js';
@@ -134,14 +138,33 @@ export class Inspector {
     box.append(
       h('h2', null, `${sel.length} elements selected`),
       h('p', { class: 'sub' }, 'Drag to move together. Alt-drag duplicates.'),
+      h(
+        'div',
+        { class: 'row' },
+        h('button', { class: 'btn outline small', type: 'button', title: 'Group (Ctrl/⌘+G)', onClick: () => this.app.canvas.groupSelection() }, 'Group'),
+        h('button', { class: 'btn outline small', type: 'button', title: 'Ungroup (Ctrl/⌘+Shift+G)', onClick: () => this.app.canvas.ungroupSelection() }, 'Ungroup'),
+      ),
       h('button', { class: 'btn outline danger', type: 'button', onClick: () => this.app.canvas.deleteSelection() }, icon('trash', 16), 'Delete selected'),
     );
+  }
+
+  /** Colour picker row: swatches, a custom colour input and a reset. */
+  colorField(label, current, isCustom, apply, hint) {
+    const swatches = FLOW_PALETTE.map((c) =>
+      h('button', { class: 'swatch', type: 'button', title: c, 'aria-label': `${label} ${c}`, 'aria-pressed': String(current.toLowerCase() === c), style: { background: c }, onClick: () => apply(c) }),
+    );
+    const input = h('input', { type: 'color', class: 'swatch-input', value: current, 'aria-label': `${label} (custom)`, onChange: (e) => apply(e.target.value) });
+    const reset = h('button', { class: 'btn outline small', type: 'button', disabled: !isCustom || undefined, onClick: () => apply('') }, 'Reset');
+    const f = field(label, h('div', { class: 'swatches' }, swatches, input, reset));
+    if (hint) f.append(h('p', { class: 'small muted' }, hint));
+    return f;
   }
 
   renderElement(box, el) {
     const { store } = this;
     const kb = store.kb;
     const def = kb.element(el.typeId);
+    const { diagram } = store;
     const commit = (fn) => {
       try {
         store.commit(fn);
@@ -151,6 +174,14 @@ export class Inspector {
     };
     box.append(h('h2', null, el.name || '(unnamed)'), h('p', { class: 'sub' }, `${FAMILY_LABEL[el.generic] || ''} · ${def?.name || el.typeId}`));
     box.append(field('Name', textInput(el.name, (v) => commit(() => (el.name = v)), { 'aria-label': 'Name' })));
+    if (el.generic === GENERIC.FLOW) {
+      box.append(this.colorField('Line colour', flowColor(diagram, el) || '#1e1e1e', !!el.color, (v) => commit((m) => updateElement(m, el.id, { color: v })), 'Defaults to the colour of the source entity.'));
+    } else if (el.w !== undefined && el.generic !== GENERIC.BOX_BOUNDARY && el.generic !== GENERIC.ANNOTATION) {
+      box.append(this.colorField('Egress colour', entityColor(diagram, el), !!el.color, (v) => commit((m) => updateElement(m, el.id, { color: v })), 'Colour of every flow leaving this entity (a flow can override it).'));
+    }
+    if (el.groupId) {
+      box.append(h('div', { class: 'row' }, h('span', { class: 'small muted' }, 'Part of a group'), h('button', { class: 'btn outline small', type: 'button', onClick: () => this.app.canvas.ungroupSelection() }, 'Ungroup')));
+    }
     const types = kb.typesFor(el.generic);
     if (types.length > 1) {
       box.append(

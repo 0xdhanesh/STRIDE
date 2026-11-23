@@ -5,6 +5,7 @@ import { GENERIC, GENERIC_IDS, REPRESENTATION, kbFor, normalizeTemplate } from '
 import { center, controlFromBend, flatten, perimeterPoint, rectOf, rectsOverlap } from './geometry.js';
 import { clone, isSafeKey, nowIso, safeStringMap, uid } from './util.js';
 import { annotateThreats } from './enrich/enrichThreat.js';
+import { computeRoutes, normalizeColor } from './route.js';
 
 export const MODEL_FORMAT = 'stride-model';
 export const MODEL_VERSION = 1;
@@ -178,11 +179,33 @@ function shapeById(diagram, id) {
   return id ? diagram.elements.find((e) => e.id === id && e.w !== undefined) : undefined;
 }
 
+const ROUTE_CACHE = new WeakMap();
+
+/** Routes for all bound flows of a diagram, recomputed only when geometry changes. */
+function routesFor(diagram) {
+  const sig = diagram.elements
+    .map((e) => (e.w !== undefined ? `${e.id}${e.generic}${e.x},${e.y},${e.w},${e.h}` : e.generic === GENERIC.FLOW ? `${e.id}${e.source}>${e.target}${e.bend}${(e.name || '').length}` : ''))
+    .join('|');
+  const hit = ROUTE_CACHE.get(diagram);
+  if (hit && hit.sig === sig) return hit.routes;
+  const routes = computeRoutes(diagram);
+  ROUTE_CACHE.set(diagram, { sig, routes });
+  return routes;
+}
+
 /**
  * Resolve the drawn curve for a flow or line boundary.
  * Bound flow endpoints sit on the perimeter of their shapes, aimed at the curve's control point.
  */
 export function lineGeometry(model, diagram, el) {
+  if (el.generic === GENERIC.FLOW && el.source && el.target) {
+    const r = routesFor(diagram).get(el.id);
+    if (r) {
+      const bend = Math.abs(el.bend || 0) > 1 ? el.bend : r.bend;
+      const c = controlFromBend(r.p0, r.p1, bend);
+      return { p0: r.p0, c, p1: r.p1, points: flatten(r.p0, c, r.p1), labelT: r.labelT };
+    }
+  }
   const src = shapeById(diagram, el.source);
   const tgt = shapeById(diagram, el.target);
   let a = src ? center(rectOf(src)) : { x: el.x0, y: el.y0 };
@@ -231,8 +254,8 @@ export function findFreeSpot(model, diagram, w, h) {
   const shapes = diagram.elements.filter((e) => e.w !== undefined && genericOfElement(model, e) !== GENERIC.BOX_BOUNDARY);
   for (let row = 0; row < 200; row++) {
     for (let col = 0; col < 5; col++) {
-      const r = { x: 80 + col * 240, y: 80 + row * 180, w, h };
-      const padded = { x: r.x - 30, y: r.y - 30, w: r.w + 60, h: r.h + 60 };
+      const r = { x: 80 + col * 320, y: 80 + row * 230, w, h };
+      const padded = { x: r.x - 50, y: r.y - 50, w: r.w + 100, h: r.h + 100 };
       if (!shapes.some((s) => rectsOverlap(padded, rectOf(s)))) return { x: r.x, y: r.y };
     }
   }
@@ -299,6 +322,8 @@ export function addElement(model, diagramRef, spec = {}) {
   };
   const evidence = normalizeEvidence(spec.evidence);
   if (evidence.length) el.evidence = evidence;
+  if (normalizeColor(spec.color)) el.color = normalizeColor(spec.color);
+  if (spec.groupId && isSafeKey(spec.groupId)) el.groupId = spec.groupId;
   if (isShapeGeneric(generic)) {
     const size = DEFAULT_SIZE[generic];
     el.w = Math.max(20, num(spec.w, size.w));
@@ -323,13 +348,7 @@ export function addElement(model, diagramRef, spec = {}) {
     el.x1 = num(spec.x1, 300);
     el.y1 = num(spec.y1, 100);
     el.bend = num(spec.bend, 0);
-    if (el.source && el.target && spec.bend === undefined) {
-      // Offset reverse/parallel flows so they do not overlap.
-      const parallel = diagram.elements.filter(
-        (e) => e.generic === GENERIC.FLOW && ((e.source === el.source && e.target === el.target) || (e.source === el.target && e.target === el.source)),
-      ).length;
-      if (parallel) el.bend = (parallel % 2 ? 1 : -1) * 40 * Math.ceil(parallel / 2);
-    }
+    // Parallel and reverse flows are separated automatically by per-flow ports (see route.js).
   }
   diagram.elements.push(el);
   if (spec.props) setProperties(model, el, spec.props);
@@ -368,6 +387,12 @@ export function updateElement(model, ref, patch = {}) {
   if (patch.outOfScope !== undefined) el.outOfScope = !!patch.outOfScope;
   if (patch.outOfScopeReason !== undefined) el.outOfScopeReason = String(patch.outOfScopeReason);
   if (patch.order !== undefined) el.order = num(patch.order, el.order);
+  if (patch.color !== undefined) {
+    const c = normalizeColor(patch.color);
+    if (c) el.color = c;
+    else if (patch.color === '' || patch.color === null) delete el.color;
+    else throw new ModelError(`Invalid color '${patch.color}'. Use a hex value like #1c7ed6, or '' to reset`);
+  }
   if (patch.evidence !== undefined) {
     const ev = normalizeEvidence(patch.evidence);
     if (ev.length) el.evidence = ev;
@@ -480,6 +505,43 @@ export function moveElements(model, ids, dx, dy) {
     }
   }
   touch(model);
+}
+
+// ---------------------------------------------------------------- groups
+
+/** Ids of the given elements plus every other member of their groups. */
+export function expandGroups(diagram, ids) {
+  const out = new Set(ids);
+  const groups = new Set();
+  for (const e of diagram.elements) if (out.has(e.id) && e.groupId) groups.add(e.groupId);
+  if (groups.size) for (const e of diagram.elements) if (e.groupId && groups.has(e.groupId)) out.add(e.id);
+  return out;
+}
+
+/** Group elements (Ctrl+G). Members of groups touched by the selection join the new group. Returns the group id. */
+export function groupElements(model, diagramRef, ids) {
+  const diagram = requireDiagram(model, diagramRef);
+  const members = expandGroups(diagram, ids);
+  if (members.size < 2) throw new ModelError('Select at least two elements to group');
+  const groupId = uid('grp');
+  for (const e of diagram.elements) if (members.has(e.id)) e.groupId = groupId;
+  touch(model);
+  return groupId;
+}
+
+/** Ungroup (Ctrl+Shift+G): dissolve every group that the given elements belong to. */
+export function ungroupElements(model, diagramRef, ids) {
+  const diagram = requireDiagram(model, diagramRef);
+  const members = expandGroups(diagram, ids);
+  let n = 0;
+  for (const e of diagram.elements) {
+    if (members.has(e.id) && e.groupId) {
+      delete e.groupId;
+      n++;
+    }
+  }
+  if (n) touch(model);
+  return n;
 }
 
 // ---------------------------------------------------------------- threats & notes
@@ -622,6 +684,8 @@ function sanitizeElement(raw, kb) {
   };
   const evidence = normalizeEvidence(raw.evidence);
   if (evidence.length) el.evidence = evidence;
+  if (normalizeColor(raw.color)) el.color = normalizeColor(raw.color);
+  if (isSafeKey(raw.groupId)) el.groupId = raw.groupId;
   if (isShapeGeneric(generic)) {
     const size = DEFAULT_SIZE[generic];
     el.x = num(raw.x, 0);
