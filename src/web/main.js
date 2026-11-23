@@ -45,6 +45,16 @@ function setFocus(on) {
     ui.canvas.svg.focus({ preventScroll: true });
   });
 }
+function applyPaletteCollapsed() {
+  app.classList.toggle('palette-collapsed', !!store.prefs.paletteCollapsed);
+  requestAnimationFrame(() => ui.canvas?.requestRender());
+}
+function togglePalette() {
+  store.prefs.paletteCollapsed = !store.prefs.paletteCollapsed;
+  store.savePrefs();
+  applyPaletteCollapsed();
+  renderTopbar();
+}
 const toggleFocus = () => setFocus(!app.classList.contains('focus'));
 
 const ui = {
@@ -54,6 +64,7 @@ ui.canvas = new Canvas(store, stage);
 ui.palette = new Palette(store, palette);
 ui.inspector = new Inspector(store, inspector, ui);
 ui.drawer = new Drawer(store, drawer, ui);
+stage.append(h('div', { class: 'focus-hint', 'aria-hidden': 'true' }, 'Press ', h('kbd', null, 'H'), ' for hand mode'));
 stage.append(h('button', { class: 'btn focus-exit', type: 'button', title: `Exit focus mode (Esc or ${MOD}.)`, onClick: () => setFocus(false) }, icon('x', 16), h('span', null, 'Exit focus')));
 
 // ------------------------------------------------------------ theme
@@ -63,6 +74,7 @@ function applyTheme() {
   else document.documentElement.setAttribute('data-theme', t);
 }
 applyTheme();
+applyPaletteCollapsed();
 
 // ------------------------------------------------------------ menus
 let openMenu = null;
@@ -242,7 +254,8 @@ function shortcutsDialog() {
     ['Wheel, ⇧Wheel', 'Pan'],
     [`${MOD}Wheel, +, −`, 'Zoom'],
     ['⇧1', 'Zoom to fit'],
-    [`${MOD}G, ${MOD}⇧G`, 'Group, ungroup selection'],
+    ['G, ⇧G (or ' + MOD + 'G, ' + MOD + '⇧G)', 'Group, ungroup selection'],
+    ['/', 'Search stencils (floating box when the stencil pane is hidden)'],
     [`${MOD}.`, 'Focus mode: hide every menu (Esc exits)'],
     [`${MOD}S`, 'Save'],
   ];
@@ -333,6 +346,7 @@ function renderTopbar() {
   ], 'Settings');
   clear(topbar).append(
     h('button', { class: 'btn show-sm', type: 'button', 'aria-label': 'Stencils', onClick: () => app.classList.toggle('show-palette') }, icon('menu')),
+    h('button', { class: 'btn hide-sm', type: 'button', title: store.prefs.paletteCollapsed ? 'Show stencils' : 'Hide stencils', 'aria-label': 'Toggle stencils', 'aria-pressed': String(!store.prefs.paletteCollapsed), onClick: togglePalette }, icon('menu')),
     h('div', { class: 'brand' }, h('img', { src: 'assets/logo-64.png', alt: '', width: 28, height: 28 }), h('span', { class: 'hide-sm' }, 'STRIDE'), h('button', { class: 'btn model-name', type: 'button', title: 'Rename model', onClick: renameModel }, model.meta.name + (store.dirty && store.fileName ? ' •' : ''))),
     fileMenu,
     h('div', { class: 'sep hide-sm' }),
@@ -343,6 +357,7 @@ function renderTopbar() {
     h('button', { class: 'btn', type: 'button', title: `Undo (${MOD}Z)`, 'aria-label': 'Undo', disabled: !store.undoStack.length || undefined, onClick: () => store.undo() }, icon('undo')),
     h('button', { class: 'btn', type: 'button', title: `Redo (${MOD}⇧Z)`, 'aria-label': 'Redo', disabled: !store.redoStack.length || undefined, onClick: () => store.redo() }, icon('redo')),
     reportMenu,
+    h('button', { class: 'btn hide-sm', type: 'button', title: 'Show/hide threat panel', 'aria-label': 'Toggle threat panel', onClick: () => ui.drawer.toggle() }, icon('chevron')),
     settingsMenu,
     h('button', { class: 'btn show-sm', type: 'button', 'aria-label': 'Properties', onClick: () => app.classList.toggle('show-inspector') }, icon('panel')),
   );

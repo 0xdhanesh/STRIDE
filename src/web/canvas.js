@@ -126,6 +126,8 @@ export class Canvas {
     this.svg.addEventListener('pointerup', (e) => this.onUp(e));
     this.svg.addEventListener('pointercancel', (e) => this.onUp(e, true));
     this.svg.addEventListener('dblclick', (e) => this.onDblClick(e));
+    this.svg.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('blur', () => this.drag && this.onUp({ pointerId: -1 }, false));
     this.svg.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
     this.svg.addEventListener('dragover', (e) => e.preventDefault());
     this.svg.addEventListener('drop', (e) => this.onDrop(e));
@@ -389,6 +391,9 @@ export class Canvas {
   onMove(e) {
     const d = this.drag;
     if (!d) return;
+    // A mouse-up we never saw (context menu, Ctrl-click on macOS, focus loss) must not leave
+    // the selection stuck to the pointer.
+    if (e.buttons === 0 && e.pointerType === 'mouse' && d.kind !== 'pan') return this.onUp(e);
     const p = this.toWorld(e);
     const { model, diagram } = this.store;
     switch (d.kind) {
@@ -691,6 +696,7 @@ export class Canvas {
   }
 
   groupSelection() {
+    if (this.drag) this.onUp({ pointerId: -1 });
     const ids = [...this.store.selection];
     if (ids.length < 2) return toast('Select at least two elements to group.');
     let gid;
@@ -704,6 +710,7 @@ export class Canvas {
     return gid;
   }
   ungroupSelection() {
+    if (this.drag) this.onUp({ pointerId: -1 });
     const ids = [...this.store.selection];
     let n = 0;
     this.store.commit((m) => (n = ungroupElements(m, this.store.diagram.id, ids)));
@@ -775,6 +782,17 @@ export class Canvas {
       return;
     }
     if (mod) return;
+    if (k === '/') {
+      e.preventDefault();
+      this.store.emit('quicksearch');
+      return;
+    }
+    if (k === 'g' && !e.altKey) {
+      e.preventDefault();
+      if (e.shiftKey) this.ungroupSelection();
+      else this.groupSelection();
+      return;
+    }
     if (k === 'delete' || k === 'backspace') {
       e.preventDefault();
       this.deleteSelection();
