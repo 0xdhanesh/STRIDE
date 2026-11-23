@@ -10,15 +10,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './static-server.mjs';
+import { learningPages } from './docs-learning.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const spec = (name) => fs.readFileSync(path.join(ROOT, 'how-to-max/specs', `${name}.json`), 'utf8');
+const spec = (dir, name) => fs.readFileSync(path.join(ROOT, dir, 'specs', `${name}.json`), 'utf8');
 
 const NAV = [
   ['../index.html', 'Open the app'],
+  ['../learn/index.html', 'Learn'],
   ['../how-to/index.html', 'How to use it'],
   ['../what-is/index.html', 'What is STRIDE'],
   ['../how-to-max/index.html', 'Worked examples'],
+  ['../practice/index.html', 'Practice'],
+  ['../think/index.html', 'Think like an attacker'],
 ];
 
 function page({ slug, title, lead, toc, body }) {
@@ -78,7 +82,7 @@ const howTo = () => {
 <li><b>Look at the picture.</b> Boxes and ovals are parts of the system, arrows are information moving between them, red dashed lines are trust boundaries.</li>
 <li><b>Open the <i>Analyze</i> view</b> (top right). The threat list appears at the bottom, best findings first.</li>
 <li><b>Open a threat.</b> Read what could go wrong, where, and the suggested mitigation. Set its state and add a justification.</li>
-<li><b>Start your own</b> with <i>File → New model</i>, then follow “Drawing a diagram” below.</li>
+<li><b>Start your own</b> with <i>File → New model</i>, then follow “Drawing a diagram” below. New to threat modeling? Follow the <a href="../learn/index.html">learning path</a>.</li>
 </ol>
 ${note('tip', 'Everything runs in your browser. Nothing is uploaded. Your work is autosaved in this browser; use <i>File → Save</i> to keep a file.')}
 </section>
@@ -342,7 +346,7 @@ ${table(
     ['High signal', 'A threat backed by concrete evidence such as a dangerous code path or sensitive data, as opposed to a generic architectural prompt.'],
   ],
 )}
-<p>Ready to try it? Read <a href="../how-to/index.html">How to use the tool</a>, or open the <a href="../index.html">app</a> and choose <i>File → Open example model</i>.</p>
+<p>Ready to try it? Follow the <a href="../learn/index.html">learning path</a>, read <a href="../how-to/index.html">How to use the tool</a>, or open the <a href="../index.html">app</a> and choose <i>File → Open example model</i>.</p>
 </section>`;
   return page({ slug: 'what-is', title: 'What is STRIDE, and why it matters', lead: 'An introduction for developers, IT and operations, security engineers and managers: what STRIDE is, what a threat model is, why teams do it, and what it means for your role.', toc, body });
 };
@@ -351,7 +355,7 @@ ${table(
 const rows = (list) => list.map(([a, b, c]) => [esc(a), esc(b), c ? esc(c) : '']);
 
 function scenario({ id, title, when, goal, boundaries, elements, flows, look, mistakes, name, steps }) {
-  const s = spec(name);
+  const s = spec('how-to-max', name);
   return `<section id="${id}"><h2>${esc(title)}</h2>
 <p><b>Use this when:</b> ${when}</p>
 <p>${goal}</p>
@@ -452,7 +456,7 @@ const howToMax = () => {
 };
 
 // ====================================================================== write
-const OUT = { 'how-to/index.html': howTo, 'what-is/index.html': whatIs, 'how-to-max/index.html': howToMax };
+const OUT = { 'how-to/index.html': howTo, 'what-is/index.html': whatIs, 'how-to-max/index.html': howToMax, ...learningPages({ page, table, note, kbd, esc, spec }) };
 
 export function buildDocs({ check = false } = {}) {
   const stale = [];

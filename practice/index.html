@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Practice scenarios · STRIDE Threat Modeler</title>
+<meta name="description" content="Four small, realistic features that systems often get wrong. Draw each one, find the threats, then compare with a model answer and a runnable spec.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body>
+<header class="top"><a class="brand" href="../index.html"><img src="../assets/logo-64.png" alt="" width="28" height="28"><span>STRIDE</span></a><nav aria-label="Documentation"><a href="../index.html">Open the app</a><a href="../learn/index.html">Learn</a><a href="../how-to/index.html">How to use it</a><a href="../what-is/index.html">What is STRIDE</a><a href="../how-to-max/index.html">Worked examples</a><a href="../practice/index.html" aria-current="page">Practice</a><a href="../think/index.html">Think like an attacker</a></nav></header>
+<div class="wrap">
+<aside class="toc" aria-label="On this page"><b>On this page</b><ul><li><a href="#how">How to practice</a></li><li><a href="#reset">1. Password reset</a></li><li><a href="#webhook">2. Payment webhook receiver</a></li><li><a href="#mobile">3. Fitness mobile app</a></li><li><a href="#share">4. File sharing by link</a></li><li><a href="#after">After the answer</a></li></ul></aside>
+<main>
+<h1>Practice scenarios</h1>
+<p class="lead">Four small, realistic features that systems often get wrong. Draw each one, find the threats, then compare with a model answer and a runnable spec.</p>
+<section id="how"><h2>How to practice</h2>
+<p>Each scenario is a small feature that real systems get wrong. Spend <b>20 to 30 minutes</b> on each, <i>before</i> opening the model answer:</p>
+<ol class="steps"><li>Draw the diagram in the app (<i>File → New model</i>): elements, one arrow per direction, boundaries.</li><li>Read the generated threats, then write down at least <b>six threats of your own</b> covering as many STRIDE letters as you can. Add the ones the tool missed with <i>Add threat</i>.</li><li>Pick the two that worry you most and say how you would fix them, specifically.</li><li>Only now open the model answer. Score yourself: how many did you find? Which did you miss, and why? Add the missing ones to your model.</li></ol>
+<div class="note tip">The answers are written as one reasonable model, not the only one. If you found a good threat that is not listed, that is a win. Order is not important; reasons are.</div>
+</section><section id="reset"><h2>1. Password reset</h2>
+<p>A user who forgot their password asks for a reset. The service creates a one-time token, stores a hash of it, and emails a link through an email provider. The user clicks the link and sets a new password.</p>
+<h3>Your tasks</h3>
+<ol class="steps"><li>Draw the diagram. Which elements are outside your control?</li><li>Where is the weakest link in the chain: which step relies on something you do not own?</li><li>Write threats for at least four STRIDE letters.</li><li>What should be logged, and what must <i>never</i> be logged?</li></ol>
+<details class="answer"><summary>Model answer (try it first!)</summary>
+<h4>Elements, flows and boundaries</h4>
+<p><b>Trust boundaries:</b> <i>Our systems</i> around the reset page, account service and accounts database. The user and the email provider are outside. Email is an <b>untrusted channel</b> that you do not control.</p>
+<div class="tw"><table><thead><tr><th>Element</th><th>Type</th><th>Why</th></tr></thead><tbody><tr><td>User</td><td>Human User (external)</td><td>Anyone can request a reset for any address</td></tr><tr><td>Reset page</td><td>Web Application</td><td>Public entry point</td></tr><tr><td>Account service</td><td>Web Service</td><td>Creates and checks tokens</td></tr><tr><td>Accounts DB</td><td>SQL Database</td><td>Holds password hashes and token hashes</td></tr><tr><td>Email provider</td><td>External Web Service</td><td>Delivers the link; outside your control</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th>Flow</th><th>Carries</th></tr></thead><tbody><tr><td>User → Reset page</td><td>Reset request with email address; later the link click and new password</td></tr><tr><td>Reset page → Account service</td><td>Create reset token; token and new password</td></tr><tr><td>Account service → Accounts DB</td><td>Store token hash; update password hash</td></tr><tr><td>Account service → Email provider</td><td>Reset email with link</td></tr></tbody></table></div>
+<h4>Threats to find</h4>
+<div class="tw"><table><thead><tr><th>STRIDE</th><th>Where</th><th>What could go wrong</th><th>Fix</th></tr></thead><tbody><tr><td><b>S</b></td><td>Link and token</td><td>Attacker guesses or reuses a reset token and takes over the account</td><td>Long random single-use token, short expiry, stored only as a hash</td></tr><tr><td><b>S</b></td><td>Email channel</td><td>Attacker with access to the victim’s mailbox resets the password silently</td><td>Notify other channels, require extra verification for sensitive accounts, cool-down</td></tr><tr><td><b>T</b></td><td>Reset email with link</td><td>Link is built from the request’s Host header, so the email points to the attacker’s site</td><td>Build links from fixed configuration, never from request headers</td></tr><tr><td><b>I</b></td><td>Reset request</td><td>Different responses reveal which emails have accounts (enumeration)</td><td>Same message and timing whether or not the account exists</td></tr><tr><td><b>I</b></td><td>Link click</td><td>Token in the URL leaks through logs, browser history and Referer headers</td><td>Exchange the token at once, no-referrer policy, never log query strings</td></tr><tr><td><b>R</b></td><td>Whole flow</td><td>No record of who requested or used a reset, so abuse cannot be investigated</td><td>Audit events with time, address and result; alert on bursts</td></tr><tr><td><b>D</b></td><td>Reset request</td><td>Attacker floods one address with reset emails, or exhausts the email quota</td><td>Rate limits per account and per source, captcha after a few tries</td></tr><tr><td><b>E</b></td><td>Update password</td><td>Old sessions stay valid after reset, or reset bypasses multi-factor sign-in</td><td>Revoke sessions on reset; keep MFA requirements</td></tr></tbody></table></div>
+<h4>What learners usually miss</h4>
+<ul><li>That <b>email is not secure</b>. Anyone who can read the mailbox can use the link.</li><li>Tokens stored in <b>plaintext</b> in the database: a read-only leak becomes account takeover.</li><li>The <b>timing</b> side of enumeration, not only the message text.</li></ul>
+<p><b>Discussion:</b> Is “anyone with the user’s mailbox” inside or outside your threat model? Write down the decision either way.</p>
+<p>Build the reference model: <code>stride sync password-reset.model.json practice/specs/password-reset.json</code>, or download the spec and use <i>File → Open…</i> in the app.</p>
+<details><summary>Spec for this scenario (<a href="specs/password-reset.json" download>download password-reset.json</a>)</summary><pre><code>{
+  &quot;name&quot;: &quot;Password reset (practice 1)&quot;,
+  &quot;description&quot;: &quot;A user who forgot their password asks for a reset. The service creates a one-time token, stores a hash of it, and emails a link through an email provider. The user clicks the link and sets a new password.&quot;,
+  &quot;assumptions&quot;: &quot;Email is a separate, less trusted channel. Reset tokens are single use and expire.&quot;,
+  &quot;externalDependencies&quot;: &quot;Email provider&quot;,
+  &quot;zones&quot;: [
+    {
+      &quot;name&quot;: &quot;Our systems&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    }
+  ],
+  &quot;elements&quot;: [
+    {
+      &quot;name&quot;: &quot;User&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.User&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Reset page&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebApp&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Account service&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Accounts DB&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.SQL&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;,
+      &quot;custom&quot;: {
+        &quot;dataClass&quot;: &quot;credentials, tokens&quot;
+      }
+    },
+    {
+      &quot;name&quot;: &quot;Email provider&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.WebSvc&quot;
+    }
+  ],
+  &quot;flows&quot;: [
+    {
+      &quot;from&quot;: &quot;User&quot;,
+      &quot;to&quot;: &quot;Reset page&quot;,
+      &quot;name&quot;: &quot;Reset request with email address&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Reset page&quot;,
+      &quot;to&quot;: &quot;Account service&quot;,
+      &quot;name&quot;: &quot;Create reset token&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Account service&quot;,
+      &quot;to&quot;: &quot;Accounts DB&quot;,
+      &quot;name&quot;: &quot;Store token hash&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Account service&quot;,
+      &quot;to&quot;: &quot;Email provider&quot;,
+      &quot;name&quot;: &quot;Reset email with link&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;User&quot;,
+      &quot;to&quot;: &quot;Reset page&quot;,
+      &quot;name&quot;: &quot;Link click and new password&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Reset page&quot;,
+      &quot;to&quot;: &quot;Account service&quot;,
+      &quot;name&quot;: &quot;Token and new password&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Account service&quot;,
+      &quot;to&quot;: &quot;Accounts DB&quot;,
+      &quot;name&quot;: &quot;Update password hash&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    }
+  ]
+}
+</code></pre></details></details>
+</section><section id="webhook"><h2>2. Payment webhook receiver</h2>
+<p>A payment provider calls a public webhook endpoint when a payment succeeds or fails. The endpoint puts verified events on a queue; a worker reads them and updates order status in the orders database.</p>
+<h3>Your tasks</h3>
+<ol class="steps"><li>Draw it. Which element is exposed to the internet, and who can call it?</li><li>What would an attacker send to this endpoint, and what would they hope to achieve?</li><li>Find at least one threat for each of S, T, D and E.</li><li>What can go wrong <i>inside</i> the system, after the endpoint?</li></ol>
+<details class="answer"><summary>Model answer (try it first!)</summary>
+<h4>Elements, flows and boundaries</h4>
+<p><b>Trust boundaries:</b> <i>Our systems</i> around the endpoint, queue, worker and database. The provider is outside. The endpoint is the part of your system that faces the internet.</p>
+<div class="tw"><table><thead><tr><th>Element</th><th>Type</th><th>Why</th></tr></thead><tbody><tr><td>Payment provider</td><td>External Web Service</td><td>Sends events; you trust it only as far as the signature proves</td></tr><tr><td>Webhook endpoint</td><td>Web Service</td><td>Public, unauthenticated by session, authenticated by signature</td></tr><tr><td>Event queue</td><td>Cache (data store)</td><td>Holds events until processed</td></tr><tr><td>Order worker</td><td>Win32 Service</td><td>Applies events to orders</td></tr><tr><td>Orders DB</td><td>SQL Database</td><td>Order status</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th>Flow</th><th>Carries</th></tr></thead><tbody><tr><td>Payment provider → Webhook endpoint</td><td>Signed payment events</td></tr><tr><td>Webhook endpoint → Payment provider</td><td>Acknowledgement</td></tr><tr><td>Webhook endpoint → Event queue</td><td>Verified events</td></tr><tr><td>Event queue → Order worker</td><td>Events to process</td></tr><tr><td>Order worker → Orders DB</td><td>Order status updates</td></tr></tbody></table></div>
+<h4>Threats to find</h4>
+<div class="tw"><table><thead><tr><th>STRIDE</th><th>Where</th><th>What could go wrong</th><th>Fix</th></tr></thead><tbody><tr><td><b>S</b></td><td>Signed payment events</td><td>Anyone posts a fake “payment succeeded” and gets goods for free</td><td>Verify the signature over the raw body with the shared secret; reject anything unsigned</td></tr><tr><td><b>T</b></td><td>Signed payment events</td><td>A genuine old event is replayed (for example a refund or a success for another order)</td><td>Reject stale timestamps and de-duplicate by event id</td></tr><tr><td><b>T</b></td><td>Events to process</td><td>Fields are trusted without checking amount and order against your own records</td><td>Validate against the order, or re-fetch the event from the provider’s API</td></tr><tr><td><b>I</b></td><td>Acknowledgement</td><td>Verbose errors or logged full payloads expose personal data</td><td>Minimal responses, redact logs</td></tr><tr><td><b>D</b></td><td>Webhook endpoint</td><td>Flooding the endpoint, or one malformed “poison” event that crashes the worker on every retry</td><td>Rate limit, acknowledge fast and process later, dead-letter queue and retry limits</td></tr><tr><td><b>E</b></td><td>Order status updates</td><td>The worker’s database account can change everything, so a bug in event handling is a full compromise</td><td>Least-privilege account that can only update order status</td></tr><tr><td><b>R</b></td><td>Order status updates</td><td>You cannot tell which event caused which status change</td><td>Store the event id with every change; keep an append-only log</td></tr><tr><td><b>T</b></td><td>Event queue</td><td>Anything inside the network can inject events directly, skipping signature checks</td><td>Authenticate queue producers; restrict who can publish</td></tr></tbody></table></div>
+<h4>What learners usually miss</h4>
+<ul><li>The <b>queue is a data store</b> with its own attackers: verification at the edge does not protect it.</li><li><b>Acknowledge only after the event is safely stored</b>, or you lose events.</li><li><b>Secret rotation</b>: what happens when the signing secret has to change?</li></ul>
+<p><b>Discussion:</b> Should an unsigned request even reach your application code? Where is the earliest place to reject it?</p>
+<p>Build the reference model: <code>stride sync webhook-receiver.model.json practice/specs/webhook-receiver.json</code>, or download the spec and use <i>File → Open…</i> in the app.</p>
+<details><summary>Spec for this scenario (<a href="specs/webhook-receiver.json" download>download webhook-receiver.json</a>)</summary><pre><code>{
+  &quot;name&quot;: &quot;Payment webhook receiver (practice 2)&quot;,
+  &quot;description&quot;: &quot;A payment provider calls our webhook endpoint when a payment succeeds or fails. The endpoint puts verified events on a queue; a worker reads them and updates order status in the orders database.&quot;,
+  &quot;assumptions&quot;: &quot;The provider signs each event. The queue is only reachable from inside our network.&quot;,
+  &quot;externalDependencies&quot;: &quot;Payment provider&quot;,
+  &quot;zones&quot;: [
+    {
+      &quot;name&quot;: &quot;Our systems&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    }
+  ],
+  &quot;elements&quot;: [
+    {
+      &quot;name&quot;: &quot;Payment provider&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.WebSvc&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Webhook endpoint&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Event queue&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.Cache&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Order worker&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.Win32Service&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Orders DB&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.SQL&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;
+    }
+  ],
+  &quot;flows&quot;: [
+    {
+      &quot;from&quot;: &quot;Payment provider&quot;,
+      &quot;to&quot;: &quot;Webhook endpoint&quot;,
+      &quot;name&quot;: &quot;Signed payment events&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Webhook endpoint&quot;,
+      &quot;to&quot;: &quot;Payment provider&quot;,
+      &quot;name&quot;: &quot;Acknowledgement&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Webhook endpoint&quot;,
+      &quot;to&quot;: &quot;Event queue&quot;,
+      &quot;name&quot;: &quot;Verified events&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Event queue&quot;,
+      &quot;to&quot;: &quot;Order worker&quot;,
+      &quot;name&quot;: &quot;Events to process&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Order worker&quot;,
+      &quot;to&quot;: &quot;Orders DB&quot;,
+      &quot;name&quot;: &quot;Order status updates&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    }
+  ]
+}
+</code></pre></details></details>
+</section><section id="mobile"><h2>3. Fitness mobile app</h2>
+<p>A phone app records workouts, keeps a local cache and syncs with a cloud API through a gateway. The API stores activity data and asks a push service to send reminders to the phone.</p>
+<h3>Your tasks</h3>
+<ol class="steps"><li>Draw it. Which side of the main boundary do you control?</li><li>Assume the phone is lost, rooted, or running a modified copy of your app. What breaks?</li><li>Find the three most serious Information disclosure and Elevation of privilege threats.</li><li>Where is the push service a risk to you?</li></ol>
+<details class="answer"><summary>Model answer (try it first!)</summary>
+<h4>Elements, flows and boundaries</h4>
+<p><b>Trust boundaries:</b> <i>User device</i> (you do not control it: treat everything on it as attacker-readable and attacker-modifiable) and <i>Backend</i>. The push service is outside.</p>
+<div class="tw"><table><thead><tr><th>Element</th><th>Type</th><th>Why</th></tr></thead><tbody><tr><td>Phone user</td><td>Human User (external)</td><td>The legitimate user, or whoever holds the phone</td></tr><tr><td>Mobile app</td><td>Generic Process</td><td>Runs on the device: not trustworthy to enforce rules</td></tr><tr><td>Local cache</td><td>Device (data store)</td><td>Cached activity and tokens on the phone</td></tr><tr><td>API gateway</td><td>Web Server</td><td>Backend entry point</td></tr><tr><td>Fitness API</td><td>Web Service</td><td>Business logic and authorization</td></tr><tr><td>Activity DB</td><td>Non Relational Database</td><td>Health-related data</td></tr><tr><td>Push service</td><td>External Web Service</td><td>Delivers notifications through the phone vendor</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th>Flow</th><th>Carries</th></tr></thead><tbody><tr><td>Phone user ↔ Mobile app</td><td>Taps and sensor data</td></tr><tr><td>Mobile app ↔ Local cache</td><td>Cached activity and tokens</td></tr><tr><td>Mobile app ↔ API gateway</td><td>API calls with token; responses</td></tr><tr><td>API gateway → Fitness API</td><td>Forwarded calls</td></tr><tr><td>Fitness API → Activity DB</td><td>Reads and writes</td></tr><tr><td>Fitness API → Push service → Mobile app</td><td>Reminder requests and notifications</td></tr></tbody></table></div>
+<h4>Threats to find</h4>
+<div class="tw"><table><thead><tr><th>STRIDE</th><th>Where</th><th>What could go wrong</th><th>Fix</th></tr></thead><tbody><tr><td><b>S</b></td><td>API calls with token</td><td>A stolen or copied access token is used from another device</td><td>Short-lived tokens, rotating refresh tokens, revoke on logout or loss</td></tr><tr><td><b>T</b></td><td>API calls with token</td><td>A proxy changes the user id or activity id in a request</td><td>Server-side checks on every request; never trust values that came from the app</td></tr><tr><td><b>E</b></td><td>Forwarded calls</td><td>Changing an object id returns or edits another user’s data (broken object-level authorization)</td><td>Ownership check in the API on every object access, with tests</td></tr><tr><td><b>I</b></td><td>Local cache</td><td>Tokens and health data are readable on a lost, rooted or backed-up phone</td><td>OS secure storage, encrypt the local database, store the minimum, exclude from backups</td></tr><tr><td><b>I</b></td><td>API responses</td><td>The API returns more fields than the screen shows</td><td>Explicit response shapes, no entire-record returns</td></tr><tr><td><b>I</b></td><td>Push notifications</td><td>Sensitive details appear on the lock screen or pass through the push vendor</td><td>Send “you have an update”, fetch details after sign-in</td></tr><tr><td><b>D</b></td><td>API calls with token</td><td>Bulk sync or reminder abuse overloads the API or spams a user</td><td>Per-user and per-device rate limits, page-size caps</td></tr><tr><td><b>R</b></td><td>API calls with token</td><td>You cannot tell the user from a thief using a stolen phone</td><td>Device-bound sessions, audit trail with device id, user-visible session list with revoke</td></tr></tbody></table></div>
+<h4>What learners usually miss</h4>
+<ul><li><b>Secrets inside the app</b> (API keys, signing keys): they can be extracted from the package.</li><li><b>Old app versions</b> that are still allowed to call your API.</li><li>The <b>transport on hostile networks</b>: TLS everywhere, and a plan if you pin certificates.</li></ul>
+<p><b>Discussion:</b> The golden rule of this scenario: anything checked only in the app is not checked.</p>
+<p>Build the reference model: <code>stride sync mobile-api.model.json practice/specs/mobile-api.json</code>, or download the spec and use <i>File → Open…</i> in the app.</p>
+<details><summary>Spec for this scenario (<a href="specs/mobile-api.json" download>download mobile-api.json</a>)</summary><pre><code>{
+  &quot;name&quot;: &quot;Fitness mobile app (practice 3)&quot;,
+  &quot;description&quot;: &quot;A phone app records workouts, keeps a local cache, and syncs with a cloud API through a gateway. The API stores activity data and asks a push service to send reminders to the phone.&quot;,
+  &quot;assumptions&quot;: &quot;Phones can be lost, rooted or running modified apps. The API must not trust the app.&quot;,
+  &quot;externalDependencies&quot;: &quot;Push notification service&quot;,
+  &quot;zones&quot;: [
+    {
+      &quot;name&quot;: &quot;User device&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.Sandbox&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Backend&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    }
+  ],
+  &quot;elements&quot;: [
+    {
+      &quot;name&quot;: &quot;Phone user&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.User&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Mobile app&quot;,
+      &quot;type&quot;: &quot;GE.P&quot;,
+      &quot;zone&quot;: &quot;User device&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Local cache&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.Device&quot;,
+      &quot;zone&quot;: &quot;User device&quot;
+    },
+    {
+      &quot;name&quot;: &quot;API gateway&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebServer&quot;,
+      &quot;zone&quot;: &quot;Backend&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Fitness API&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Backend&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Activity DB&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.NoSQL&quot;,
+      &quot;zone&quot;: &quot;Backend&quot;,
+      &quot;custom&quot;: {
+        &quot;dataClass&quot;: &quot;health-related&quot;
+      }
+    },
+    {
+      &quot;name&quot;: &quot;Push service&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.WebSvc&quot;
+    }
+  ],
+  &quot;flows&quot;: [
+    {
+      &quot;from&quot;: &quot;Phone user&quot;,
+      &quot;to&quot;: &quot;Mobile app&quot;,
+      &quot;name&quot;: &quot;Taps and sensor data&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Mobile app&quot;,
+      &quot;to&quot;: &quot;Local cache&quot;,
+      &quot;name&quot;: &quot;Cached activity&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Local cache&quot;,
+      &quot;to&quot;: &quot;Mobile app&quot;,
+      &quot;name&quot;: &quot;Cached data&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Mobile app&quot;,
+      &quot;to&quot;: &quot;API gateway&quot;,
+      &quot;name&quot;: &quot;API calls with token&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;API gateway&quot;,
+      &quot;to&quot;: &quot;Mobile app&quot;,
+      &quot;name&quot;: &quot;API responses&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;API gateway&quot;,
+      &quot;to&quot;: &quot;Fitness API&quot;,
+      &quot;name&quot;: &quot;Forwarded calls&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Fitness API&quot;,
+      &quot;to&quot;: &quot;Activity DB&quot;,
+      &quot;name&quot;: &quot;Activity reads and writes&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Fitness API&quot;,
+      &quot;to&quot;: &quot;Push service&quot;,
+      &quot;name&quot;: &quot;Reminder requests&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Push service&quot;,
+      &quot;to&quot;: &quot;Mobile app&quot;,
+      &quot;name&quot;: &quot;Push notifications&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    }
+  ]
+}
+</code></pre></details></details>
+</section><section id="share"><h2>4. File sharing by link</h2>
+<p>A file owner creates a share link with an expiry and permissions. Anyone with the link can open it; the web app asks the link service whether it is valid, then fetches the file from storage.</p>
+<h3>Your tasks</h3>
+<ol class="steps"><li>Draw it. Who is the “recipient”, and what do you actually know about them?</li><li>List three ways a link could reach someone it was not meant for.</li><li>Can a recipient reach the file <i>without</i> going through the link service? How would you stop that?</li><li>What should the owner be able to see afterwards?</li></ol>
+<details class="answer"><summary>Model answer (try it first!)</summary>
+<h4>Elements, flows and boundaries</h4>
+<p><b>Trust boundaries:</b> <i>Our systems</i> around the web app, link service, links database and file storage. Owner and recipient are outside; the recipient is <b>anonymous</b>.</p>
+<div class="tw"><table><thead><tr><th>Element</th><th>Type</th><th>Why</th></tr></thead><tbody><tr><td>File owner</td><td>Human User (external)</td><td>Authenticated, creates links</td></tr><tr><td>Link recipient</td><td>Human User (external)</td><td>Anonymous: whoever holds the link</td></tr><tr><td>Web app</td><td>Web Application</td><td>Entry point for both roles</td></tr><tr><td>Link service</td><td>Web Service</td><td>Creates and validates links</td></tr><tr><td>Share links DB</td><td>SQL Database</td><td>Link, expiry, permissions, target file</td></tr><tr><td>File storage</td><td>Cloud Storage</td><td>The files; must not be reachable directly</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th>Flow</th><th>Carries</th></tr></thead><tbody><tr><td>File owner → Web app → Link service</td><td>Create link</td></tr><tr><td>Link service ↔ Share links DB</td><td>Store and look up link, expiry, permissions</td></tr><tr><td>Link recipient → Web app → Link service</td><td>Open and validate link</td></tr><tr><td>Web app → File storage</td><td>Fetch file</td></tr><tr><td>Web app → Link recipient</td><td>File download</td></tr></tbody></table></div>
+<h4>Threats to find</h4>
+<div class="tw"><table><thead><tr><th>STRIDE</th><th>Where</th><th>What could go wrong</th><th>Fix</th></tr></thead><tbody><tr><td><b>I</b></td><td>Open link</td><td>Short or predictable links are guessed or enumerated</td><td>At least 128 bits of randomness, rate limit validation, identical responses for missing and expired links</td></tr><tr><td><b>I</b></td><td>Link and download</td><td>A forwarded link, chat preview or Referer log exposes the file to more people</td><td>Expiry, optional sign-in or passcode, revocation, no-referrer policy, per-link access log</td></tr><tr><td><b>I</b></td><td>Fetch file</td><td>Storage objects are public or signed URLs live for days, bypassing the link service</td><td>Private storage, short-lived signed URLs minted only after validation</td></tr><tr><td><b>T</b></td><td>Create link</td><td>Permissions or expiry are taken from request parameters the client can edit</td><td>Server derives permissions from its own stored record only</td></tr><tr><td><b>S</b></td><td>Open link</td><td>Anyone with the link is “the recipient”; you cannot tell who it really was</td><td>Decide knowingly: accept, or require sign-in for sensitive files</td></tr><tr><td><b>E</b></td><td>Validate link</td><td>A link meant for one file grants access to a folder or sibling files (path tricks)</td><td>Scope the link to one object id, normalise and check paths</td></tr><tr><td><b>D</b></td><td>Fetch file</td><td>Repeated downloads of huge files exhaust bandwidth and cost</td><td>Rate limits, quotas, download caps per link</td></tr><tr><td><b>R</b></td><td>Fetch file</td><td>The owner cannot see who opened or downloaded a file</td><td>Access log with time and source per link, visible to the owner</td></tr></tbody></table></div>
+<h4>What learners usually miss</h4>
+<ul><li><b>Deleting the file must invalidate its links</b>, and expired links must really stop working.</li><li>Serving user files from the <b>main site’s domain</b> can let a malicious file attack other users; use a separate download domain.</li><li>The <b>decision</b> that bearer links are weak authentication: write it down as an accepted risk or add a control.</li></ul>
+<p><b>Discussion:</b> Is a share link a convenience feature or a security feature? Your answer sets how strong it needs to be.</p>
+<p>Build the reference model: <code>stride sync file-share-links.model.json practice/specs/file-share-links.json</code>, or download the spec and use <i>File → Open…</i> in the app.</p>
+<details><summary>Spec for this scenario (<a href="specs/file-share-links.json" download>download file-share-links.json</a>)</summary><pre><code>{
+  &quot;name&quot;: &quot;File sharing by link (practice 4)&quot;,
+  &quot;description&quot;: &quot;A file owner creates a share link with an expiry and permissions. Anyone with the link can open it; the web app asks the link service whether it is valid and then fetches the file from storage.&quot;,
+  &quot;assumptions&quot;: &quot;Links are long random values. Files are private in storage; only the web app can read them.&quot;,
+  &quot;externalDependencies&quot;: &quot;None&quot;,
+  &quot;zones&quot;: [
+    {
+      &quot;name&quot;: &quot;Our systems&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    }
+  ],
+  &quot;elements&quot;: [
+    {
+      &quot;name&quot;: &quot;File owner&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.User&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Link recipient&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.User&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Web app&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebApp&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Link service&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Share links DB&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.SQL&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;
+    },
+    {
+      &quot;name&quot;: &quot;File storage&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.CloudStorage&quot;,
+      &quot;zone&quot;: &quot;Our systems&quot;,
+      &quot;custom&quot;: {
+        &quot;dataClass&quot;: &quot;user files&quot;
+      }
+    }
+  ],
+  &quot;flows&quot;: [
+    {
+      &quot;from&quot;: &quot;File owner&quot;,
+      &quot;to&quot;: &quot;Web app&quot;,
+      &quot;name&quot;: &quot;Create link request&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Web app&quot;,
+      &quot;to&quot;: &quot;Link service&quot;,
+      &quot;name&quot;: &quot;Create link&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Link service&quot;,
+      &quot;to&quot;: &quot;Share links DB&quot;,
+      &quot;name&quot;: &quot;Store link, expiry, permissions&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Link recipient&quot;,
+      &quot;to&quot;: &quot;Web app&quot;,
+      &quot;name&quot;: &quot;Open link&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Web app&quot;,
+      &quot;to&quot;: &quot;Link service&quot;,
+      &quot;name&quot;: &quot;Validate link&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Link service&quot;,
+      &quot;to&quot;: &quot;Share links DB&quot;,
+      &quot;name&quot;: &quot;Link lookup&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Web app&quot;,
+      &quot;to&quot;: &quot;File storage&quot;,
+      &quot;name&quot;: &quot;Fetch file&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Web app&quot;,
+      &quot;to&quot;: &quot;Link recipient&quot;,
+      &quot;name&quot;: &quot;File download&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    }
+  ]
+}
+</code></pre></details></details>
+</section><section id="after"><h2>After the answer</h2>
+<ul><li>Add every threat you missed to <i>your</i> model with <i>Add threat</i>, so the practice leaves something behind.</li><li>Pick one scenario and explain it out loud to someone else in five minutes. Gaps show up immediately.</li><li>Change one thing in the scenario (add a login, add a vendor, add an admin) and see which threats appear or change.</li><li>Then try a system you work on. Start with its single most exposed entry point.</li></ul>
+<p>Next: <a href="../think/index.html">thinking like an attacker, and deciding what to do about each threat</a>.</p>
+</section>
+<footer>STRIDE Threat Modeler. Generated threats are a starting point for expert review, not a guarantee of security.</footer>
+</main>
+</div>
+</body>
+</html>
