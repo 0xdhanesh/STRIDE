@@ -49,53 +49,156 @@ export class Palette {
     store.on('model', (d) => d?.replaced && this.render());
     store.on('tool', () => this.syncActive());
     store.on('template', () => this.render());
+    store.on('quicksearch', () => this.focusSearch());
+    this.buildQuick();
     this.render();
   }
+
+  /** Stencil types matching a query (name, id or family), grouped by family, in palette order. */
+  matches(query) {
+    const kb = this.store.kb;
+    const q = query.trim().toLowerCase();
+    const out = [];
+    for (const fam of FAMILIES) {
+      const famHit = q && fam.label.toLowerCase().includes(q);
+      for (const t of kb.typesFor(fam.generic)) {
+        if (!q || famHit || t.name.toLowerCase().includes(q) || t.id.toLowerCase().includes(q)) out.push({ fam, t });
+      }
+    }
+    return out;
+  }
+
   render() {
     const kb = this.store.kb;
-    const search = h('input', { type: 'search', placeholder: 'Search stencils…', 'aria-label': 'Search stencils', value: this.query });
+    const search = h('input', { type: 'search', placeholder: 'Search stencils…  ( / )', 'aria-label': 'Search stencils', value: this.query });
     search.addEventListener('input', () => {
       this.query = search.value;
       this.renderList();
     });
+    search.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        search.blur();
+        document.getElementById('canvas')?.focus({ preventScroll: true });
+      } else if (e.key === 'Enter') {
+        const first = this.matches(this.query)[0];
+        if (first) this.pick(first.t);
+      }
+    });
+    this.search = search;
     this.list = h('div');
     clear(this.root).append(search, this.list, h('p', { class: 'palette-hint' }, 'Click a stencil then click the canvas, or drag it onto the canvas. ', kb.manifest.name, ' template.'));
     this.renderList();
   }
+
+  pick(t) {
+    this.store.setTool({ kind: 'place', typeId: t.id });
+    toast(`Click the canvas to place “${t.name}”.`);
+  }
+
   renderList() {
-    const kb = this.store.kb;
-    const q = this.query.trim().toLowerCase();
+    const q = this.query.trim();
     clear(this.list);
-    for (const fam of FAMILIES) {
-      const types = kb.typesFor(fam.generic).filter((t) => !q || t.name.toLowerCase().includes(q) || t.id.toLowerCase().includes(q));
-      if (!types.length) continue;
-      this.list.appendChild(h('h3', null, fam.label));
-      for (const t of types) {
-        const btn = h(
-          'button',
-          {
-            class: 'stencil',
-            type: 'button',
-            draggable: 'true',
-            title: `${t.name}${t.description ? ` — ${t.description}` : ''}`,
-            'data-type': t.id,
-            onClick: () => this.store.setTool({ kind: 'place', typeId: t.id }),
-          },
-          icon(fam.glyph, 22),
-          h('span', null, t.id === fam.generic ? `${t.name.replace(/^Generic /, '')}` : t.name),
-        );
-        btn.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('application/x-stride-type', t.id);
-          e.dataTransfer.effectAllowed = 'copy';
-        });
-        this.list.appendChild(btn);
+    let lastFam = null;
+    for (const { fam, t } of this.matches(q)) {
+      if (fam !== lastFam) {
+        this.list.appendChild(h('h3', null, fam.label));
+        lastFam = fam;
       }
+      const btn = h(
+        'button',
+        {
+          class: 'stencil',
+          type: 'button',
+          draggable: 'true',
+          title: `${t.name}${t.description ? ` — ${t.description}` : ''}`,
+          'data-type': t.id,
+          onClick: () => this.store.setTool({ kind: 'place', typeId: t.id }),
+        },
+        icon(fam.glyph, 22),
+        h('span', null, t.id === fam.generic ? `${t.name.replace(/^Generic /, '')}` : t.name),
+      );
+      btn.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/x-stride-type', t.id);
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+      this.list.appendChild(btn);
     }
+    if (q && !this.list.firstChild) this.list.appendChild(h('p', { class: 'palette-hint' }, 'No stencil matches “', q, '”.'));
     this.syncActive();
   }
   syncActive() {
     const t = this.store.tool;
     for (const b of this.root.querySelectorAll('.stencil')) b.classList.toggle('active', t.kind === 'place' && b.dataset.type === t.typeId);
+  }
+
+  // ---- "/" search: focuses the side list when it is visible, otherwise a floating
+  // box over the canvas, so the stencil pane stays hidden while you search.
+  paneVisible() {
+    const r = this.root.getBoundingClientRect();
+    return r.width > 40 && r.height > 40 && getComputedStyle(this.root).display !== 'none';
+  }
+  focusSearch() {
+    if (this.paneVisible()) {
+      this.search.focus();
+      this.search.select();
+    } else this.openQuick();
+  }
+  buildQuick() {
+    this.quickInput = h('input', { type: 'search', class: 'quick-input', placeholder: 'Search stencils — type, ↑↓, Enter to pick', 'aria-label': 'Search stencils' });
+    this.quickList = h('div', { class: 'quick-list', role: 'listbox' });
+    this.quick = h('div', { class: 'quick hidden', role: 'dialog', 'aria-label': 'Stencil search' }, this.quickInput, this.quickList);
+    this.quickIndex = 0;
+    this.quickItems = [];
+    this.quickInput.addEventListener('input', () => {
+      this.quickIndex = 0;
+      this.renderQuick();
+    });
+    this.quickInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') this.closeQuick();
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const n = this.quickItems.length;
+        if (n) this.quickIndex = (this.quickIndex + (e.key === 'ArrowDown' ? 1 : n - 1)) % n;
+        this.renderQuick(false);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const hit = this.quickItems[this.quickIndex];
+        if (hit) this.quickPick(hit.t);
+      }
+    });
+    this.quickInput.addEventListener('blur', () => setTimeout(() => this.closeQuick(false), 120));
+    this.root.parentElement ? this.root.parentElement.appendChild(this.quick) : queueMicrotask(() => this.root.parentElement?.appendChild(this.quick));
+  }
+  openQuick() {
+    if (!this.quick.isConnected) this.root.parentElement?.appendChild(this.quick);
+    this.quick.classList.remove('hidden');
+    this.quickInput.value = '';
+    this.quickIndex = 0;
+    this.renderQuick();
+    this.quickInput.focus();
+  }
+  closeQuick(refocus = true) {
+    if (this.quick.classList.contains('hidden')) return;
+    this.quick.classList.add('hidden');
+    if (refocus) document.getElementById('canvas')?.focus({ preventScroll: true });
+  }
+  quickPick(t) {
+    this.closeQuick();
+    this.pick(t);
+  }
+  renderQuick(rebuild = true) {
+    if (rebuild) this.quickItems = this.matches(this.quickInput.value).slice(0, 12);
+    clear(this.quickList);
+    this.quickItems.forEach(({ fam, t }, i) => {
+      const row = h('button', { class: `quick-item${i === this.quickIndex ? ' on' : ''}`, type: 'button', role: 'option', 'aria-selected': String(i === this.quickIndex) }, icon(fam.glyph, 20), h('span', null, t.id === fam.generic ? t.name.replace(/^Generic /, '') : t.name), h('small', null, fam.label));
+      row.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); // keep input focus until we pick
+        this.quickPick(t);
+      });
+      this.quickList.appendChild(row);
+    });
+    if (!this.quickItems.length) this.quickList.appendChild(h('p', { class: 'palette-hint' }, 'No stencil matches.'));
   }
 }
 
