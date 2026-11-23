@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Worked examples: building real threat models · STRIDE Threat Modeler</title>
+<meta name="description" content="Step-by-step threat models for a typical web app, a microservices system, an application that takes input, processes it, stores it and retrieves it, and an IVR system integrated with a customer support portal. Each comes with a ready-to-run spec.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body>
+<header class="top"><a class="brand" href="../index.html"><img src="../assets/logo-64.png" alt="" width="28" height="28"><span>STRIDE</span></a><nav aria-label="Documentation"><a href="../index.html">Open the app</a><a href="../how-to/index.html">How to use it</a><a href="../what-is/index.html">What is STRIDE</a><a href="../how-to-max/index.html" aria-current="page">Worked examples</a></nav></header>
+<div class="wrap">
+<aside class="toc" aria-label="On this page"><b>On this page</b><ul><li><a href="#recipe">The recipe</a></li><li><a href="#web-app">A normal web app</a></li><li><a href="#microservices">Microservices</a></li><li><a href="#intake">Input → process → store → retrieve</a></li><li><a href="#ivr">IVR with a support portal</a></li><li><a href="#review">Reviewing any model</a></li></ul></aside>
+<main>
+<h1>Worked examples: building real threat models</h1>
+<p class="lead">Step-by-step threat models for a typical web app, a microservices system, an application that takes input, processes it, stores it and retrieves it, and an IVR system integrated with a customer support portal. Each comes with a ready-to-run spec.</p>
+<section id="recipe"><h2>The recipe (works for any system)</h2>
+<ol class="steps">
+<li><b>List the actors.</b> Every person and outside system that touches yours becomes an <i>external interactor</i>.</li>
+<li><b>List the code that runs.</b> Each deployable thing becomes a <i>process</i>. If two things are deployed and secured separately, draw two.</li>
+<li><b>List where data rests.</b> Databases, buckets, queues, caches, logs, recordings: each is a <i>data store</i>.</li>
+<li><b>Draw every data flow, one arrow per direction,</b> named after what it carries. Include the boring ones (logging, monitoring, backups); attackers do.</li>
+<li><b>Draw trust boundaries</b> where control, network or identity changes. Put a vendor on the far side of a boundary.</li>
+<li><b>Set types and properties</b>, then read the high-signal threats first and triage.</li>
+<li><b>Write down assumptions</b> in the model details (“traffic inside the cluster is mutually authenticated”). An unchecked assumption is where most real incidents hide.</li>
+</ol>
+<p>Each example below can be built in one command from the spec shown. Run it, open the result in the app, then change it to match your own system.</p>
+</section><section id="web-app"><h2>A normal web app</h2>
+<p><b>Use this when:</b> a browser-based product: public pages, logins, a database behind it.</p>
+<p>The most common shape: a user, a browser, a public web server, an application, a database, and one outside service (email).</p>
+<h3>1. Draw it</h3>
+<p><b>Trust boundaries (box):</b> <i>User device</i> (the browser is not under your control), <i>Public zone (DMZ)</i>, <i>Internal network</i>.</p>
+<div class="tw"><table><thead><tr><th>Element</th><th>Stencil type</th><th>Where / notes</th></tr></thead><tbody><tr><td>Visitor</td><td>Human User (external)</td><td>The person using the site</td></tr><tr><td>Browser</td><td>Browser Client (process)</td><td>In “User device”: you do not control it</td></tr><tr><td>Web server</td><td>Web Server (process)</td><td>In the public zone: terminates TLS, proxies</td></tr><tr><td>Web application</td><td>Web Application (process)</td><td>Internal: business logic, sessions</td></tr><tr><td>Database</td><td>SQL Database (store)</td><td>Internal: accounts and orders</td></tr><tr><td>Email provider</td><td>External Web Service</td><td>Outside: sends reset emails</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th>Data flow (from → to)</th><th>Carries</th><th>Crosses</th></tr></thead><tbody><tr><td>Visitor → Browser, Browser → Web server</td><td>Clicks, typing, page and API requests (HTTPS)</td><td>User device → Public zone</td></tr><tr><td>Web server → Web application and back</td><td>Forwarded requests, rendered responses</td><td>Public zone → Internal</td></tr><tr><td>Web application ↔ Database</td><td>SQL queries and results</td><td>Inside Internal</td></tr><tr><td>Web application → Email provider</td><td>Password-reset emails</td><td>Internal → outside</td></tr></tbody></table></div>
+<h3>2. What to look for</h3>
+<div class="tw"><table><thead><tr><th>STRIDE</th><th>Where</th><th>Question to ask</th><th>Typical fix</th></tr></thead><tbody><tr><td><b>S</b></td><td>Browser → Web server</td><td>Can someone reuse or forge a session? Is login protected against guessing?</td><td>Strong sessions, MFA, lockout, secure cookies</td></tr><tr><td><b>T</b></td><td>Browser → Web application</td><td>Is every field validated on the server? Can a user change a price or role in the request?</td><td>Server-side validation, parameterised queries</td></tr><tr><td><b>I</b></td><td>Web application → Database</td><td>Is the database reachable from anywhere else? Are secrets or personal data logged?</td><td>Network rules, least-privilege DB account, encryption at rest</td></tr><tr><td><b>D</b></td><td>Public zone</td><td>What stops one client from flooding login or search?</td><td>Rate limits, timeouts, caching</td></tr><tr><td><b>E</b></td><td>Web application</td><td>Is authorization checked on the server for every action, not just hidden in the UI?</td><td>Deny-by-default checks and tests per role</td></tr><tr><td><b>R</b></td><td>Web application</td><td>Can an admin action be traced to a person?</td><td>Audit log with user, time, action</td></tr></tbody></table></div>
+<h3>3. Mistakes to avoid</h3>
+<ul><li>Drawing only “the website” as one oval. Split web server, application and database so boundaries have something to cross.</li><li>Forgetting the reverse flows (responses, query results). Data leaves on them.</li><li>Leaving out the email provider and other third parties: they hold your users’ data too.</li></ul>
+<h3>4. Build it automatically</h3>
+<p>This spec has 6 elements, 8 flows and 3 zones and produces about 50 threats with no validation warnings.</p>
+<pre><code>stride sync web-app.model.json how-to-max/specs/web-app.json
+stride report web-app.model.json --format exec -o web-app-summary.html</code></pre>
+<details><summary>Show the spec (<a href="specs/web-app.json" download>download web-app.json</a>)</summary><pre><code>{
+  &quot;name&quot;: &quot;Web application (typical)&quot;,
+  &quot;description&quot;: &quot;Visitors use a browser to reach a public web server. It forwards requests to the application, which reads and writes a SQL database and sends password-reset emails through an email provider.&quot;,
+  &quot;assumptions&quot;: &quot;TLS is used between the browser and the web server. The internal network is not reachable from the internet.&quot;,
+  &quot;externalDependencies&quot;: &quot;Email provider&quot;,
+  &quot;zones&quot;: [
+    {
+      &quot;name&quot;: &quot;User device&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.Sandbox&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Public zone (DMZ)&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Internal network&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    }
+  ],
+  &quot;elements&quot;: [
+    {
+      &quot;name&quot;: &quot;Visitor&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.User&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Browser&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.BrowserClient&quot;,
+      &quot;zone&quot;: &quot;User device&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Web server&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebServer&quot;,
+      &quot;zone&quot;: &quot;Public zone (DMZ)&quot;,
+      &quot;custom&quot;: {
+        &quot;software&quot;: &quot;reverse proxy&quot;
+      }
+    },
+    {
+      &quot;name&quot;: &quot;Web application&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebApp&quot;,
+      &quot;zone&quot;: &quot;Internal network&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Database&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.SQL&quot;,
+      &quot;zone&quot;: &quot;Internal network&quot;,
+      &quot;custom&quot;: {
+        &quot;dataClass&quot;: &quot;accounts, orders&quot;
+      }
+    },
+    {
+      &quot;name&quot;: &quot;Email provider&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.WebSvc&quot;
+    }
+  ],
+  &quot;flows&quot;: [
+    {
+      &quot;from&quot;: &quot;Visitor&quot;,
+      &quot;to&quot;: &quot;Browser&quot;,
+      &quot;name&quot;: &quot;Clicks and typing&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Browser&quot;,
+      &quot;to&quot;: &quot;Web server&quot;,
+      &quot;name&quot;: &quot;Page and API requests&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Web server&quot;,
+      &quot;to&quot;: &quot;Browser&quot;,
+      &quot;name&quot;: &quot;Pages and responses&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Web server&quot;,
+      &quot;to&quot;: &quot;Web application&quot;,
+      &quot;name&quot;: &quot;Forwarded requests&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Web application&quot;,
+      &quot;to&quot;: &quot;Web server&quot;,
+      &quot;name&quot;: &quot;Rendered responses&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Web application&quot;,
+      &quot;to&quot;: &quot;Database&quot;,
+      &quot;name&quot;: &quot;SQL queries&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Database&quot;,
+      &quot;to&quot;: &quot;Web application&quot;,
+      &quot;name&quot;: &quot;Query results&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Web application&quot;,
+      &quot;to&quot;: &quot;Email provider&quot;,
+      &quot;name&quot;: &quot;Password-reset emails&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    }
+  ]
+}
+</code></pre></details>
+</section><section id="microservices"><h2>Microservices</h2>
+<p><b>Use this when:</b> several small services behind an API gateway, talking to each other and through a message broker.</p>
+<p>The risk moves inside: many internal calls, each a chance for a missing check. Model every service-to-service call.</p>
+<h3>1. Draw it</h3>
+<p><b>Trust boundaries (box):</b> <i>Public edge</i> (gateway), <i>Service cluster</i>, <i>Data tier</i>. Add a boundary per team or per sensitivity (for example around payments) as the system grows.</p>
+<div class="tw"><table><thead><tr><th>Element</th><th>Stencil type</th><th>Where / notes</th></tr></thead><tbody><tr><td>Customer client</td><td>Browser (external)</td><td>Web or mobile client</td></tr><tr><td>API gateway</td><td>Web Server (process)</td><td>The only public entry point</td></tr><tr><td>Identity service</td><td>Web Service (process)</td><td>Issues and validates tokens</td></tr><tr><td>Orders / Inventory / Payments service</td><td>Web Service (process) ×3</td><td>One process per deployable service</td></tr><tr><td>Message broker</td><td>Generic Data Store</td><td>Queue or topics: it stores messages</td></tr><tr><td>Orders DB, Inventory DB</td><td>SQL Database (store) ×2</td><td>One database per service</td></tr><tr><td>Payment provider</td><td>External Web Service</td><td>Outside</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th>Data flow (from → to)</th><th>Carries</th><th>Crosses</th></tr></thead><tbody><tr><td>Customer client ↔ API gateway</td><td>API requests and responses</td><td>Internet → Public edge</td></tr><tr><td>API gateway → Identity / Orders</td><td>Token validation, order requests</td><td>Edge → Cluster</td></tr><tr><td>Orders → Inventory, Payments</td><td>Reserve stock, charge request</td><td>Inside Cluster</td></tr><tr><td>Orders ↔ Message broker ↔ Inventory</td><td>Order events</td><td>Inside Cluster</td></tr><tr><td>Orders / Inventory → their DBs</td><td>Reads and writes</td><td>Cluster → Data tier</td></tr><tr><td>Payments → Payment provider</td><td>Card charge</td><td>Cluster → outside</td></tr></tbody></table></div>
+<h3>2. What to look for</h3>
+<div class="tw"><table><thead><tr><th>STRIDE</th><th>Where</th><th>Question to ask</th><th>Typical fix</th></tr></thead><tbody><tr><td><b>S</b></td><td>Service → service</td><td>Does a service verify who is calling it, or does it trust anything inside the network?</td><td>Mutual TLS, service identities, signed tokens</td></tr><tr><td><b>T</b></td><td>Message broker</td><td>Can any service publish any event? Are messages validated by the consumer?</td><td>Per-topic permissions, schema validation</td></tr><tr><td><b>I</b></td><td>Services → DBs</td><td>Can the Orders service read the Inventory database? Do tokens carry more than needed?</td><td>One credential per service, scoped tokens</td></tr><tr><td><b>D</b></td><td>Gateway, broker</td><td>What happens when one service is slow: do callers pile up?</td><td>Timeouts, circuit breakers, queue limits</td></tr><tr><td><b>E</b></td><td>API gateway → Orders</td><td>Is the end user’s identity passed on and checked again behind the gateway?</td><td>Re-check authorization in each service</td></tr><tr><td><b>R</b></td><td>Payments</td><td>Is each charge traceable end to end?</td><td>Correlation ids, immutable audit trail</td></tr></tbody></table></div>
+<h3>3. Mistakes to avoid</h3>
+<ul><li>Assuming “inside the cluster” means trusted. Draw the flows and ask who authenticates them.</li><li>One diagram for 40 services. Make one diagram per business flow (checkout, signup) and reuse the element names.</li><li>Forgetting the broker is a data store: it holds data and needs access control and retention rules.</li></ul>
+<h3>4. Build it automatically</h3>
+<p>Spec: 10 elements, 11 flows, 3 zones; about 56 threats.</p>
+<pre><code>stride sync microservices.model.json how-to-max/specs/microservices.json
+stride report microservices.model.json --format exec -o microservices-summary.html</code></pre>
+<details><summary>Show the spec (<a href="specs/microservices.json" download>download microservices.json</a>)</summary><pre><code>{
+  &quot;name&quot;: &quot;Microservices shop&quot;,
+  &quot;description&quot;: &quot;A client calls an API gateway. Behind it, an identity service, orders, inventory and payments services talk to each other and to a message broker. Orders and inventory each own a database. Payments calls an external provider.&quot;,
+  &quot;assumptions&quot;: &quot;Services run in one private cluster. Service-to-service traffic should be authenticated; verify whether it really is.&quot;,
+  &quot;externalDependencies&quot;: &quot;Payment provider&quot;,
+  &quot;zones&quot;: [
+    {
+      &quot;name&quot;: &quot;Public edge&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Service cluster&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Data tier&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    }
+  ],
+  &quot;elements&quot;: [
+    {
+      &quot;name&quot;: &quot;Customer client&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.Browser&quot;
+    },
+    {
+      &quot;name&quot;: &quot;API gateway&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebServer&quot;,
+      &quot;zone&quot;: &quot;Public edge&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Identity service&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Service cluster&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Orders service&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Service cluster&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Inventory service&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Service cluster&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Payments service&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Service cluster&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Message broker&quot;,
+      &quot;type&quot;: &quot;GE.DS&quot;,
+      &quot;zone&quot;: &quot;Service cluster&quot;,
+      &quot;custom&quot;: {
+        &quot;engine&quot;: &quot;queue / topics&quot;
+      }
+    },
+    {
+      &quot;name&quot;: &quot;Orders DB&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.SQL&quot;,
+      &quot;zone&quot;: &quot;Data tier&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Inventory DB&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.SQL&quot;,
+      &quot;zone&quot;: &quot;Data tier&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Payment provider&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.WebSvc&quot;
+    }
+  ],
+  &quot;flows&quot;: [
+    {
+      &quot;from&quot;: &quot;Customer client&quot;,
+      &quot;to&quot;: &quot;API gateway&quot;,
+      &quot;name&quot;: &quot;API requests&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;API gateway&quot;,
+      &quot;to&quot;: &quot;Customer client&quot;,
+      &quot;name&quot;: &quot;API responses&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;API gateway&quot;,
+      &quot;to&quot;: &quot;Identity service&quot;,
+      &quot;name&quot;: &quot;Token validation&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;API gateway&quot;,
+      &quot;to&quot;: &quot;Orders service&quot;,
+      &quot;name&quot;: &quot;Order requests&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Orders service&quot;,
+      &quot;to&quot;: &quot;Inventory service&quot;,
+      &quot;name&quot;: &quot;Reserve stock&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Orders service&quot;,
+      &quot;to&quot;: &quot;Payments service&quot;,
+      &quot;name&quot;: &quot;Charge request&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Payments service&quot;,
+      &quot;to&quot;: &quot;Payment provider&quot;,
+      &quot;name&quot;: &quot;Card charge&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Orders service&quot;,
+      &quot;to&quot;: &quot;Orders DB&quot;,
+      &quot;name&quot;: &quot;Order reads and writes&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Inventory service&quot;,
+      &quot;to&quot;: &quot;Inventory DB&quot;,
+      &quot;name&quot;: &quot;Stock reads and writes&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Orders service&quot;,
+      &quot;to&quot;: &quot;Message broker&quot;,
+      &quot;name&quot;: &quot;Order events&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Message broker&quot;,
+      &quot;to&quot;: &quot;Inventory service&quot;,
+      &quot;name&quot;: &quot;Order events consumed&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    }
+  ]
+}
+</code></pre></details>
+</section><section id="intake"><h2>A complex application: input → process → store → retrieve</h2>
+<p><b>Use this when:</b> the app accepts content or data from users, processes it (parsing, scanning, converting, enriching), stores it, and later retrieves it for the same or other users.</p>
+<p>Examples: document upload, claims intake, media processing, form builders, data import. The core idea: <b>everything that arrives is hostile until proven otherwise, and everything stored may later be shown to someone else.</b></p>
+<h3>1. Draw it</h3>
+<p><b>Trust boundaries (box):</b> <i>Public</i> (uploaders and readers), <i>Application and processing</i>, <i>Data tier</i>. If processing runs with different privileges, split it into its own zone in the real system and separate credentials.</p>
+<div class="tw"><table><thead><tr><th>Element</th><th>Stencil type</th><th>Where / notes</th></tr></thead><tbody><tr><td>Uploader, Reader</td><td>Human User (external) ×2</td><td>Often different roles</td></tr><tr><td>Portal</td><td>Web Application (process)</td><td>Upload form, search, downloads</td></tr><tr><td>Upload API</td><td>Web Service (process)</td><td>Validates and routes</td></tr><tr><td>Malware scanner</td><td>Generic Process</td><td>Scans before anything else touches the file</td></tr><tr><td>Job queue</td><td>Cache (store)</td><td>Work waiting to be processed</td></tr><tr><td>Processing worker</td><td>Win32 Service (process)</td><td>Parses and extracts: the riskiest code</td></tr><tr><td>Object storage</td><td>Cloud Storage (store)</td><td>The files</td></tr><tr><td>Metadata DB</td><td>SQL Database (store)</td><td>Extracted data</td></tr><tr><td>Search index</td><td>Non Relational Database (store)</td><td>Searchable copy</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th>Data flow (from → to)</th><th>Carries</th><th>Crosses</th></tr></thead><tbody><tr><td>Uploader → Portal → Upload API</td><td>File and metadata</td><td>Public → Application</td></tr><tr><td>Upload API ↔ Malware scanner</td><td>File to scan, verdict</td><td>Inside Application</td></tr><tr><td>Upload API → Job queue → Worker</td><td>Processing job, job and file reference</td><td>Inside Application</td></tr><tr><td>Worker → Object storage / Metadata DB / Search index</td><td>Processed file, extracted data, index entries</td><td>Application → Data tier</td></tr><tr><td>Reader → Portal → Upload API → stores</td><td>Search, download, lookups, fetch file</td><td>Public → Application → Data tier</td></tr><tr><td>Portal → Reader</td><td>Results and files</td><td>Application → Public</td></tr></tbody></table></div>
+<h3>2. What to look for</h3>
+<div class="tw"><table><thead><tr><th>STRIDE</th><th>Where</th><th>Question to ask</th><th>Typical fix</th></tr></thead><tbody><tr><td><b>T</b></td><td>Uploader → Upload API</td><td>Is file type checked by content, not name? Size, count and nesting limits? Can a crafted file crash or exploit the parser?</td><td>Content sniffing, limits, parsers in a sandbox</td></tr><tr><td><b>E</b></td><td>Worker</td><td>If the parser is compromised, what can the worker reach? Does it hold keys to every store?</td><td>Least privilege, separate identity, no network egress</td></tr><tr><td><b>I</b></td><td>Portal → Reader</td><td>Can one user fetch another user’s file by changing an id? Are stored values escaped when shown (stored XSS)?</td><td>Per-object authorization, output encoding, signed URLs</td></tr><tr><td><b>T</b></td><td>Job queue</td><td>Can someone put a job on the queue directly? Are jobs idempotent and validated?</td><td>Authenticated producers, validated payloads</td></tr><tr><td><b>D</b></td><td>Upload API, worker</td><td>Can one huge or malicious file starve everyone else (zip bombs, endless loops)?</td><td>Quotas, timeouts, per-tenant queues</td></tr><tr><td><b>R</b></td><td>Upload API</td><td>Can you tell who uploaded, who read, who deleted?</td><td>Audit log of every upload, read and delete</td></tr><tr><td><b>I</b></td><td>Object storage</td><td>Is the bucket public or are links guessable? Are files encrypted and retained longer than needed?</td><td>Private buckets, expiring signed URLs, retention policy</td></tr></tbody></table></div>
+<h3>3. Mistakes to avoid</h3>
+<ul><li>Validating only in the browser. The attacker never uses your form.</li><li>Treating stored data as trusted when it is read back. It was input once; it is output now: encode it for where it is shown.</li><li>Giving the processing worker admin rights “for simplicity”.</li><li>Forgetting derived copies: the search index, caches and thumbnails hold the same sensitive data as the original.</li></ul>
+<h3>4. Build it automatically</h3>
+<p>Spec: 10 elements, 14 flows, 3 zones; about 70 threats. Read the Worker and Portal findings first.</p>
+<pre><code>stride sync intake-platform.model.json how-to-max/specs/intake-platform.json
+stride report intake-platform.model.json --format exec -o intake-platform-summary.html</code></pre>
+<details><summary>Show the spec (<a href="specs/intake-platform.json" download>download intake-platform.json</a>)</summary><pre><code>{
+  &quot;name&quot;: &quot;Document intake platform&quot;,
+  &quot;description&quot;: &quot;Users upload documents through a portal. The upload API scans each file, queues it, and a worker extracts data, stores the file in object storage, writes metadata to a database and updates a search index. Readers search and download through the same portal.&quot;,
+  &quot;assumptions&quot;: &quot;Uploaded files are untrusted. Workers run with their own identity and only the access they need.&quot;,
+  &quot;externalDependencies&quot;: &quot;Object storage service&quot;,
+  &quot;zones&quot;: [
+    {
+      &quot;name&quot;: &quot;Public&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Application and processing&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Data tier&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    }
+  ],
+  &quot;elements&quot;: [
+    {
+      &quot;name&quot;: &quot;Uploader&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.User&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Reader&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.User&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Portal&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebApp&quot;,
+      &quot;zone&quot;: &quot;Application and processing&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Upload API&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Application and processing&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Malware scanner&quot;,
+      &quot;type&quot;: &quot;GE.P&quot;,
+      &quot;zone&quot;: &quot;Application and processing&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Job queue&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.Cache&quot;,
+      &quot;zone&quot;: &quot;Application and processing&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Processing worker&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.Win32Service&quot;,
+      &quot;zone&quot;: &quot;Application and processing&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Object storage&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.CloudStorage&quot;,
+      &quot;zone&quot;: &quot;Data tier&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Metadata DB&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.SQL&quot;,
+      &quot;zone&quot;: &quot;Data tier&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Search index&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.NoSQL&quot;,
+      &quot;zone&quot;: &quot;Data tier&quot;
+    }
+  ],
+  &quot;flows&quot;: [
+    {
+      &quot;from&quot;: &quot;Uploader&quot;,
+      &quot;to&quot;: &quot;Portal&quot;,
+      &quot;name&quot;: &quot;Upload form and file&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Portal&quot;,
+      &quot;to&quot;: &quot;Upload API&quot;,
+      &quot;name&quot;: &quot;File and metadata&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Upload API&quot;,
+      &quot;to&quot;: &quot;Malware scanner&quot;,
+      &quot;name&quot;: &quot;File to scan&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Malware scanner&quot;,
+      &quot;to&quot;: &quot;Upload API&quot;,
+      &quot;name&quot;: &quot;Scan verdict&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Upload API&quot;,
+      &quot;to&quot;: &quot;Job queue&quot;,
+      &quot;name&quot;: &quot;Processing job&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Job queue&quot;,
+      &quot;to&quot;: &quot;Processing worker&quot;,
+      &quot;name&quot;: &quot;Job and file reference&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Processing worker&quot;,
+      &quot;to&quot;: &quot;Object storage&quot;,
+      &quot;name&quot;: &quot;Processed file&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Processing worker&quot;,
+      &quot;to&quot;: &quot;Metadata DB&quot;,
+      &quot;name&quot;: &quot;Extracted data&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Processing worker&quot;,
+      &quot;to&quot;: &quot;Search index&quot;,
+      &quot;name&quot;: &quot;Index entries&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Reader&quot;,
+      &quot;to&quot;: &quot;Portal&quot;,
+      &quot;name&quot;: &quot;Search and download requests&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Portal&quot;,
+      &quot;to&quot;: &quot;Reader&quot;,
+      &quot;name&quot;: &quot;Results and files&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Portal&quot;,
+      &quot;to&quot;: &quot;Upload API&quot;,
+      &quot;name&quot;: &quot;Read request&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Upload API&quot;,
+      &quot;to&quot;: &quot;Metadata DB&quot;,
+      &quot;name&quot;: &quot;Metadata lookups&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Upload API&quot;,
+      &quot;to&quot;: &quot;Object storage&quot;,
+      &quot;name&quot;: &quot;Fetch file&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    }
+  ]
+}
+</code></pre></details>
+</section><section id="ivr"><h2>An IVR system integrated into a customer support portal</h2>
+<p><b>Use this when:</b> customers phone a company, an automated voice menu (IVR) identifies them and handles simple tasks, and the call can be passed to an agent who works in a support portal backed by customer records.</p>
+<p>This mixes telephony and web: voice and keypad input, speech services, one-time codes, card payments, call recording, and an agent desktop. Callers are anonymous and phone numbers can be forged, so <b>never treat the caller as authenticated just because of the number</b>.</p>
+<h3>1. Draw it</h3>
+<p><b>Trust boundaries (box):</b> <i>Contact centre</i> (IVR platform and agent desktop) and <i>Back office and data</i> (portal, records API, customer database, recordings). The carrier, speech service, code provider and payment processor are outside parties, drawn as external interactors. The phone carrier is folded into the call flow; draw it as its own element if you want to model carrier-side threats such as SIP hijacking.</p>
+<div class="tw"><table><thead><tr><th>Element</th><th>Stencil type</th><th>Where / notes</th></tr></thead><tbody><tr><td>Caller</td><td>Human User (external)</td><td>Anonymous until verified</td></tr><tr><td>IVR platform</td><td>Web Service (process)</td><td>Call flow, speech and keypad handling</td></tr><tr><td>Speech service</td><td>External Web Service</td><td>Speech-to-text / text-to-speech vendor</td></tr><tr><td>One-time-code provider</td><td>External Web Service</td><td>Sends SMS or voice codes</td></tr><tr><td>Payment processor</td><td>External Web Service</td><td>Takes card details</td></tr><tr><td>Agent desktop</td><td>Browser Client (process)</td><td>Screen with caller details</td></tr><tr><td>Support agent</td><td>Human User (external)</td><td>Insider: can see customer data</td></tr><tr><td>Support portal</td><td>Web Application (process)</td><td>Cases and customer views</td></tr><tr><td>Customer records API</td><td>Web Service (process)</td><td>One front door to customer data</td></tr><tr><td>Customer DB</td><td>SQL Database (store)</td><td>Personal data</td></tr><tr><td>Call recordings</td><td>Cloud Storage (store)</td><td>Voice, often with personal data</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th>Data flow (from → to)</th><th>Carries</th><th>Crosses</th></tr></thead><tbody><tr><td>Caller ↔ IVR platform</td><td>Voice and keypad tones; prompts and transfer (via the carrier)</td><td>Phone network → Contact centre</td></tr><tr><td>IVR ↔ Speech service</td><td>Audio out, transcript back</td><td>Contact centre → outside</td></tr><tr><td>IVR ↔ Customer records API</td><td>Caller lookup and PIN check, account details</td><td>Contact centre → Back office</td></tr><tr><td>IVR → One-time-code provider</td><td>Send one-time code</td><td>Contact centre → outside</td></tr><tr><td>IVR → Payment processor</td><td>Card payment (keypad entry)</td><td>Contact centre → outside</td></tr><tr><td>IVR → Call recordings</td><td>Call recording</td><td>Contact centre → Back office</td></tr><tr><td>IVR → Agent desktop; Agent → Agent desktop</td><td>Caller details, agent actions</td><td>Inside Contact centre</td></tr><tr><td>Agent desktop → Support portal → Records API → Customer DB</td><td>Case updates, customer data requests, reads and writes</td><td>Contact centre → Back office</td></tr><tr><td>Agent desktop → Call recordings</td><td>Recording playback</td><td>Contact centre → Back office</td></tr></tbody></table></div>
+<h3>2. What to look for</h3>
+<div class="tw"><table><thead><tr><th>STRIDE</th><th>Where</th><th>Question to ask</th><th>Typical fix</th></tr></thead><tbody><tr><td><b>S</b></td><td>Caller → IVR</td><td>Can the caller ID be faked? Can someone pass “verification” by guessing a PIN or date of birth? Can a cloned voice pass a voice-print check?</td><td>Do not rely on caller ID; one-time codes; lockout; step-up checks for sensitive actions</td></tr><tr><td><b>S</b></td><td>Webhooks / carrier → IVR</td><td>Are call-event callbacks signed? Can anyone post fake “call ended” events?</td><td>Verify signatures, allow-list sources</td></tr><tr><td><b>I</b></td><td>IVR → Call recordings</td><td>Do recordings capture card numbers or one-time codes? Who can replay them? How long are they kept?</td><td>Pause recording during payment, encrypt, role-limited access, retention limits</td></tr><tr><td><b>I</b></td><td>IVR → Payment processor</td><td>Do card tones ever touch your systems or logs?</td><td>Send tones straight to the processor (DTMF masking), never store or log them</td></tr><tr><td><b>T</b></td><td>Caller → IVR</td><td>Can spoken or typed input change the call flow, inject into lookups, or break the speech parser?</td><td>Validate all input, parameterised lookups, limit retries</td></tr><tr><td><b>D</b></td><td>Carrier → IVR</td><td>Can attackers flood the lines or run up costs (toll fraud, premium-rate dialling)?</td><td>Call rate limits, destination allow-lists, spend alerts</td></tr><tr><td><b>E</b></td><td>Agent desktop / portal</td><td>Can an agent see more than the current caller’s data? Is lookup of any customer logged?</td><td>Least privilege, screen-pop only the active caller, audit every access</td></tr><tr><td><b>R</b></td><td>Records API</td><td>Can you prove who changed an address or reset a PIN, and after what verification?</td><td>Audit trail linking change, agent and verification result</td></tr></tbody></table></div>
+<h3>3. Mistakes to avoid</h3>
+<ul><li>Skipping the telephony side because “it’s the carrier’s problem”. Your IVR still decides what a caller may do.</li><li>Recording everything, always. Recordings are your largest store of personal data and, if you take card payments, may put you in scope of payment-card rules.</li><li>Trusting the phone number to identify a customer.</li><li>Drawing the agent as part of “the system” only. Agents are insiders: model their access and log it.</li><li>Forgetting the speech and code vendors. Audio and personal data go to them; they belong outside a trust boundary.</li></ul>
+<h3>4. Build it automatically</h3>
+<p>Spec: 11 elements, 15 flows, 2 zones; about 85 threats with no validation warnings.</p>
+<pre><code>stride sync ivr-support-portal.model.json how-to-max/specs/ivr-support-portal.json
+stride report ivr-support-portal.model.json --format exec -o ivr-support-portal-summary.html</code></pre>
+<details><summary>Show the spec (<a href="specs/ivr-support-portal.json" download>download ivr-support-portal.json</a>)</summary><pre><code>{
+  &quot;name&quot;: &quot;IVR customer support portal&quot;,
+  &quot;description&quot;: &quot;Callers reach an IVR platform through a phone carrier. The IVR recognises speech and keypad input, looks the caller up through a customer records API, can send a one-time code, takes card payments through a payment processor, records the call, and hands the caller to a support agent whose desktop receives the caller details. Agents work cases in the support portal.&quot;,
+  &quot;assumptions&quot;: &quot;The carrier is trusted to deliver calls but not to authenticate callers. Call recordings may contain personal data and card details unless recording is paused during payment.&quot;,
+  &quot;externalDependencies&quot;: &quot;Phone carrier, speech service, one-time-code provider, payment processor&quot;,
+  &quot;zones&quot;: [
+    {
+      &quot;name&quot;: &quot;Contact centre&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Back office and data&quot;,
+      &quot;type&quot;: &quot;SE.TB.B.TMCore.CorpNet&quot;
+    }
+  ],
+  &quot;elements&quot;: [
+    {
+      &quot;name&quot;: &quot;Caller&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.User&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Speech service&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.WebSvc&quot;
+    },
+    {
+      &quot;name&quot;: &quot;One-time-code provider&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.WebSvc&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Payment processor&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.WebSvc&quot;
+    },
+    {
+      &quot;name&quot;: &quot;IVR platform&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Contact centre&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Agent desktop&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.BrowserClient&quot;,
+      &quot;zone&quot;: &quot;Contact centre&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Support agent&quot;,
+      &quot;type&quot;: &quot;SE.EI.TMCore.User&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Support portal&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebApp&quot;,
+      &quot;zone&quot;: &quot;Back office and data&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Customer records API&quot;,
+      &quot;type&quot;: &quot;SE.P.TMCore.WebSvc&quot;,
+      &quot;zone&quot;: &quot;Back office and data&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Customer DB&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.SQL&quot;,
+      &quot;zone&quot;: &quot;Back office and data&quot;,
+      &quot;custom&quot;: {
+        &quot;dataClass&quot;: &quot;PII&quot;
+      }
+    },
+    {
+      &quot;name&quot;: &quot;Call recordings&quot;,
+      &quot;type&quot;: &quot;SE.DS.TMCore.CloudStorage&quot;,
+      &quot;zone&quot;: &quot;Back office and data&quot;,
+      &quot;custom&quot;: {
+        &quot;dataClass&quot;: &quot;voice, possible PII&quot;
+      }
+    }
+  ],
+  &quot;flows&quot;: [
+    {
+      &quot;from&quot;: &quot;Caller&quot;,
+      &quot;to&quot;: &quot;IVR platform&quot;,
+      &quot;name&quot;: &quot;Phone call via the carrier: voice and keypad tones&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;IVR platform&quot;,
+      &quot;to&quot;: &quot;Caller&quot;,
+      &quot;name&quot;: &quot;IVR prompts and call transfer&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;IVR platform&quot;,
+      &quot;to&quot;: &quot;Speech service&quot;,
+      &quot;name&quot;: &quot;Audio to transcribe&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Speech service&quot;,
+      &quot;to&quot;: &quot;IVR platform&quot;,
+      &quot;name&quot;: &quot;Transcript&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;IVR platform&quot;,
+      &quot;to&quot;: &quot;Customer records API&quot;,
+      &quot;name&quot;: &quot;Caller lookup and PIN check&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Customer records API&quot;,
+      &quot;to&quot;: &quot;IVR platform&quot;,
+      &quot;name&quot;: &quot;Account details&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;IVR platform&quot;,
+      &quot;to&quot;: &quot;One-time-code provider&quot;,
+      &quot;name&quot;: &quot;Send one-time code&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;IVR platform&quot;,
+      &quot;to&quot;: &quot;Payment processor&quot;,
+      &quot;name&quot;: &quot;Card payment (keypad entry)&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;IVR platform&quot;,
+      &quot;to&quot;: &quot;Call recordings&quot;,
+      &quot;name&quot;: &quot;Call recording&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;IVR platform&quot;,
+      &quot;to&quot;: &quot;Agent desktop&quot;,
+      &quot;name&quot;: &quot;Caller details for the agent&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Support agent&quot;,
+      &quot;to&quot;: &quot;Agent desktop&quot;,
+      &quot;name&quot;: &quot;Agent actions&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Agent desktop&quot;,
+      &quot;to&quot;: &quot;Support portal&quot;,
+      &quot;name&quot;: &quot;Case updates&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Support portal&quot;,
+      &quot;to&quot;: &quot;Customer records API&quot;,
+      &quot;name&quot;: &quot;Customer data requests&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Customer records API&quot;,
+      &quot;to&quot;: &quot;Customer DB&quot;,
+      &quot;name&quot;: &quot;Customer reads and writes&quot;,
+      &quot;type&quot;: &quot;GE.DF&quot;
+    },
+    {
+      &quot;from&quot;: &quot;Agent desktop&quot;,
+      &quot;to&quot;: &quot;Call recordings&quot;,
+      &quot;name&quot;: &quot;Recording playback&quot;,
+      &quot;type&quot;: &quot;SE.DF.TMCore.HTTPS&quot;
+    }
+  ]
+}
+</code></pre></details>
+</section><section id="review"><h2>Reviewing any model</h2>
+<ul>
+<li>Does every process, store and external have at least one flow in and one flow out?</li>
+<li>Does every arrow that crosses a boundary appear to cross it on the picture?</li>
+<li>Can a stranger point at any arrow and be told what it carries and how it is protected?</li>
+<li>Are the assumptions written down, and has someone checked at least the three most important?</li>
+<li>Has every high-priority threat got an owner, a state and a justification?</li>
+<li>Will someone update this when the architecture changes? Put it in the definition of done.</li>
+</ul>
+<p>For management, produce the <b>executive summary</b> (<i>Report → Download report…</i>, or <code>--format exec</code>) and pick a clear font such as Verdana. See <a href="../how-to/index.html#reports">Reports and fonts</a>.</p>
+</section>
+<footer>STRIDE Threat Modeler. Generated threats are a starting point for expert review, not a guarantee of security.</footer>
+</main>
+</div>
+</body>
+</html>

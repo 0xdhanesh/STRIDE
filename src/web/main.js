@@ -9,15 +9,18 @@ import {
   loadModel,
   parseTemplateText,
   removeDiagram,
+  REPORT_FONTS,
   renderDiagramSvg,
+  renderExecutiveReport,
   renderHtmlReport,
+  resolveFont,
   renderMarkdownReport,
   serializeModel,
   threatsToCsv,
 } from '../core/index.js';
 import * as core from '../core/index.js';
 import { Canvas } from './canvas.js';
-import { clear, confirmDialog, downloadText, h, icon, modal, openBlob, pickFile, promptDialog, toast } from './dom.js';
+import { clear, confirmDialog, downloadText, field, h, icon, modal, openBlob, pickFile, promptDialog, select, toast } from './dom.js';
 import { Drawer, Inspector, Palette } from './panels.js';
 import { Store } from './state.js';
 import { openTemplateEditor } from './template-editor.js';
@@ -94,7 +97,7 @@ function closeMenu() {
   openMenu = null;
 }
 document.addEventListener('pointerdown', (e) => {
-  if (openMenu && !openMenu.contains(e.target) && !e.target.closest('.menu > .btn')) closeMenu();
+  if (openMenu && !openMenu.contains(e.target) && !e.target.closest?.('.menu > .btn')) closeMenu();
 });
 document.addEventListener('keydown', (e) => e.key === 'Escape' && closeMenu());
 
@@ -213,14 +216,74 @@ async function importTemplate() {
   }
 }
 
-function exportReport(kind) {
+function exportReport(kind, font) {
   const m = store.model;
   const base = slug(m.meta.name);
-  if (kind === 'html') openBlob(renderHtmlReport(m));
-  else if (kind === 'html-download') downloadText(`${base}-report.html`, renderHtmlReport(m), 'text/html');
+  if (kind === 'html') openBlob(renderHtmlReport(m, { font }));
+  else if (kind === 'html-download') downloadText(`${base}-report.html`, renderHtmlReport(m, { font }), 'text/html');
+  else if (kind === 'exec') openBlob(renderExecutiveReport(m, { font }));
+  else if (kind === 'exec-download') downloadText(`${base}-executive-summary.html`, renderExecutiveReport(m, { font }), 'text/html');
   else if (kind === 'md') downloadText(`${base}-report.md`, renderMarkdownReport(m), 'text/markdown');
   else if (kind === 'csv') downloadText(`${base}-threats.csv`, threatsToCsv(m), 'text/csv');
   else if (kind === 'svg') downloadText(`${base}-${slug(store.diagram.name)}.svg`, renderDiagramSvg(m, store.diagram, { sketch: store.prefs.sketch }), 'image/svg+xml');
+}
+
+/** Choose the report type and the font, then open or download it. */
+async function reportDialog() {
+  const types = [
+    { value: 'exec', label: 'Executive summary — large print, plain language (for senior management)', fonts: true },
+    { value: 'html', label: 'Technical report — every threat, with evidence', fonts: true },
+    { value: 'md', label: 'Markdown summary', fonts: false },
+    { value: 'csv', label: 'Threat list (CSV)', fonts: false },
+    { value: 'svg', label: 'Current diagram (SVG)', fonts: false },
+  ];
+  const CUSTOM = '__custom';
+  const typeSel = select(types.map(({ value, label }) => ({ value, label })), store.prefs.reportType || 'exec', null, { 'aria-label': 'Report type' });
+  const fontSel = select([...Object.entries(REPORT_FONTS).map(([value, f]) => ({ value, label: f.label })), { value: CUSTOM, label: 'Other font installed on this computer…' }], store.prefs.reportFont || 'system', null, { 'aria-label': 'Font' });
+  const custom = h('input', { type: 'text', placeholder: 'Font name, e.g. Segoe UI', maxlength: 40, 'aria-label': 'Custom font name', value: store.prefs.reportFontCustom || '' });
+  const sample = h('p', { class: 'font-sample' }, 'The quick brown fox jumps over the lazy dog — 0123456789');
+  const fontBox = h('div', null, field('Font', fontSel), h('div', { class: 'hidden', 'data-custom': '' }, field('Font name', custom)), sample);
+  const customRow = fontBox.querySelector('[data-custom]');
+  const chosenFont = () => {
+    if (fontSel.value !== CUSTOM) return fontSel.value;
+    return custom.value.trim() || 'system';
+  };
+  const refresh = () => {
+    const t = types.find((x) => x.value === typeSel.value);
+    fontBox.classList.toggle('hidden', !t.fonts);
+    customRow.classList.toggle('hidden', fontSel.value !== CUSTOM);
+    try {
+      sample.style.fontFamily = resolveFont(chosenFont()).stack;
+      sample.classList.remove('bad');
+    } catch {
+      sample.classList.add('bad');
+    }
+  };
+  for (const el of [typeSel, fontSel, custom]) el.addEventListener('input', refresh);
+  refresh();
+  const choice = await modal({
+    title: 'Download report',
+    content: h('div', null, field('Report', typeSel), fontBox, h('p', { class: 'small muted' }, 'Fonts are used by the reader’s computer, so pick one that is installed where the report will be opened. Reports can be printed or saved as PDF from the browser.')),
+    buttons: [
+      { label: 'Cancel', value: null },
+      { label: 'Open in new tab', value: 'open' },
+      { label: 'Download', value: 'download', class: 'primary' },
+    ],
+  });
+  if (!choice) return;
+  const type = typeSel.value;
+  let font;
+  if (types.find((x) => x.value === type).fonts) {
+    try {
+      font = resolveFont(chosenFont()).id === 'custom' ? chosenFont() : fontSel.value;
+    } catch (e) {
+      return toast(e.message, 5000);
+    }
+    Object.assign(store.prefs, { reportType: type, reportFont: fontSel.value, reportFontCustom: custom.value });
+    store.savePrefs();
+  }
+  const kind = type === 'exec' || type === 'html' ? (choice === 'open' ? type : `${type}-download`) : type;
+  exportReport(kind, font);
 }
 
 async function renameModel() {
@@ -339,11 +402,22 @@ function renderTopbar() {
     { label: 'Delete diagram…', run: () => deleteDiagramUi(store.diagram) },
   ]);
   const reportMenu = menu('Report', 'report', [
+    { label: 'Download report… (type and font)', run: reportDialog },
+    '-',
+    { label: 'Open executive summary (for management)', run: () => exportReport('exec') },
     { label: 'Open full report (HTML)', run: () => exportReport('html') },
     { label: 'Download full report (HTML)', run: () => exportReport('html-download') },
     { label: 'Download Markdown summary', run: () => exportReport('md') },
     { label: 'Export threats to CSV', run: () => exportReport('csv') },
     { label: 'Export diagram as SVG', run: () => exportReport('svg') },
+  ]);
+  const openDoc = (rel) => window.open(rel, '_blank', 'noopener');
+  const helpMenu = menu('Help', 'book', [
+    { label: 'How to use this tool', run: () => openDoc('how-to/index.html') },
+    { label: 'What is STRIDE, and why it matters', run: () => openDoc('what-is/index.html') },
+    { label: 'Worked examples (web app, microservices, IVR…)', run: () => openDoc('how-to-max/index.html') },
+    '-',
+    { label: 'Keyboard shortcuts', kbd: '?', run: shortcutsDialog },
   ]);
   const settingsMenu = menu('', store.prefs.theme === 'dark' ? 'moon' : 'sun', () => [
     { label: `Theme: ${store.prefs.theme}`, run: cycleTheme },
@@ -368,6 +442,7 @@ function renderTopbar() {
     h('button', { class: 'btn', type: 'button', title: `Undo (${MOD}Z)`, 'aria-label': 'Undo', disabled: !store.undoStack.length || undefined, onClick: () => store.undo() }, icon('undo')),
     h('button', { class: 'btn', type: 'button', title: `Redo (${MOD}⇧Z)`, 'aria-label': 'Redo', disabled: !store.redoStack.length || undefined, onClick: () => store.redo() }, icon('redo')),
     reportMenu,
+    helpMenu,
     h('button', { class: 'btn hide-sm', type: 'button', title: store.prefs.inspectorCollapsed ? 'Show threat model panel' : 'Hide threat model panel', 'aria-label': 'Toggle threat model panel', 'aria-pressed': String(!store.prefs.inspectorCollapsed), onClick: toggleInspector }, icon('panel')),
     h('button', { class: 'btn hide-sm', type: 'button', title: 'Show/hide threat panel', 'aria-label': 'Toggle threat panel', onClick: () => ui.drawer.toggle() }, icon('chevron')),
     settingsMenu,

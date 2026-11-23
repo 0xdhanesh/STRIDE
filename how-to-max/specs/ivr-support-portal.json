@@ -1,0 +1,166 @@
+{
+  "name": "IVR customer support portal",
+  "description": "Callers reach an IVR platform through a phone carrier. The IVR recognises speech and keypad input, looks the caller up through a customer records API, can send a one-time code, takes card payments through a payment processor, records the call, and hands the caller to a support agent whose desktop receives the caller details. Agents work cases in the support portal.",
+  "assumptions": "The carrier is trusted to deliver calls but not to authenticate callers. Call recordings may contain personal data and card details unless recording is paused during payment.",
+  "externalDependencies": "Phone carrier, speech service, one-time-code provider, payment processor",
+  "zones": [
+    {
+      "name": "Contact centre",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    },
+    {
+      "name": "Back office and data",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    }
+  ],
+  "elements": [
+    {
+      "name": "Caller",
+      "type": "SE.EI.TMCore.User"
+    },
+    {
+      "name": "Speech service",
+      "type": "SE.EI.TMCore.WebSvc"
+    },
+    {
+      "name": "One-time-code provider",
+      "type": "SE.EI.TMCore.WebSvc"
+    },
+    {
+      "name": "Payment processor",
+      "type": "SE.EI.TMCore.WebSvc"
+    },
+    {
+      "name": "IVR platform",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Contact centre"
+    },
+    {
+      "name": "Agent desktop",
+      "type": "SE.P.TMCore.BrowserClient",
+      "zone": "Contact centre"
+    },
+    {
+      "name": "Support agent",
+      "type": "SE.EI.TMCore.User"
+    },
+    {
+      "name": "Support portal",
+      "type": "SE.P.TMCore.WebApp",
+      "zone": "Back office and data"
+    },
+    {
+      "name": "Customer records API",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Back office and data"
+    },
+    {
+      "name": "Customer DB",
+      "type": "SE.DS.TMCore.SQL",
+      "zone": "Back office and data",
+      "custom": {
+        "dataClass": "PII"
+      }
+    },
+    {
+      "name": "Call recordings",
+      "type": "SE.DS.TMCore.CloudStorage",
+      "zone": "Back office and data",
+      "custom": {
+        "dataClass": "voice, possible PII"
+      }
+    }
+  ],
+  "flows": [
+    {
+      "from": "Caller",
+      "to": "IVR platform",
+      "name": "Phone call via the carrier: voice and keypad tones",
+      "type": "GE.DF"
+    },
+    {
+      "from": "IVR platform",
+      "to": "Caller",
+      "name": "IVR prompts and call transfer",
+      "type": "GE.DF"
+    },
+    {
+      "from": "IVR platform",
+      "to": "Speech service",
+      "name": "Audio to transcribe",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Speech service",
+      "to": "IVR platform",
+      "name": "Transcript",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "IVR platform",
+      "to": "Customer records API",
+      "name": "Caller lookup and PIN check",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Customer records API",
+      "to": "IVR platform",
+      "name": "Account details",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "IVR platform",
+      "to": "One-time-code provider",
+      "name": "Send one-time code",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "IVR platform",
+      "to": "Payment processor",
+      "name": "Card payment (keypad entry)",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "IVR platform",
+      "to": "Call recordings",
+      "name": "Call recording",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "IVR platform",
+      "to": "Agent desktop",
+      "name": "Caller details for the agent",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Support agent",
+      "to": "Agent desktop",
+      "name": "Agent actions",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Agent desktop",
+      "to": "Support portal",
+      "name": "Case updates",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Support portal",
+      "to": "Customer records API",
+      "name": "Customer data requests",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Customer records API",
+      "to": "Customer DB",
+      "name": "Customer reads and writes",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Agent desktop",
+      "to": "Call recordings",
+      "name": "Recording playback",
+      "type": "SE.DF.TMCore.HTTPS"
+    }
+  ]
+}

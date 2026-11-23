@@ -16,7 +16,15 @@ export function startServer(port = 0, root = ROOT) {
       res.writeHead(400).end();
       return;
     }
-    const file = path.join(root, path.normalize(p === '/' ? '/index.html' : p));
+    let file = path.join(root, path.normalize(p === '/' ? '/index.html' : p));
+    // Directory endpoints such as /how-to serve their index.html (with a trailing-slash redirect, like static hosts do).
+    if (fs.existsSync(file) && fs.statSync(file).isDirectory()) {
+      if (!p.endsWith('/')) {
+        res.writeHead(301, { location: `${p}/` }).end();
+        return;
+      }
+      file = path.join(file, 'index.html');
+    }
     const rel = path.relative(root, file);
     if (rel.startsWith('..') || rel.split(path.sep).some((part) => part.startsWith('.')) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
       res.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');

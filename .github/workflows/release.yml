@@ -45,7 +45,7 @@ jobs:
           STAGE="dist/${NAME}"
           rm -rf "$STAGE" && mkdir -p "$STAGE"
           cp dist/STRIDE.html "$STAGE/"
-          cp -R index.html assets src bin package.json README.md THIRD_PARTY.md "$STAGE/"
+          cp -R index.html assets src bin how-to what-is how-to-max package.json README.md THIRD_PARTY.md "$STAGE/"
           (cd dist && zip -qr "${NAME}.zip" "${NAME}")
           unzip -l "dist/${NAME}.zip" | tail -1
           echo "ZIP=dist/${NAME}.zip" >> "$GITHUB_ENV"

@@ -88,7 +88,10 @@ Analysis
   note <model.json> <text> [--author A]
 
 Output
-  report <model.json> [--format html|md|csv|json|svg] [--diagram D] [-o file]
+  report <model.json> [--format html|exec|md|csv|json|svg] [--diagram D] [-o file]
+        [--font arial|verdana|georgia|…|"Any Installed Font"]  Font for html/exec reports
+        --format exec                            Executive report: large print, plain language,
+                                                 no technical detail, for senior management
         [--signal high|medium|all|off]           Stakeholder section first: executive summary
                                                  and findings at or above the level (default
                                                  high); the full register follows. off = classic
@@ -377,7 +380,7 @@ export async function main(argv, io = { stdout: process.stdout, stderr: process.
         const model = loadModelFile(need(rest[0], 'model file'));
         let format = opts.format;
         if (!format && opts.out) format = { '.html': 'html', '.htm': 'html', '.md': 'md', '.csv': 'csv', '.json': 'json', '.svg': 'svg' }[path.extname(opts.out).toLowerCase()];
-        const text = ops.opReport(model, { format: format || 'html', diagram: opts.diagram, signal: opts.signal });
+        const text = ops.opReport(model, { format: format || 'html', diagram: opts.diagram, signal: opts.signal, font: opts.font, top: opts.top });
         if (opts.out) {
           writeTextAtomic(opts.out, text);
           out(io, json ? { file: opts.out } : `Wrote ${opts.out}`, json);

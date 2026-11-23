@@ -7,6 +7,7 @@ import { validateModel } from './validate.js';
 import { csvCell, escapeHtml } from './util.js';
 import { GENERIC } from './kb.js';
 import { annotateThreats, enrichedEvidence } from './enrich/enrichThreat.js';
+import { fontCss } from './fonts.js';
 import { SIGNAL_LABELS, SIGNAL_LEVELS, displayTitle, levelsAtLeast, normalizeSignalLevel, oneLine } from './signal.js';
 
 export function filterThreats(model, { states, categories, priorities, signals, diagramId, text, includeOrphans = true } = {}) {
@@ -239,7 +240,7 @@ function stakeholderHtml(sh) {
  * Full HTML report: stakeholder summary (executive summary + high-signal findings) first, then metadata, summary, notes, per-diagram image, validation messages,
  * threats grouped by interaction, and threats no longer associated with an interaction.
  */
-export function renderHtmlReport(model, { states, includeMessages = true, signal = 'high' } = {}) {
+export function renderHtmlReport(model, { states, includeMessages = true, signal = 'high', font } = {}) {
   const level = normalizeSignalLevel(signal) || 'high';
   const sh = level === 'off' ? null : stakeholderSummary(model, { signal: level });
   if (!sh) annotateThreats(model);
@@ -261,7 +262,7 @@ export function renderHtmlReport(model, { states, includeMessages = true, signal
   ].filter(([, v]) => v);
 
   let html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(m.name)} — Threat Model Report</title><style>${REPORT_CSS}</style></head><body><main>
+<title>${escapeHtml(m.name)} — Threat Model Report</title><style>${REPORT_CSS}${fontCss(font)}</style></head><body><main>
 <h1>${escapeHtml(m.name)}</h1><p class="k" style="color:var(--muted)">Threat model report · generated ${escapeHtml(new Date().toISOString())}</p>
 <dl class="meta">${metaRows.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>
 ${sh ? stakeholderHtml(sh) : ''}

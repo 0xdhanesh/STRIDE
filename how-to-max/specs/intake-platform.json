@@ -1,0 +1,156 @@
+{
+  "name": "Document intake platform",
+  "description": "Users upload documents through a portal. The upload API scans each file, queues it, and a worker extracts data, stores the file in object storage, writes metadata to a database and updates a search index. Readers search and download through the same portal.",
+  "assumptions": "Uploaded files are untrusted. Workers run with their own identity and only the access they need.",
+  "externalDependencies": "Object storage service",
+  "zones": [
+    {
+      "name": "Public",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    },
+    {
+      "name": "Application and processing",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    },
+    {
+      "name": "Data tier",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    }
+  ],
+  "elements": [
+    {
+      "name": "Uploader",
+      "type": "SE.EI.TMCore.User"
+    },
+    {
+      "name": "Reader",
+      "type": "SE.EI.TMCore.User"
+    },
+    {
+      "name": "Portal",
+      "type": "SE.P.TMCore.WebApp",
+      "zone": "Application and processing"
+    },
+    {
+      "name": "Upload API",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Application and processing"
+    },
+    {
+      "name": "Malware scanner",
+      "type": "GE.P",
+      "zone": "Application and processing"
+    },
+    {
+      "name": "Job queue",
+      "type": "SE.DS.TMCore.Cache",
+      "zone": "Application and processing"
+    },
+    {
+      "name": "Processing worker",
+      "type": "SE.P.TMCore.Win32Service",
+      "zone": "Application and processing"
+    },
+    {
+      "name": "Object storage",
+      "type": "SE.DS.TMCore.CloudStorage",
+      "zone": "Data tier"
+    },
+    {
+      "name": "Metadata DB",
+      "type": "SE.DS.TMCore.SQL",
+      "zone": "Data tier"
+    },
+    {
+      "name": "Search index",
+      "type": "SE.DS.TMCore.NoSQL",
+      "zone": "Data tier"
+    }
+  ],
+  "flows": [
+    {
+      "from": "Uploader",
+      "to": "Portal",
+      "name": "Upload form and file",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Portal",
+      "to": "Upload API",
+      "name": "File and metadata",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Upload API",
+      "to": "Malware scanner",
+      "name": "File to scan",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Malware scanner",
+      "to": "Upload API",
+      "name": "Scan verdict",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Upload API",
+      "to": "Job queue",
+      "name": "Processing job",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Job queue",
+      "to": "Processing worker",
+      "name": "Job and file reference",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Processing worker",
+      "to": "Object storage",
+      "name": "Processed file",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Processing worker",
+      "to": "Metadata DB",
+      "name": "Extracted data",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Processing worker",
+      "to": "Search index",
+      "name": "Index entries",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Reader",
+      "to": "Portal",
+      "name": "Search and download requests",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Portal",
+      "to": "Reader",
+      "name": "Results and files",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Portal",
+      "to": "Upload API",
+      "name": "Read request",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Upload API",
+      "to": "Metadata DB",
+      "name": "Metadata lookups",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Upload API",
+      "to": "Object storage",
+      "name": "Fetch file",
+      "type": "SE.DF.TMCore.HTTPS"
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "name": "Microservices shop",
+  "description": "A client calls an API gateway. Behind it, an identity service, orders, inventory and payments services talk to each other and to a message broker. Orders and inventory each own a database. Payments calls an external provider.",
+  "assumptions": "Services run in one private cluster. Service-to-service traffic should be authenticated; verify whether it really is.",
+  "externalDependencies": "Payment provider",
+  "zones": [
+    {
+      "name": "Public edge",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    },
+    {
+      "name": "Service cluster",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    },
+    {
+      "name": "Data tier",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    }
+  ],
+  "elements": [
+    {
+      "name": "Customer client",
+      "type": "SE.EI.TMCore.Browser"
+    },
+    {
+      "name": "API gateway",
+      "type": "SE.P.TMCore.WebServer",
+      "zone": "Public edge"
+    },
+    {
+      "name": "Identity service",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Service cluster"
+    },
+    {
+      "name": "Orders service",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Service cluster"
+    },
+    {
+      "name": "Inventory service",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Service cluster"
+    },
+    {
+      "name": "Payments service",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Service cluster"
+    },
+    {
+      "name": "Message broker",
+      "type": "GE.DS",
+      "zone": "Service cluster",
+      "custom": {
+        "engine": "queue / topics"
+      }
+    },
+    {
+      "name": "Orders DB",
+      "type": "SE.DS.TMCore.SQL",
+      "zone": "Data tier"
+    },
+    {
+      "name": "Inventory DB",
+      "type": "SE.DS.TMCore.SQL",
+      "zone": "Data tier"
+    },
+    {
+      "name": "Payment provider",
+      "type": "SE.EI.TMCore.WebSvc"
+    }
+  ],
+  "flows": [
+    {
+      "from": "Customer client",
+      "to": "API gateway",
+      "name": "API requests",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "API gateway",
+      "to": "Customer client",
+      "name": "API responses",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "API gateway",
+      "to": "Identity service",
+      "name": "Token validation",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "API gateway",
+      "to": "Orders service",
+      "name": "Order requests",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Orders service",
+      "to": "Inventory service",
+      "name": "Reserve stock",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Orders service",
+      "to": "Payments service",
+      "name": "Charge request",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Payments service",
+      "to": "Payment provider",
+      "name": "Card charge",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Orders service",
+      "to": "Orders DB",
+      "name": "Order reads and writes",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Inventory service",
+      "to": "Inventory DB",
+      "name": "Stock reads and writes",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Orders service",
+      "to": "Message broker",
+      "name": "Order events",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Message broker",
+      "to": "Inventory service",
+      "name": "Order events consumed",
+      "type": "GE.DF"
+    }
+  ]
+}

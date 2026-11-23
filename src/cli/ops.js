@@ -28,10 +28,12 @@ import {
   removeElements,
   renameDiagram,
   renderDiagramSvg,
+  renderExecutiveReport,
   renderHtmlReport,
   renderMarkdownReport,
   requireDiagram,
   requireElement,
+  resolveFont,
   resolveTypeId,
   summarize,
   syncModel,
@@ -287,11 +289,19 @@ export function opExplain(model, { flow }) {
   return explainFlow(model, id);
 }
 
-export function opReport(model, { format = 'html', diagram, signal } = {}) {
+export function opReport(model, { format = 'html', diagram, signal, font, top } = {}) {
   const level = parseSignal(signal, 'high');
+  try {
+    resolveFont(font);
+  } catch (e) {
+    throw new ModelError(e.message);
+  }
   switch (String(format).toLowerCase()) {
     case 'html':
-      return renderHtmlReport(model, { signal: level });
+      return renderHtmlReport(model, { signal: level, font });
+    case 'exec':
+    case 'executive':
+      return renderExecutiveReport(model, { font, top: top ? Number(top) : undefined });
     case 'md':
     case 'markdown':
       return renderMarkdownReport(model, { signal: level });
@@ -311,7 +321,7 @@ export function opReport(model, { format = 'html', diagram, signal } = {}) {
     case 'svg':
       return renderDiagramSvg(model, requireDiagram(model, diagram));
     default:
-      throw new ModelError(`Unknown report format '${format}'. Use html, md, csv, json or svg.`);
+      throw new ModelError(`Unknown report format '${format}'. Use html, exec, md, csv, json or svg.`);
   }
 }
 
