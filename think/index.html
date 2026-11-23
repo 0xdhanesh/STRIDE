@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thinking like an attacker, and deciding what to do · STRIDE Threat Modeler</title>
+<meta name="description" content="The human skills the tool cannot automate: finding threats beyond the generated list, rating them honestly, choosing between fix, avoid, transfer and accept, and writing mitigations people can verify.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body>
+<header class="top"><a class="brand" href="../index.html"><img src="../assets/logo-64.png" alt="" width="28" height="28"><span>STRIDE</span></a><nav aria-label="Documentation"><a href="../index.html">Open the app</a><a href="../learn/index.html">Learn</a><a href="../how-to/index.html">How to use it</a><a href="../what-is/index.html">What is STRIDE</a><a href="../how-to-max/index.html">Worked examples</a><a href="../practice/index.html">Practice</a><a href="../think/index.html" aria-current="page">Think like an attacker</a></nav></header>
+<div class="wrap">
+<aside class="toc" aria-label="On this page"><b>On this page</b><ul><li><a href="#mindset">The attacker’s mindset</a></li><li><a href="#prompts">Question prompts by STRIDE letter</a></li><li><a href="#abuse">Abuse cases and chains</a></li><li><a href="#assume">Assume something is compromised</a></li><li><a href="#rating">Rating a threat</a></li><li><a href="#decide">Deciding what to do</a></li><li><a href="#write">Writing good mitigations and justifications</a></li><li><a href="#others">Other methods and when to use them</a></li><li><a href="#pitfalls">Pitfalls</a></li></ul></aside>
+<main>
+<h1>Thinking like an attacker, and deciding what to do</h1>
+<p class="lead">The human skills the tool cannot automate: finding threats beyond the generated list, rating them honestly, choosing between fix, avoid, transfer and accept, and writing mitigations people can verify.</p>
+
+<section id="mindset"><h2>The attacker’s mindset</h2>
+<p>The tool generates a large first list from your diagram. What it cannot do is <b>think about your business</b>. That part is a human skill, and it can be learned. Start from these questions, in this order:</p>
+<ol class="steps"><li><b>What would an attacker want?</b> Money, data, free service, disruption, a foothold for later, revenge, publicity. Name the <i>assets</i> first: customer records, payments, credentials, availability, reputation.</li><li><b>Who could they be?</b> A stranger on the internet, a customer, a partner, an employee, a contractor, a compromised vendor, a competitor. Each has different access. Insiders already stand <i>past</i> most of your boundaries.</li><li><b>Where do they get in?</b> List every entry point: URLs, APIs, file uploads, message queues, admin tools, phone lines, emails, build pipelines, and people (support staff who can be tricked).</li><li><b>What is the cheapest path?</b> Attackers choose the easiest route, not the cleverest. Skip the exotic and ask what a bored person with a browser and a free afternoon can do.</li><li><b>What is the worst outcome?</b> Work backwards from the thing that would hurt most and ask what would have to be true for it to happen.</li></ol>
+</section>
+
+<section id="prompts"><h2>Question prompts by STRIDE letter</h2>
+<p>At each arrow and each element, run through these. They turn “think of threats” into a checklist you can actually use.</p>
+<div class="tw"><table><thead><tr><th></th><th>Ask yourself</th></tr></thead><tbody><tr><td><b>S</b> Spoofing</td><td>How does the receiver know who sent this? What if the sender lies, replays an old message, or uses a stolen credential? Can the receiver itself be faked (look-alike endpoint, DNS, a rogue device)?</td></tr><tr><td><b>T</b> Tampering</td><td>Who can change this data in transit, at rest, or before it reaches the server? Which values do we take from the client that we should compute ourselves? Can the order, timing or repetition of requests be changed?</td></tr><tr><td><b>R</b> Repudiation</td><td>Could someone do this and later deny it? What record would prove who did what, when and from where? Can that record itself be edited or deleted by the same person?</td></tr><tr><td><b>I</b> Information disclosure</td><td>What is the most sensitive thing here? Who can read it: in transit, in storage, in logs, in backups, in error messages, in caches, in analytics? What does the response reveal beyond what was asked?</td></tr><tr><td><b>D</b> Denial of service</td><td>What is the most expensive thing a caller can ask for? What if they ask a million times, or send one enormous item? What happens when this dependency is down or slow?</td></tr><tr><td><b>E</b> Elevation of privilege</td><td>What can a normal user do that only an admin should? Is every action checked on the <i>server</i>, for <i>this user</i>, on <i>this object</i>? What does this component run as, and what could it reach if taken over?</td></tr></tbody></table></div>
+</section>
+
+<section id="abuse"><h2>Abuse cases and chains</h2>
+<p><b>Abuse cases</b> turn a feature around. For a normal user story, write the attacker’s version:</p>
+<ul><li>User story: <i>“As a customer I can reset my password by email.”</i></li><li>Abuse case: <i>“As an attacker I request resets for other people’s accounts, guess or steal the token, and take over the account.”</i></li></ul>
+<p>Writing three abuse cases for each important feature gives you better threats than any list, because they are specific to your product.</p>
+<p><b>Chains.</b> Real incidents rarely use one flaw. A low-risk information leak (a verbose error naming an internal host) plus a missing check on that host plus an over-privileged service account becomes a serious breach. When rating threats, ask “what does this give an attacker as a stepping stone?”, not only “how bad is it alone?”.</p>
+</section>
+
+<section id="assume"><h2>Assume something is compromised</h2>
+<p>For each important component, ask: <b>“If this were taken over, what could the attacker reach next?”</b> Trace its outgoing arrows. That shows where you depend on a single component being perfect, and where least privilege, network segmentation and independent checks matter most. Do the same for credentials: if this key leaked today, how would you find out, and how fast could you replace it?</p>
+</section>
+
+<section id="rating"><h2>Rating a threat</h2>
+<p>You cannot fix everything first, so rank. A simple, honest approach is <b>likelihood × impact</b> on a three-level scale, agreed by the team.</p>
+<div class="tw"><table><thead><tr><th>Likelihood goes up when…</th><th>Impact goes up when…</th></tr></thead><tbody><tr><td>it is reachable from the internet without signing in</td><td>it exposes sensitive or regulated personal data</td></tr><tr><td>it needs little skill or special tooling</td><td>it affects many users, not one</td></tr><tr><td>there is a clear gain (money, data) for the attacker</td><td>it can move money or change records people rely on</td></tr><tr><td>no control exists today, or the control is untested</td><td>it harms safety, availability of a critical service, or trust</td></tr><tr><td>it has happened to similar systems</td><td>it is hard to detect or reverse</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th></th><th>Low impact</th><th>Medium impact</th><th>High impact</th></tr></thead><tbody><tr><td><b>High likelihood</b></td><td>Medium</td><td>High</td><td>High</td></tr><tr><td><b>Medium likelihood</b></td><td>Low</td><td>Medium</td><td>High</td></tr><tr><td><b>Low likelihood</b></td><td>Low</td><td>Low</td><td>Medium</td></tr></tbody></table></div>
+<p>Use the result as the threat’s <b>priority</b> in the tool, and write down the reason in one sentence. <i>Example:</i> “High: any signed-in user can read any invoice by changing the id (easy, internet-facing) and invoices hold billing addresses (sensitive).”</p>
+<div class="note warn">Numeric scoring schemes look precise but are subjective; many teams moved away from point scoring (such as DREAD) because two people rate the same threat very differently. A short, agreed three-level scale plus a written reason is more useful and easier to defend.</div>
+</section>
+
+<section id="decide"><h2>Deciding what to do</h2>
+<p>Every threat ends in one of four decisions. “We have not looked at it” is not a decision.</p>
+<div class="tw"><table><thead><tr><th>Decision</th><th>Meaning</th><th>Example</th><th>In the tool</th></tr></thead><tbody><tr><td><b>Mitigate</b></td><td>Add or improve a control so the threat is less likely or less harmful.</td><td>Check ownership of every invoice on the server</td><td>Needs Investigation → Mitigation Implemented, with the control named</td></tr><tr><td><b>Avoid</b> (eliminate)</td><td>Remove the feature, data or flow that causes the threat.</td><td>Stop storing card numbers; use the provider’s hosted form</td><td>Remove it from the diagram, or Not Applicable with the reason</td></tr><tr><td><b>Transfer</b></td><td>Move the risk to someone better placed, by contract or product choice. It never moves <i>your</i> responsibility to protect your users’ data.</td><td>Use a managed identity service; buy cyber insurance for the residual</td><td>Mitigation Implemented, naming the vendor and what you verified</td></tr><tr><td><b>Accept</b></td><td>Knowingly live with it, because it is unlikely, cheap, or costlier to fix than to bear. By someone with authority, in writing, with a review date.</td><td>An internal-only report page shows a name list to all staff</td><td>Not Applicable or kept open with a justification, owner and date</td></tr></tbody></table></div>
+<p><b>Who decides?</b> The people who own the risk: usually the product or service owner, informed by engineering and security. Accepting a high-priority risk should need a more senior person than accepting a low one. The <a href="../how-to/index.html#reports">executive summary</a> exists to put these decisions in front of them in plain language.</p>
+</section>
+
+<section id="write"><h2>Writing good mitigations and justifications</h2>
+<p>A good mitigation is <b>specific, testable and owned</b>.</p>
+<div class="tw"><table><thead><tr><th>Weak</th><th>Strong</th></tr></thead><tbody><tr><td>“Improve security of the login.”</td><td>“Limit sign-in to 5 attempts per account per 15 minutes; locked accounts get an email. Owner: Auth team. Test: <code>test_login_lockout</code>.”</td></tr><tr><td>“Handled.”</td><td>“Authorization is checked in <code>InvoiceService.get()</code>; any invoice not owned by the caller returns 404. Covered by the role-matrix tests.”</td></tr><tr><td>“Encrypt data.”</td><td>“Database volumes use AES-256 with keys held in the cloud key vault; backups use a separate key. Verified in the 2026-Q1 review.”</td></tr><tr><td>“Not applicable.”</td><td>“Not applicable: this flow only exists in the test environment (see deployment diagram, no route in production).”</td></tr></tbody></table></div>
+<p>Ask of every mitigation: <i>Where is it enforced? How would we know if it stopped working? Who owns it?</i></p>
+</section>
+
+<section id="others"><h2>Other methods and when to use them</h2>
+<p>STRIDE-per-flow, as used here, is a strong default because it is simple, structured and teaches well. Know its neighbours:</p>
+<div class="tw"><table><thead><tr><th>Method</th><th>Use it when</th><th>How it differs</th></tr></thead><tbody><tr><td><b>Attack trees</b></td><td>You have one critical goal (“steal customer data”) and want every path to it</td><td>Starts from the attacker’s goal and branches into ways to achieve it, rather than from the architecture</td></tr><tr><td><b>LINDDUN</b></td><td>Personal data and privacy are the main concern</td><td>Same diagram-based approach but with privacy threat categories (linking, identifying, non-repudiation, detecting, data disclosure, unawareness, non-compliance)</td></tr><tr><td><b>PASTA</b></td><td>You need a risk-centric, business-driven process with stronger attacker simulation</td><td>A longer, staged process that ties threats to business impact</td></tr><tr><td><b>ATT&amp;CK / CAPEC</b></td><td>You want realistic attacker techniques to brainstorm with, or to test detection</td><td>Catalogues of known techniques and patterns, not a method for drawing your system</td></tr></tbody></table></div>
+<p>They combine well: use STRIDE to find threats broadly, attack trees to go deep on the few that matter, and a catalogue to make the brainstorm realistic.</p>
+</section>
+
+<section id="pitfalls"><h2>Pitfalls</h2>
+<ul><li><b>Boiling the ocean.</b> Model one feature or one flow at a time. A finished small model beats an abandoned big one.</li><li><b>Only imagining outsiders.</b> Customers, staff and vendors have legitimate access that can be misused or stolen.</li><li><b>Trusting “internal”.</b> The inside of your network is not a boundary of trust unless you have verified it.</li><li><b>Rating everything High.</b> If everything is urgent nothing is. Use the matrix and defend each rating.</li><li><b>Treating the tool’s list as complete.</b> It is a strong start. Your abuse cases and your knowledge of the business add the rest.</li><li><b>No follow-through.</b> A threat without an owner and a date does not get fixed. Put the work into the normal backlog.</li><li><b>One and done.</b> Revisit when the architecture, data or vendors change.</li></ul>
+<p>Put it into practice: <a href="../practice/index.html">practice scenarios</a>, or back to the <a href="../learn/index.html">learning path</a>.</p>
+</section>
+<footer>STRIDE Threat Modeler. Generated threats are a starting point for expert review, not a guarantee of security.</footer>
+</main>
+</div>
+</body>
+</html>

@@ -41,23 +41,24 @@ test('font choice applies to technical and executive reports; bad fonts are reje
 
 test('documentation pages are current and every worked-example spec builds cleanly', () => {
   assert.deepEqual(buildDocs({ check: true }), []);
-  const dir = path.join(ROOT, 'how-to-max/specs');
-  const specs = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
-  assert.ok(specs.length >= 4);
-  for (const f of specs) {
+  const dirs = ['how-to-max/specs', 'learn/specs', 'practice/specs'].map((d) => path.join(ROOT, d));
+  const specs = dirs.flatMap((d) => fs.readdirSync(d).filter((f) => f.endsWith('.json')).map((f) => path.join(d, f)));
+  assert.ok(specs.length >= 9);
+  for (const file of specs) {
+    const f = path.basename(file);
     const m = createModel({ template: DEFAULT_TEMPLATE, name: f });
-    const report = syncModel(m, JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
+    const report = syncModel(m, JSON.parse(fs.readFileSync(file, 'utf8')));
     generateThreats(m);
     assert.deepEqual(report.layoutWarnings, [], `${f} layout`);
     assert.deepEqual(validateModel(m).filter((x) => x.severity !== 'info'), [], `${f} validation`);
-    assert.ok(m.threats.length > 20, `${f} produces threats`);
+    assert.ok(m.threats.length > 10, `${f} produces threats`);
   }
 });
 
 test('/how-to, /what-is and /how-to-max are served', async () => {
   const { server, port } = await startServer(0);
   try {
-    for (const p of ['how-to', 'what-is', 'how-to-max']) {
+    for (const p of ['how-to', 'what-is', 'how-to-max', 'learn', 'practice', 'think']) {
       const r = await fetch(`http://127.0.0.1:${port}/${p}`, { redirect: 'manual' });
       assert.equal(r.status, 301);
       const page = await fetch(`http://127.0.0.1:${port}/${p}/`);

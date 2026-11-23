@@ -1,0 +1,110 @@
+{
+  "name": "Fitness mobile app (practice 3)",
+  "description": "A phone app records workouts, keeps a local cache, and syncs with a cloud API through a gateway. The API stores activity data and asks a push service to send reminders to the phone.",
+  "assumptions": "Phones can be lost, rooted or running modified apps. The API must not trust the app.",
+  "externalDependencies": "Push notification service",
+  "zones": [
+    {
+      "name": "User device",
+      "type": "SE.TB.B.TMCore.Sandbox"
+    },
+    {
+      "name": "Backend",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    }
+  ],
+  "elements": [
+    {
+      "name": "Phone user",
+      "type": "SE.EI.TMCore.User"
+    },
+    {
+      "name": "Mobile app",
+      "type": "GE.P",
+      "zone": "User device"
+    },
+    {
+      "name": "Local cache",
+      "type": "SE.DS.TMCore.Device",
+      "zone": "User device"
+    },
+    {
+      "name": "API gateway",
+      "type": "SE.P.TMCore.WebServer",
+      "zone": "Backend"
+    },
+    {
+      "name": "Fitness API",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Backend"
+    },
+    {
+      "name": "Activity DB",
+      "type": "SE.DS.TMCore.NoSQL",
+      "zone": "Backend",
+      "custom": {
+        "dataClass": "health-related"
+      }
+    },
+    {
+      "name": "Push service",
+      "type": "SE.EI.TMCore.WebSvc"
+    }
+  ],
+  "flows": [
+    {
+      "from": "Phone user",
+      "to": "Mobile app",
+      "name": "Taps and sensor data",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Mobile app",
+      "to": "Local cache",
+      "name": "Cached activity",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Local cache",
+      "to": "Mobile app",
+      "name": "Cached data",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Mobile app",
+      "to": "API gateway",
+      "name": "API calls with token",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "API gateway",
+      "to": "Mobile app",
+      "name": "API responses",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "API gateway",
+      "to": "Fitness API",
+      "name": "Forwarded calls",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Fitness API",
+      "to": "Activity DB",
+      "name": "Activity reads and writes",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Fitness API",
+      "to": "Push service",
+      "name": "Reminder requests",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Push service",
+      "to": "Mobile app",
+      "name": "Push notifications",
+      "type": "SE.DF.TMCore.HTTPS"
+    }
+  ]
+}

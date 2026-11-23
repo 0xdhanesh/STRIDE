@@ -1,0 +1,73 @@
+{
+  "name": "Cinema booking (tutorial)",
+  "description": "Customers pick seats and pay for cinema tickets on a booking website. The site stores bookings in a database and takes payment through an outside payment provider.",
+  "assumptions": "The payment provider handles card details; our systems never see card numbers.",
+  "externalDependencies": "Payment provider",
+  "zones": [
+    {
+      "name": "Our systems",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    }
+  ],
+  "elements": [
+    {
+      "name": "Customer",
+      "type": "SE.EI.TMCore.User"
+    },
+    {
+      "name": "Booking web app",
+      "type": "SE.P.TMCore.WebApp",
+      "zone": "Our systems"
+    },
+    {
+      "name": "Bookings DB",
+      "type": "SE.DS.TMCore.SQL",
+      "zone": "Our systems",
+      "custom": {
+        "dataClass": "names, emails, bookings"
+      }
+    },
+    {
+      "name": "Payment provider",
+      "type": "SE.EI.TMCore.WebSvc"
+    }
+  ],
+  "flows": [
+    {
+      "from": "Customer",
+      "to": "Booking web app",
+      "name": "Seat selection and details",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Booking web app",
+      "to": "Customer",
+      "name": "Booking confirmation",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Booking web app",
+      "to": "Bookings DB",
+      "name": "Booking reads and writes",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Bookings DB",
+      "to": "Booking web app",
+      "name": "Booking data",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Booking web app",
+      "to": "Payment provider",
+      "name": "Card payment request",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Payment provider",
+      "to": "Booking web app",
+      "name": "Payment result",
+      "type": "SE.DF.TMCore.HTTPS"
+    }
+  ]
+}

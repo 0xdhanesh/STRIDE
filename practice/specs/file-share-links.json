@@ -1,0 +1,95 @@
+{
+  "name": "File sharing by link (practice 4)",
+  "description": "A file owner creates a share link with an expiry and permissions. Anyone with the link can open it; the web app asks the link service whether it is valid and then fetches the file from storage.",
+  "assumptions": "Links are long random values. Files are private in storage; only the web app can read them.",
+  "externalDependencies": "None",
+  "zones": [
+    {
+      "name": "Our systems",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    }
+  ],
+  "elements": [
+    {
+      "name": "File owner",
+      "type": "SE.EI.TMCore.User"
+    },
+    {
+      "name": "Link recipient",
+      "type": "SE.EI.TMCore.User"
+    },
+    {
+      "name": "Web app",
+      "type": "SE.P.TMCore.WebApp",
+      "zone": "Our systems"
+    },
+    {
+      "name": "Link service",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Our systems"
+    },
+    {
+      "name": "Share links DB",
+      "type": "SE.DS.TMCore.SQL",
+      "zone": "Our systems"
+    },
+    {
+      "name": "File storage",
+      "type": "SE.DS.TMCore.CloudStorage",
+      "zone": "Our systems",
+      "custom": {
+        "dataClass": "user files"
+      }
+    }
+  ],
+  "flows": [
+    {
+      "from": "File owner",
+      "to": "Web app",
+      "name": "Create link request",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Web app",
+      "to": "Link service",
+      "name": "Create link",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Link service",
+      "to": "Share links DB",
+      "name": "Store link, expiry, permissions",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Link recipient",
+      "to": "Web app",
+      "name": "Open link",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Web app",
+      "to": "Link service",
+      "name": "Validate link",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Link service",
+      "to": "Share links DB",
+      "name": "Link lookup",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Web app",
+      "to": "File storage",
+      "name": "Fetch file",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Web app",
+      "to": "Link recipient",
+      "name": "File download",
+      "type": "SE.DF.TMCore.HTTPS"
+    }
+  ]
+}

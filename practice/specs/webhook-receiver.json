@@ -1,0 +1,70 @@
+{
+  "name": "Payment webhook receiver (practice 2)",
+  "description": "A payment provider calls our webhook endpoint when a payment succeeds or fails. The endpoint puts verified events on a queue; a worker reads them and updates order status in the orders database.",
+  "assumptions": "The provider signs each event. The queue is only reachable from inside our network.",
+  "externalDependencies": "Payment provider",
+  "zones": [
+    {
+      "name": "Our systems",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    }
+  ],
+  "elements": [
+    {
+      "name": "Payment provider",
+      "type": "SE.EI.TMCore.WebSvc"
+    },
+    {
+      "name": "Webhook endpoint",
+      "type": "SE.P.TMCore.WebSvc",
+      "zone": "Our systems"
+    },
+    {
+      "name": "Event queue",
+      "type": "SE.DS.TMCore.Cache",
+      "zone": "Our systems"
+    },
+    {
+      "name": "Order worker",
+      "type": "SE.P.TMCore.Win32Service",
+      "zone": "Our systems"
+    },
+    {
+      "name": "Orders DB",
+      "type": "SE.DS.TMCore.SQL",
+      "zone": "Our systems"
+    }
+  ],
+  "flows": [
+    {
+      "from": "Payment provider",
+      "to": "Webhook endpoint",
+      "name": "Signed payment events",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Webhook endpoint",
+      "to": "Payment provider",
+      "name": "Acknowledgement",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Webhook endpoint",
+      "to": "Event queue",
+      "name": "Verified events",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Event queue",
+      "to": "Order worker",
+      "name": "Events to process",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Order worker",
+      "to": "Orders DB",
+      "name": "Order status updates",
+      "type": "GE.DF"
+    }
+  ]
+}

@@ -154,12 +154,24 @@ async function openSample() {
   requestAnimationFrame(() => ui.canvas.zoomToFit());
 }
 
+/** A saved model, or an architecture spec (zones/elements/flows, as used by `stride sync`) that is built into a new model. */
+function modelFromText(text) {
+  const raw = JSON.parse(text);
+  if (raw && raw.format !== 'stride-model' && (Array.isArray(raw.elements) || Array.isArray(raw.zones))) {
+    const m = createModel({ template: DEFAULT_TEMPLATE, name: String(raw.name || 'Imported architecture spec').slice(0, 200) });
+    core.syncModel(m, raw);
+    core.generateThreats(m);
+    return m;
+  }
+  return loadModel(raw);
+}
+
 async function openModel() {
   if (!(await confirmDiscard())) return;
   const f = await pickFile('.json,.stride.json,application/json');
   if (!f) return;
   try {
-    store.setModel(loadModel(f.text), { fileName: f.name });
+    store.setModel(modelFromText(f.text), { fileName: f.name });
     requestAnimationFrame(() => ui.canvas.zoomToFit());
     toast(`Opened ${f.name}`);
   } catch (e) {
@@ -388,7 +400,7 @@ function renderTopbar() {
   );
   const fileMenu = menu('File', 'menu', [
     { label: 'New model', run: newModel },
-    { label: 'Open…', kbd: `${MOD}O`, run: openModel },
+    { label: 'Open… (model or architecture spec)', kbd: `${MOD}O`, run: openModel },
     { label: 'Save', kbd: `${MOD}S`, run: () => saveModel(false) },
     { label: 'Save as…', kbd: `${MOD}⇧S`, run: () => saveModel(true) },
     '-',
@@ -413,9 +425,12 @@ function renderTopbar() {
   ]);
   const openDoc = (rel) => window.open(rel, '_blank', 'noopener');
   const helpMenu = menu('Help', 'book', [
+    { label: 'Learn threat modeling (start here)', run: () => openDoc('learn/index.html') },
     { label: 'How to use this tool', run: () => openDoc('how-to/index.html') },
     { label: 'What is STRIDE, and why it matters', run: () => openDoc('what-is/index.html') },
     { label: 'Worked examples (web app, microservices, IVR…)', run: () => openDoc('how-to-max/index.html') },
+    { label: 'Practice scenarios', run: () => openDoc('practice/index.html') },
+    { label: 'Thinking like an attacker', run: () => openDoc('think/index.html') },
     '-',
     { label: 'Keyboard shortcuts', kbd: '?', run: shortcutsDialog },
   ]);
