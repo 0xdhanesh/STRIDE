@@ -2,6 +2,7 @@
 
 import { GENERIC } from './kb.js';
 import { center, quadPoint } from './geometry.js';
+import { flowColor } from './route.js';
 import { diagramBounds, kbOf, lineGeometry } from './model.js';
 import { arrowHead, ellipsePath, quadPath, roughEllipse, roughLine, roughQuad, roughRect } from './sketch.js';
 import { escapeHtml } from './util.js';
@@ -17,7 +18,7 @@ export const SVG_STYLE = `
 .dg .fill-A{fill:var(--fill-annotation,#f8f9fa)}
 .dg .boundary{fill:none;stroke:var(--boundary,#e03131);stroke-width:1.8;stroke-dasharray:8 7;stroke-linecap:round}
 .dg .box-fill{fill:var(--boundary-fill,rgba(224,49,49,.035))}
-.dg .flow{fill:none;stroke:var(--flow,#1e1e1e);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.dg .flow{fill:none;stroke:var(--flow,#1e1e1e);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .dg .label-bg{fill:var(--paper,#fff);opacity:.92}
 .dg .caption{font-size:${SMALL}px;fill:var(--muted,#868e96);font-style:italic}
 .dg .blabel{fill:var(--boundary,#e03131);font-size:13px}
@@ -126,7 +127,7 @@ export function renderElement(model, diagram, el, opts = {}) {
     body += `<path class="${isFlow ? 'flow' : 'boundary'}" d="${d}"/>`;
     if (isFlow) body += `<path class="flow" d="${arrowHead(geo.c, geo.p1)}"/>`;
     // Flow labels sit mid-curve; arc boundary labels near the start so they do not collide with flow labels.
-    const mid = quadPoint(geo.p0, geo.c, geo.p1, isFlow ? 0.5 : 0.1);
+    const mid = quadPoint(geo.p0, geo.c, geo.p1, isFlow ? geo.labelT ?? 0.5 : 0.1);
     if (el.name) {
       const fs = isFlow ? 14 : 13;
       const lines = wrapText(el.name, 160, fs);
@@ -137,7 +138,9 @@ export function renderElement(model, diagram, el, opts = {}) {
     }
     if (count) body += badge(mid.x + 14, mid.y - 16, count);
   }
-  return `<g class="${classes.join(' ')}" data-id="${escapeHtml(el.id)}">${body}</g>`;
+  const color = g === GENERIC.FLOW ? flowColor(diagram, el) : undefined;
+  const style = color ? ` style="--flow:${color}"` : '';
+  return `<g class="${classes.join(' ')}" data-id="${escapeHtml(el.id)}"${style}>${body}</g>`;
 }
 
 const LAYER = {

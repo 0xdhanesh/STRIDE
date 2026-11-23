@@ -37,6 +37,16 @@ const inspector = h('aside', { class: 'inspector', 'aria-label': 'Properties' })
 const drawer = h('section', { class: 'drawer', 'aria-label': 'Threats, messages and notes' });
 clear(app).append(topbar, palette, stage, inspector, drawer);
 
+function setFocus(on) {
+  app.classList.toggle('focus', on);
+  closeMenu();
+  requestAnimationFrame(() => {
+    ui.canvas.zoomToFit();
+    ui.canvas.svg.focus({ preventScroll: true });
+  });
+}
+const toggleFocus = () => setFocus(!app.classList.contains('focus'));
+
 const ui = {
   openTemplate: (focus) => openTemplateEditor(store, focus),
 };
@@ -44,6 +54,7 @@ ui.canvas = new Canvas(store, stage);
 ui.palette = new Palette(store, palette);
 ui.inspector = new Inspector(store, inspector, ui);
 ui.drawer = new Drawer(store, drawer, ui);
+stage.append(h('button', { class: 'btn focus-exit', type: 'button', title: `Exit focus mode (Esc or ${MOD}.)`, onClick: () => setFocus(false) }, icon('x', 16), h('span', null, 'Exit focus')));
 
 // ------------------------------------------------------------ theme
 function applyTheme() {
@@ -231,6 +242,8 @@ function shortcutsDialog() {
     ['Wheel, ⇧Wheel', 'Pan'],
     [`${MOD}Wheel, +, −`, 'Zoom'],
     ['⇧1', 'Zoom to fit'],
+    [`${MOD}G, ${MOD}⇧G`, 'Group, ungroup selection'],
+    [`${MOD}.`, 'Focus mode: hide every menu (Esc exits)'],
     [`${MOD}S`, 'Save'],
   ];
   modal({ title: 'Keyboard shortcuts', content: h('table', { class: 'kbd-table' }, rows.map(([k, v]) => h('tr', null, h('td', null, k), h('td', null, v)))) });
@@ -310,6 +323,7 @@ function renderTopbar() {
   ]);
   const settingsMenu = menu('', store.prefs.theme === 'dark' ? 'moon' : 'sun', () => [
     { label: `Theme: ${store.prefs.theme}`, run: cycleTheme },
+    { label: 'Focus on diagram (hide all menus)', kbd: `${MOD}.`, run: toggleFocus },
     { label: `Grid: ${store.prefs.grid ? 'on' : 'off'}`, run: () => togglePref('grid') },
     { label: `Hand-drawn style: ${store.prefs.sketch ? 'on' : 'off'}`, run: () => togglePref('sketch') },
     { label: `Keep tool after drawing: ${store.prefs.toolLock ? 'on' : 'off'}`, run: () => togglePref('toolLock') },
@@ -325,6 +339,7 @@ function renderTopbar() {
     tabs,
     h('div', { class: 'spacer' }),
     viewSeg,
+    h('button', { class: 'btn', type: 'button', title: `Focus on diagram (${MOD}.)`, 'aria-label': 'Focus on diagram', onClick: toggleFocus }, icon('fit')),
     h('button', { class: 'btn', type: 'button', title: `Undo (${MOD}Z)`, 'aria-label': 'Undo', disabled: !store.undoStack.length || undefined, onClick: () => store.undo() }, icon('undo')),
     h('button', { class: 'btn', type: 'button', title: `Redo (${MOD}⇧Z)`, 'aria-label': 'Redo', disabled: !store.redoStack.length || undefined, onClick: () => store.redo() }, icon('redo')),
     reportMenu,
@@ -369,6 +384,11 @@ window.addEventListener('keydown', (e) => {
   } else if (mod && k === 'o') {
     e.preventDefault();
     openModel();
+  } else if (mod && e.key === '.') {
+    e.preventDefault();
+    toggleFocus();
+  } else if (e.key === 'Escape' && app.classList.contains('focus') && !document.querySelector('dialog[open]') && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+    setFocus(false);
   } else if (e.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && !document.querySelector('dialog[open]')) {
     shortcutsDialog();
   }

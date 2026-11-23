@@ -232,6 +232,27 @@ async function main() {
     const hs = await evaluate(`(() => ({ rows: document.querySelectorAll('.table-wrap tbody tr').length, high: __stride.store.model.threats.filter(t => t.signal?.level === 'high').length, first: document.querySelector('.table-wrap tbody tr td.title')?.textContent || '' }))()`);
     check(hs.rows === hs.high && hs.rows > 0 && hs.rows < allRows && hs.first.startsWith('Command / code injection sink (shell_exec)'), `high-signal view filters and ranks threats (${allRows} → ${hs.rows}, first: ${hs.first.slice(0, 60)})`);
 
+    // Grouping (Ctrl+G), line colours and focus mode.
+    await evaluate(`(() => { const s = __stride.store; s.setModel(__stride.core.createSampleModel()); s.clearSelection(); document.getElementById('canvas').focus(); })()`);
+    await sleep(200);
+    const ids = await evaluate(`__stride.store.diagram.elements.filter(e => e.generic === 'GE.P').slice(0, 2).map(e => e.id)`);
+    await evaluate(`__stride.store.select(${JSON.stringify(ids)})`);
+    await key('g', 2);
+    await sleep(200);
+    check((await evaluate(`new Set(__stride.store.diagram.elements.filter(e => e.groupId).map(e => e.groupId)).size`)) === 1, 'Ctrl+G groups the selection');
+    await evaluate(`(() => { const s = __stride.store; s.clearSelection(); s.select([${JSON.stringify(ids[0])}].flatMap(i => [...__stride.core.expandGroups(s.diagram, [i])])); })()`);
+    check((await evaluate('__stride.store.selection.size')) === 2, 'a group selects and moves as one');
+    await key('g', 10);
+    await sleep(200);
+    check((await evaluate(`__stride.store.diagram.elements.filter(e => e.groupId).length`)) === 0, 'Ctrl+Shift+G ungroups');
+    check((await evaluate(`document.querySelectorAll('#canvas .el[style*="--flow"]').length`)) >= 5, 'flows are drawn with per-entity colours');
+    await key('.', 2);
+    await sleep(300);
+    check((await evaluate(`getComputedStyle(document.querySelector('.topbar')).display`)) === 'none', 'focus mode hides all menus');
+    await key('Escape');
+    await sleep(300);
+    check((await evaluate(`getComputedStyle(document.querySelector('.topbar')).display`)) !== 'none', 'Escape leaves focus mode');
+
     if (SHOT) {
       await evaluate(`(() => { __stride.store.setModel(__stride.core.createSampleModel()); __stride.ui.canvas.zoomToFit(); })()`);
       await sleep(500);

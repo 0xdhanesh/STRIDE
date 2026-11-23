@@ -280,3 +280,18 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .app[data-view='analyze'] .palette { display: none; }
 .app[data-view='analyze'] .toolbar { opacity: 0.55; }
 .app[data-view='analyze'] .toolbar:hover { opacity: 1; }
+
+/* Groups, colour pickers */
+.group-outline { fill: none; stroke: var(--muted); stroke-dasharray: 2 5; opacity: 0.45; pointer-events: none; }
+.group-outline.on { stroke: var(--accent); opacity: 0.9; }
+.swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.swatch { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line-strong); cursor: pointer; padding: 0; }
+.swatch[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--accent); }
+.swatch-input { width: 26px; height: 26px; padding: 0; border: 0; background: none; cursor: pointer; }
+
+/* Focus mode: only the diagram. */
+.app.focus { grid-template-columns: 1fr; grid-template-rows: 1fr; grid-template-areas: 'stage'; }
+.app.focus .topbar, .app.focus .palette, .app.focus .inspector, .app.focus .drawer, .app.focus .toolbar, .app.focus .status, .app.focus .stage-hint { display: none; }
+.focus-exit { display: none; position: absolute; top: 12px; right: 12px; z-index: 6; opacity: 0.35; transition: opacity 0.15s; }
+.focus-exit:hover, .focus-exit:focus-visible { opacity: 1; }
+.app.focus .focus-exit { display: inline-flex; }

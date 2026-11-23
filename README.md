@@ -152,6 +152,12 @@ stride threats shop.json --signal high    # only high-signal threats, best first
 stride rule check "source is 'GE.P' and flow crosses 'GE.TB.L'"
 ```
 
+**Reading the diagram.** Flows are routed automatically: every entity gets its own colour and all of its egress shares it, so
+the flows entering an entity are told apart by source. Egress from one entity leaves through a single shared port (a trunk that
+splits towards its targets); each ingress gets its own port, and flows from different entities never run on top of each other.
+In the web UI, pick an entity's egress colour or a single line's colour in the Properties panel, group elements with
+Ctrl/⌘+G (Ctrl/⌘+Shift+G ungroups), and hide every menu with Ctrl/⌘+. (Esc exits focus mode).
+
 `stride sync <model.json> <spec.json>` creates or updates a model from an architecture spec (see
 [MCPUsage.md](MCPUsage.md) §8). Elements can be referenced by id or by unique name. After every change the CLI regenerates threats;
 pass `--no-generate` to skip this. Add `--json` to any command for machine-readable output.

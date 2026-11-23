@@ -23,14 +23,14 @@ import { DEFAULT_SIZE, ModelError, addElement, findDiagram, isNodeGeneric, kbOf,
 import { safeStringMap } from './util.js';
 
 const PREFIX = 'spec_';
-const CELL_W = 210;
-const CELL_H = 150;
+const CELL_W = 360;
+const CELL_H = 210;
 const ROWS_PER_COLUMN = 4;
-const PAD = 40;
-const LABEL = 24;
-const ZONE_GAP = 130;
+const PAD = 60;
+const LABEL = 30;
+const ZONE_GAP = 240;
 const TOP = 60;
-const OUTSIDE_GAP = 130;
+const OUTSIDE_GAP = 220;
 
 export function slug(s) {
   return (
@@ -210,14 +210,14 @@ function layout(norm, keep) {
     const partner = rects.get(best[0].id);
     const size = DEFAULT_SIZE[el.generic];
     const x0 = Math.round(partner.x + partner.w / 2 - size.w / 2);
-    const clash = (r) => placed.some((p) => r.x < p.x + p.w + 50 && p.x < r.x + r.w + 50 && r.y < p.y + p.h + 40 && p.y < r.y + r.h + 40);
+    const clash = (r) => placed.some((p) => r.x < p.x + p.w + 100 && p.x < r.x + r.w + 100 && r.y < p.y + p.h + 70 && p.y < r.y + r.h + 70);
     // Nearest free spot on the first row (either side of the partner), then further rows.
     let x = x0;
     let y = bottom + OUTSIDE_GAP;
     search: for (let row = 0; row < 20; row++, y += CELL_H) {
       for (let step = 0; step <= 40; step++) {
         for (const dir of step ? [1, -1] : [1]) {
-          const cx = x0 + dir * step * 50;
+          const cx = x0 + dir * step * 80;
           if (!clash({ x: cx, y, w: size.w, h: size.h })) {
             x = cx;
             break search;
@@ -307,8 +307,8 @@ export function syncModel(model, spec, { diagram: diagramRef, prune = true, layo
     upsert(e.id, { type: e.typeId, name: e.name, props: e.props, custom: e.custom, evidence: e.evidence, outOfScope: e.outOfScope, outOfScopeReason: e.outOfScopeReason, ...rects.get(e.id) });
   }
 
-  // Flows: straight between adjacent zones; arcs above intermediate zones otherwise;
-  // opposite/parallel flows between the same pair are fanned out.
+  // Flows: auto-routed between adjacent zones (ports and bends are computed, see route.js);
+  // arcs above intermediate zones when a flow has to jump over a zone.
   const zoneIndex = new Map(norm.zones.map((z, i) => [z.id, i]));
   const top = Math.min(TOP, ...[...zoneRects.values()].map((r) => r.y));
   const pairCount = new Map();
@@ -324,12 +324,8 @@ export function syncModel(model, spec, { diagram: diagramRef, prune = true, layo
     const spansZones = za !== undefined && zb !== undefined && Math.abs(za - zb) > 1;
     if (spansZones) {
       bend = bendFromMidpoint(a, b, { x: (a.x + b.x) / 2, y: top - 60 - n * 45 });
-    } else if (n > 0) {
-      const reverse = norm.flows.some((g) => g !== f && g.from === f.to && g.to === f.from);
-      bend = (reverse ? 34 : 0) + Math.ceil(n / (reverse ? 2 : 1)) * 34 * (n % 2 && !reverse ? -1 : 1);
-    } else if (norm.flows.some((g) => g !== f && g.from === f.to && g.to === f.from)) {
-      bend = 34;
     }
+    // Everything else is routed automatically: separate ports per flow, see route.js.
     upsert(f.id, { type: f.typeId, name: f.name, props: f.props, custom: f.custom, evidence: f.evidence, outOfScope: f.outOfScope, outOfScopeReason: f.outOfScopeReason, source: f.from.id, target: f.to.id, bend: Math.round(bend) });
   }
 

@@ -11,7 +11,7 @@
     "assumptions": "Derived from docker-compose.yml and source code. The backend network is internal-only (docker-compose.yml:31). Auth0, Stripe and SendGrid are trusted third parties outside our control.",
     "externalDependencies": "Auth0 (identity), Stripe (payments), SendGrid (email)",
     "createdAt": "2026-11-22T05:37:55.216Z",
-    "updatedAt": "2026-11-22T05:37:55.239Z"
+    "updatedAt": "2026-11-23T15:08:53.632Z"
   },
   "template": {
     "format": "stride-template",
@@ -2374,8 +2374,8 @@
           ],
           "x": 80,
           "y": 60,
-          "w": 290,
-          "h": 254
+          "w": 480,
+          "h": 360
         },
         {
           "id": "spec_zone_edge",
@@ -2391,10 +2391,10 @@
             "docker-compose.yml:3",
             "docker-compose.yml:7"
           ],
-          "x": 500,
+          "x": 800,
           "y": 60,
-          "w": 290,
-          "h": 254
+          "w": 480,
+          "h": 360
         },
         {
           "id": "spec_zone_backend-network",
@@ -2409,10 +2409,10 @@
           "evidence": [
             "docker-compose.yml:31"
           ],
-          "x": 920,
+          "x": 1520,
           "y": 60,
-          "w": 500,
-          "h": 554
+          "w": 840,
+          "h": 780
         },
         {
           "id": "spec_el_customer",
@@ -2424,8 +2424,8 @@
           "outOfScope": false,
           "outOfScopeReason": "",
           "order": 0,
-          "x": 155,
-          "y": 744,
+          "x": 250,
+          "y": 1060,
           "w": 140,
           "h": 70
         },
@@ -2446,8 +2446,8 @@
             "web/src/api.ts:1",
             "web/src/InvoiceView.tsx:3"
           ],
-          "x": 160,
-          "y": 154,
+          "x": 255,
+          "y": 210,
           "w": 130,
           "h": 90
         },
@@ -2468,8 +2468,8 @@
             "docker-compose.yml:3",
             "docker-compose.yml:5"
           ],
-          "x": 580,
-          "y": 154,
+          "x": 975,
+          "y": 210,
           "w": 130,
           "h": 90
         },
@@ -2494,8 +2494,8 @@
             "api/auth.py:6",
             "api/auth.py:12"
           ],
-          "x": 1000,
-          "y": 154,
+          "x": 1695,
+          "y": 210,
           "w": 130,
           "h": 90
         },
@@ -2512,8 +2512,8 @@
           "evidence": [
             "worker/receipts.py:5"
           ],
-          "x": 1000,
-          "y": 304,
+          "x": 1695,
+          "y": 420,
           "w": 130,
           "h": 90
         },
@@ -2534,8 +2534,8 @@
             "docker-compose.yml:23",
             "api/db.py:2"
           ],
-          "x": 1200,
-          "y": 167,
+          "x": 2045,
+          "y": 223,
           "w": 150,
           "h": 64
         },
@@ -2556,8 +2556,8 @@
           "evidence": [
             "api/audit.py:3"
           ],
-          "x": 1200,
-          "y": 317,
+          "x": 2045,
+          "y": 433,
           "w": 150,
           "h": 64
         },
@@ -2577,8 +2577,8 @@
             "docker-compose.yml:26",
             "api/app.py:23"
           ],
-          "x": 1200,
-          "y": 467,
+          "x": 2045,
+          "y": 643,
           "w": 150,
           "h": 64
         },
@@ -2596,8 +2596,8 @@
             "api/auth.py:4",
             "web/src/api.ts:2"
           ],
-          "x": 355,
-          "y": 744,
+          "x": 490,
+          "y": 1060,
           "w": 140,
           "h": 70
         },
@@ -2614,8 +2614,8 @@
           "evidence": [
             "api/payments.py:2"
           ],
-          "x": 575,
-          "y": 744,
+          "x": 970,
+          "y": 1060,
           "w": 140,
           "h": 70
         },
@@ -2632,8 +2632,8 @@
           "evidence": [
             "worker/receipts.py:7"
           ],
-          "x": 995,
-          "y": 744,
+          "x": 1690,
+          "y": 1060,
           "w": 140,
           "h": 70
         },
@@ -2695,7 +2695,7 @@
           "y0": 100,
           "x1": 300,
           "y1": 100,
-          "bend": 34,
+          "bend": 0,
           "source": "spec_el_billing-spa",
           "target": "spec_el_gateway"
         },
@@ -2718,7 +2718,7 @@
           "y0": 100,
           "x1": 300,
           "y1": 100,
-          "bend": 68,
+          "bend": 0,
           "source": "spec_el_gateway",
           "target": "spec_el_billing-spa"
         },
@@ -2739,7 +2739,7 @@
           "y0": 100,
           "x1": 300,
           "y1": 100,
-          "bend": 34,
+          "bend": 0,
           "source": "spec_el_gateway",
           "target": "spec_el_billing-api"
         },
@@ -2757,7 +2757,7 @@
           "y0": 100,
           "x1": 300,
           "y1": 100,
-          "bend": 68,
+          "bend": 0,
           "source": "spec_el_billing-api",
           "target": "spec_el_gateway"
         },
@@ -2827,7 +2827,7 @@
           "y0": 100,
           "x1": 300,
           "y1": 100,
-          "bend": 34,
+          "bend": 0,
           "source": "spec_el_billing-api",
           "target": "spec_el_invoices-db"
         },
@@ -2848,7 +2848,7 @@
           "y0": 100,
           "x1": 300,
           "y1": 100,
-          "bend": 68,
+          "bend": 0,
           "source": "spec_el_invoices-db",
           "target": "spec_el_billing-api"
         },
@@ -3011,7 +3011,36 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing the Billing SPA process",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S2:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_e27d3e71",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S3:spec_el_customer:spec_fl_customer__billing-spa__browser-interactions:spec_el_billing-spa",
@@ -3038,7 +3067,36 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing the Customer external entity",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S3:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_4a55e6d6",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T1:spec_el_customer:spec_fl_customer__billing-spa__browser-interactions:spec_el_billing-spa",
@@ -3065,7 +3123,36 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential lack of input validation for Billing SPA",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T1:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_1fffe1d3",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R6:spec_el_customer:spec_fl_customer__billing-spa__browser-interactions:spec_el_billing-spa",
@@ -3091,7 +3178,35 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential data repudiation by Billing SPA",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R6:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_6c943400",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I6:spec_el_customer:spec_fl_customer__billing-spa__browser-interactions:spec_el_billing-spa",
@@ -3117,7 +3232,36 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow sniffing",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I6:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_94c01df3",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D3:spec_el_customer:spec_fl_customer__billing-spa__browser-interactions:spec_el_billing-spa",
@@ -3144,7 +3288,35 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential process crash or stop for Billing SPA",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D3:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_5e4f0521",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_customer:spec_fl_customer__billing-spa__browser-interactions:spec_el_billing-spa",
@@ -3170,7 +3342,35 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow Browser interactions is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_a3d505d4",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E5:spec_el_customer:spec_fl_customer__billing-spa__browser-interactions:spec_el_billing-spa",
@@ -3196,7 +3396,35 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation using impersonation",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E5:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_aba6050a",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E6:spec_el_customer:spec_fl_customer__billing-spa__browser-interactions:spec_el_billing-spa",
@@ -3223,7 +3451,36 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Billing SPA may be subject to elevation of privilege using remote code execution",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E6:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_421bff97",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E7:spec_el_customer:spec_fl_customer__billing-spa__browser-interactions:spec_el_billing-spa",
@@ -3249,7 +3506,35 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation by changing the execution flow in Billing SPA",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E7:spec_el_customer>spec_el_billing-spa",
+        "stableKey": "sk_28363bc4",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S8:spec_el_billing-spa:spec_fl_billing-spa__auth0__login-and-token-requests:spec_el_auth0",
@@ -3275,7 +3560,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing of the Auth0 external destination entity",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S8:spec_el_billing-spa>spec_el_auth0",
+        "stableKey": "sk_13f434a3",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R7:spec_el_billing-spa:spec_fl_billing-spa__auth0__login-and-token-requests:spec_el_auth0",
@@ -3301,7 +3618,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "External entity Auth0 potentially denies receiving data",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R7:spec_el_billing-spa>spec_el_auth0",
+        "stableKey": "sk_0339787b",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_billing-spa:spec_fl_billing-spa__auth0__login-and-token-requests:spec_el_auth0",
@@ -3327,7 +3676,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow Login and token requests is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_billing-spa>spec_el_auth0",
+        "stableKey": "sk_ea3f004e",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E3:spec_el_billing-spa:spec_fl_billing-spa__auth0__login-and-token-requests:spec_el_auth0",
@@ -3354,7 +3735,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Weakness in SSO authorization",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E3:spec_el_billing-spa>spec_el_auth0",
+        "stableKey": "sk_070020e2",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S1:spec_el_billing-spa:spec_fl_billing-spa__gateway__api-requests-bearer-jwt:spec_el_gateway",
@@ -3381,7 +3795,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing the Billing SPA process",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S1:spec_el_billing-spa>spec_el_gateway",
+        "stableKey": "sk_2b2bc154",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T12:spec_el_billing-spa:spec_fl_billing-spa__gateway__api-requests-bearer-jwt:spec_el_gateway",
@@ -3408,7 +3855,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "JavaScript Object Notation processing",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T12:spec_el_billing-spa>spec_el_gateway",
+        "stableKey": "sk_0751f35d",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T13.1:spec_el_billing-spa:spec_fl_billing-spa__gateway__api-requests-bearer-jwt:spec_el_gateway",
@@ -3435,7 +3914,40 @@
       "orphan": false,
       "changedBy": "mcp",
       "modifiedAt": "2026-11-22T05:37:55.231Z",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 10,
+        "level": "generic",
+        "reasons": [
+          "source-code evidence",
+          "marked not applicable"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Cross site scripting",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T13.1:spec_el_billing-spa>spec_el_gateway",
+        "stableKey": "sk_6af0db4b",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R6:spec_el_billing-spa:spec_fl_billing-spa__gateway__api-requests-bearer-jwt:spec_el_gateway",
@@ -3461,7 +3973,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential data repudiation by Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R6:spec_el_billing-spa>spec_el_gateway",
+        "stableKey": "sk_625dcd64",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D3:spec_el_billing-spa:spec_fl_billing-spa__gateway__api-requests-bearer-jwt:spec_el_gateway",
@@ -3488,7 +4032,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential process crash or stop for Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D3:spec_el_billing-spa>spec_el_gateway",
+        "stableKey": "sk_15fe0169",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_billing-spa:spec_fl_billing-spa__gateway__api-requests-bearer-jwt:spec_el_gateway",
@@ -3514,7 +4090,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow API requests (Bearer JWT) is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_billing-spa>spec_el_gateway",
+        "stableKey": "sk_73efca18",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E5:spec_el_billing-spa:spec_fl_billing-spa__gateway__api-requests-bearer-jwt:spec_el_gateway",
@@ -3540,7 +4148,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation using impersonation",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E5:spec_el_billing-spa>spec_el_gateway",
+        "stableKey": "sk_3052f19e",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E6:spec_el_billing-spa:spec_fl_billing-spa__gateway__api-requests-bearer-jwt:spec_el_gateway",
@@ -3567,7 +4207,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Gateway may be subject to elevation of privilege using remote code execution",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E6:spec_el_billing-spa>spec_el_gateway",
+        "stableKey": "sk_3698431f",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E7:spec_el_billing-spa:spec_fl_billing-spa__gateway__api-requests-bearer-jwt:spec_el_gateway",
@@ -3593,7 +4266,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "web/src/InvoiceView.tsx",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation by changing the execution flow in Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E7:spec_el_billing-spa>spec_el_gateway",
+        "stableKey": "sk_3183fc48",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S1:spec_el_gateway:spec_fl_gateway__billing-spa__api-responses:spec_el_billing-spa",
@@ -3620,7 +4325,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing the Gateway process",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S1:spec_el_gateway>spec_el_billing-spa",
+        "stableKey": "sk_3c104657",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T2:spec_el_gateway:spec_fl_gateway__billing-spa__api-responses:spec_el_billing-spa",
@@ -3647,7 +4385,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Gateway process memory tampered",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T2:spec_el_gateway>spec_el_billing-spa",
+        "stableKey": "sk_209ff755",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T12:spec_el_gateway:spec_fl_gateway__billing-spa__api-responses:spec_el_billing-spa",
@@ -3674,7 +4444,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "JavaScript Object Notation processing",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T12:spec_el_gateway>spec_el_billing-spa",
+        "stableKey": "sk_4405545a",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R6:spec_el_gateway:spec_fl_gateway__billing-spa__api-responses:spec_el_billing-spa",
@@ -3700,7 +4502,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential data repudiation by Billing SPA",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R6:spec_el_gateway>spec_el_billing-spa",
+        "stableKey": "sk_0aa12f87",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D3:spec_el_gateway:spec_fl_gateway__billing-spa__api-responses:spec_el_billing-spa",
@@ -3727,7 +4561,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential process crash or stop for Billing SPA",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D3:spec_el_gateway>spec_el_billing-spa",
+        "stableKey": "sk_9412bc66",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_gateway:spec_fl_gateway__billing-spa__api-responses:spec_el_billing-spa",
@@ -3753,7 +4619,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow API responses is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_gateway>spec_el_billing-spa",
+        "stableKey": "sk_259354fb",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E5:spec_el_gateway:spec_fl_gateway__billing-spa__api-responses:spec_el_billing-spa",
@@ -3779,7 +4677,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation using impersonation",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E5:spec_el_gateway>spec_el_billing-spa",
+        "stableKey": "sk_407fd769",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E6:spec_el_gateway:spec_fl_gateway__billing-spa__api-responses:spec_el_billing-spa",
@@ -3806,7 +4736,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Billing SPA may be subject to elevation of privilege using remote code execution",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E6:spec_el_gateway>spec_el_billing-spa",
+        "stableKey": "sk_81f15f3c",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E7:spec_el_gateway:spec_fl_gateway__billing-spa__api-responses:spec_el_billing-spa",
@@ -3832,7 +4795,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation by changing the execution flow in Billing SPA",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E7:spec_el_gateway>spec_el_billing-spa",
+        "stableKey": "sk_3563478b",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S1:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -3859,7 +4854,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing the Gateway process",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S1:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_34c01f5a",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S2:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -3886,7 +4914,39 @@
       "orphan": false,
       "changedBy": "mcp",
       "modifiedAt": "2026-11-22T05:37:55.230Z",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing the Billing API process",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S2:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_98036b05",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T1:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -3913,7 +4973,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential lack of input validation for Billing API",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T1:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_ebda805b",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T2:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -3940,7 +5033,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Gateway process memory tampered",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T2:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_90980cf4",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R6:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -3966,7 +5091,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential data repudiation by Billing API",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R6:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_473ea6ca",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I6:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -3992,7 +5149,39 @@
       "orphan": false,
       "changedBy": "mcp",
       "modifiedAt": "2026-11-22T05:37:55.229Z",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow sniffing",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I6:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_d96acd7b",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D3:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -4019,7 +5208,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential process crash or stop for Billing API",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D3:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_5971ba55",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -4045,7 +5266,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow Proxied API requests is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_85a87f0e",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E5:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -4071,7 +5324,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation using impersonation",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E5:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_a6af6f28",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E6:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -4098,7 +5383,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Billing API may be subject to elevation of privilege using remote code execution",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E6:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_1dfba64f",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E7:spec_el_gateway:spec_fl_gateway__billing-api__proxied-api-requests:spec_el_billing-api",
@@ -4124,7 +5442,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "docker-compose.yml",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation by changing the execution flow in Billing API",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E7:spec_el_gateway>spec_el_billing-api",
+        "stableKey": "sk_2382e15e",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S2:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4151,7 +5501,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing the Gateway process",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S2:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_eb0f34ef",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T1:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4178,7 +5561,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential lack of input validation for Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T1:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_82b2411d",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T13.1:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4205,7 +5621,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Cross site scripting",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T13.1:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_9b2561fd",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R6:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4231,7 +5680,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential data repudiation by Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R6:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_489729b6",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I6:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4257,7 +5738,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow sniffing",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I6:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_09d57fbd",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I26:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4283,7 +5797,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Weak authentication scheme",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I26:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_68dd073b",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D3:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4310,7 +5856,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential process crash or stop for Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D3:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_8e9525ff",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4336,7 +5914,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow Proxied API responses is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_42d83a52",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E5:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4362,7 +5972,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation using impersonation",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E5:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_2089842c",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E6:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4389,7 +6031,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Gateway may be subject to elevation of privilege using remote code execution",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E6:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_abdbade9",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E7:spec_el_billing-api:spec_fl_billing-api__gateway__proxied-api-responses:spec_el_gateway",
@@ -4415,7 +6090,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation by changing the execution flow in Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E7:spec_el_billing-api>spec_el_gateway",
+        "stableKey": "sk_fb960362",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T12:spec_el_stripe:spec_fl_stripe__gateway__payment-webhooks:spec_el_gateway",
@@ -4442,7 +6149,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/payments.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "JavaScript Object Notation processing",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T12:spec_el_stripe>spec_el_gateway",
+        "stableKey": "sk_b1cc96b4",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T13.1:spec_el_stripe:spec_fl_stripe__gateway__payment-webhooks:spec_el_gateway",
@@ -4469,7 +6208,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/payments.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Cross site scripting",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T13.1:spec_el_stripe>spec_el_gateway",
+        "stableKey": "sk_88fe02d6",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R6:spec_el_stripe:spec_fl_stripe__gateway__payment-webhooks:spec_el_gateway",
@@ -4495,7 +6267,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/payments.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential data repudiation by Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R6:spec_el_stripe>spec_el_gateway",
+        "stableKey": "sk_8d2bf33d",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D3:spec_el_stripe:spec_fl_stripe__gateway__payment-webhooks:spec_el_gateway",
@@ -4522,7 +6326,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/payments.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential process crash or stop for Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D3:spec_el_stripe>spec_el_gateway",
+        "stableKey": "sk_7e6b14b0",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_stripe:spec_fl_stripe__gateway__payment-webhooks:spec_el_gateway",
@@ -4548,7 +6384,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/payments.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow Payment webhooks is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_stripe>spec_el_gateway",
+        "stableKey": "sk_654b6c61",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E5:spec_el_stripe:spec_fl_stripe__gateway__payment-webhooks:spec_el_gateway",
@@ -4574,7 +6442,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/payments.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation using impersonation",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E5:spec_el_stripe>spec_el_gateway",
+        "stableKey": "sk_031682fb",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E6:spec_el_stripe:spec_fl_stripe__gateway__payment-webhooks:spec_el_gateway",
@@ -4601,7 +6501,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/payments.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Gateway may be subject to elevation of privilege using remote code execution",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E6:spec_el_stripe>spec_el_gateway",
+        "stableKey": "sk_17d0043a",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E7:spec_el_stripe:spec_fl_stripe__gateway__payment-webhooks:spec_el_gateway",
@@ -4627,7 +6560,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/payments.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation by changing the execution flow in Gateway",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E7:spec_el_stripe>spec_el_gateway",
+        "stableKey": "sk_4722d391",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S3:spec_el_auth0:spec_fl_auth0__billing-api__jwks-fetch:spec_el_billing-api",
@@ -4654,7 +6619,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/auth.py",
+          "web/src/api.ts",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing the Auth0 external entity",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S3:spec_el_auth0>spec_el_billing-api",
+        "stableKey": "sk_8ab9f58c",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R6:spec_el_auth0:spec_fl_auth0__billing-api__jwks-fetch:spec_el_billing-api",
@@ -4680,7 +6678,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/auth.py",
+          "web/src/api.ts",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential data repudiation by Billing API",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R6:spec_el_auth0>spec_el_billing-api",
+        "stableKey": "sk_23c111c6",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D3:spec_el_auth0:spec_fl_auth0__billing-api__jwks-fetch:spec_el_billing-api",
@@ -4707,7 +6737,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/auth.py",
+          "web/src/api.ts",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential process crash or stop for Billing API",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D3:spec_el_auth0>spec_el_billing-api",
+        "stableKey": "sk_bfb98101",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_auth0:spec_fl_auth0__billing-api__jwks-fetch:spec_el_billing-api",
@@ -4733,7 +6795,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/auth.py",
+          "web/src/api.ts",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow JWKS fetch is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_auth0>spec_el_billing-api",
+        "stableKey": "sk_e5a2f012",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E5:spec_el_auth0:spec_fl_auth0__billing-api__jwks-fetch:spec_el_billing-api",
@@ -4759,7 +6853,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/auth.py",
+          "web/src/api.ts",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation using impersonation",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E5:spec_el_auth0>spec_el_billing-api",
+        "stableKey": "sk_9f9aa848",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E6:spec_el_auth0:spec_fl_auth0__billing-api__jwks-fetch:spec_el_billing-api",
@@ -4786,7 +6912,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/auth.py",
+          "web/src/api.ts",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Billing API may be subject to elevation of privilege using remote code execution",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E6:spec_el_auth0>spec_el_billing-api",
+        "stableKey": "sk_5de28b57",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "E7:spec_el_auth0:spec_fl_auth0__billing-api__jwks-fetch:spec_el_billing-api",
@@ -4812,7 +6971,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/auth.py",
+          "web/src/api.ts",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Elevation by changing the execution flow in Billing API",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:E7:spec_el_auth0>spec_el_billing-api",
+        "stableKey": "sk_d7c3d742",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S7.1:spec_el_billing-api:spec_fl_billing-api__invoices-db__invoice-queries:spec_el_invoices-db",
@@ -4838,7 +7029,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/db.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing of destination data store Invoices DB",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/db.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S7.1:spec_el_billing-api>spec_el_invoices-db",
+        "stableKey": "sk_543398af",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T7:spec_el_billing-api:spec_fl_billing-api__invoices-db__invoice-queries:spec_el_invoices-db",
@@ -4865,7 +7088,39 @@
       "orphan": false,
       "changedBy": "mcp",
       "modifiedAt": "2026-11-22T05:37:55.227Z",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/db.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential SQL injection vulnerability for Invoices DB",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/db.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T7:spec_el_billing-api>spec_el_invoices-db",
+        "stableKey": "sk_294bee15",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I2:spec_el_billing-api:spec_fl_billing-api__invoices-db__invoice-queries:spec_el_invoices-db",
@@ -4892,7 +7147,39 @@
       "orphan": false,
       "changedBy": "mcp",
       "modifiedAt": "2026-11-22T05:37:55.228Z",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/db.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Authorization bypass",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/db.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I2:spec_el_billing-api>spec_el_invoices-db",
+        "stableKey": "sk_166621d3",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D2:spec_el_billing-api:spec_fl_billing-api__invoices-db__invoice-queries:spec_el_invoices-db",
@@ -4918,7 +7205,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/db.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential excessive resource consumption for Billing API or Invoices DB",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/db.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D2:spec_el_billing-api>spec_el_invoices-db",
+        "stableKey": "sk_f5649dbe",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S7:spec_el_invoices-db:spec_fl_invoices-db__billing-api__invoice-rows:spec_el_billing-api",
@@ -4944,7 +7263,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/db.py",
+          "docker-compose.yml",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing of source data store Invoices DB",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/db.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S7:spec_el_invoices-db>spec_el_billing-api",
+        "stableKey": "sk_b7572b59",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I23:spec_el_invoices-db:spec_fl_invoices-db__billing-api__invoice-rows:spec_el_billing-api",
@@ -4970,7 +7321,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/db.py",
+          "docker-compose.yml",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Weak access control for a resource",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/db.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I23:spec_el_invoices-db>spec_el_billing-api",
+        "stableKey": "sk_8f8a86a5",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S7.1:spec_el_billing-api:spec_fl_billing-api__audit-log__audit-events:spec_el_audit-log",
@@ -4996,7 +7379,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/audit.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing of destination data store Audit log",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/audit.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S7.1:spec_el_billing-api>spec_el_audit-log",
+        "stableKey": "sk_f380c5e5",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "T5:spec_el_billing-api:spec_fl_billing-api__audit-log__audit-events:spec_el_audit-log",
@@ -5022,7 +7437,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/audit.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Risks from logging",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/audit.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:T5:spec_el_billing-api>spec_el_audit-log",
+        "stableKey": "sk_1a986031",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R1:spec_el_billing-api:spec_fl_billing-api__audit-log__audit-events:spec_el_audit-log",
@@ -5048,7 +7495,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/audit.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Lower trusted subject updates logs",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/audit.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R1:spec_el_billing-api>spec_el_audit-log",
+        "stableKey": "sk_5cced963",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R2:spec_el_billing-api:spec_fl_billing-api__audit-log__audit-events:spec_el_audit-log",
@@ -5074,7 +7553,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/audit.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data logs from an unknown source",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/audit.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R2:spec_el_billing-api>spec_el_audit-log",
+        "stableKey": "sk_52c2c48c",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R3:spec_el_billing-api:spec_fl_billing-api__audit-log__audit-events:spec_el_audit-log",
@@ -5101,7 +7612,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/audit.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Insufficient auditing",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/audit.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R3:spec_el_billing-api>spec_el_audit-log",
+        "stableKey": "sk_a72ef2c1",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R4:spec_el_billing-api:spec_fl_billing-api__audit-log__audit-events:spec_el_audit-log",
@@ -5127,7 +7670,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/audit.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential weak protections for audit data",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/audit.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R4:spec_el_billing-api>spec_el_audit-log",
+        "stableKey": "sk_b5b98f6a",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I2:spec_el_billing-api:spec_fl_billing-api__audit-log__audit-events:spec_el_audit-log",
@@ -5154,7 +7729,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/audit.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Authorization bypass",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/audit.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I2:spec_el_billing-api>spec_el_audit-log",
+        "stableKey": "sk_e99ed851",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D2:spec_el_billing-api:spec_fl_billing-api__audit-log__audit-events:spec_el_audit-log",
@@ -5180,7 +7788,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/audit.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential excessive resource consumption for Billing API or Audit log",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/audit.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D2:spec_el_billing-api>spec_el_audit-log",
+        "stableKey": "sk_190f33ca",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S7.1:spec_el_billing-api:spec_fl_billing-api__job-queue__receipt-jobs:spec_el_job-queue",
@@ -5206,7 +7846,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing of destination data store Job queue",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S7.1:spec_el_billing-api>spec_el_job-queue",
+        "stableKey": "sk_220e646a",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I2:spec_el_billing-api:spec_fl_billing-api__job-queue__receipt-jobs:spec_el_job-queue",
@@ -5233,7 +7905,40 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Authorization bypass",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I2:spec_el_billing-api>spec_el_job-queue",
+        "stableKey": "sk_1c3d2f1e",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D2:spec_el_billing-api:spec_fl_billing-api__job-queue__receipt-jobs:spec_el_job-queue",
@@ -5259,7 +7964,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/app.py",
+          "api/auth.py",
+          "docker-compose.yml"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Potential excessive resource consumption for Billing API or Job queue",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D2:spec_el_billing-api>spec_el_job-queue",
+        "stableKey": "sk_567a53a9",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S7:spec_el_job-queue:spec_fl_job-queue__receipt-worker__receipt-jobs-pulled:spec_el_receipt-worker",
@@ -5285,7 +8022,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "worker/receipts.py",
+          "docker-compose.yml",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing of source data store Job queue",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "worker/receipts.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S7:spec_el_job-queue>spec_el_receipt-worker",
+        "stableKey": "sk_337f39a2",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I23:spec_el_job-queue:spec_fl_job-queue__receipt-worker__receipt-jobs-pulled:spec_el_receipt-worker",
@@ -5311,7 +8080,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "worker/receipts.py",
+          "docker-compose.yml",
+          "api/app.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Weak access control for a resource",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "worker/receipts.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/app.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I23:spec_el_job-queue>spec_el_receipt-worker",
+        "stableKey": "sk_6d686eb6",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S7:spec_el_invoices-db:spec_fl_invoices-db__receipt-worker__invoice-data:spec_el_receipt-worker",
@@ -5337,7 +8138,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "worker/receipts.py",
+          "docker-compose.yml",
+          "api/db.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing of source data store Invoices DB",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "worker/receipts.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/db.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S7:spec_el_invoices-db>spec_el_receipt-worker",
+        "stableKey": "sk_aa29a75f",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "I23:spec_el_invoices-db:spec_fl_invoices-db__receipt-worker__invoice-data:spec_el_receipt-worker",
@@ -5363,7 +8196,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "worker/receipts.py",
+          "docker-compose.yml",
+          "api/db.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Weak access control for a resource",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "worker/receipts.py"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "api/db.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:I23:spec_el_invoices-db>spec_el_receipt-worker",
+        "stableKey": "sk_f4f3ff53",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S8:spec_el_billing-api:spec_fl_billing-api__stripe__payment-intents:spec_el_stripe",
@@ -5389,7 +8254,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/payments.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing of the Stripe external destination entity",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S8:spec_el_billing-api>spec_el_stripe",
+        "stableKey": "sk_1aaedf4e",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R7:spec_el_billing-api:spec_fl_billing-api__stripe__payment-intents:spec_el_stripe",
@@ -5415,7 +8312,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/payments.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "External entity Stripe potentially denies receiving data",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R7:spec_el_billing-api>spec_el_stripe",
+        "stableKey": "sk_19fe2256",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_billing-api:spec_fl_billing-api__stripe__payment-intents:spec_el_stripe",
@@ -5441,7 +8370,39 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "api/payments.py",
+          "api/app.py",
+          "api/auth.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow Payment intents is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "api/payments.py"
+          },
+          {
+            "file": "api/app.py"
+          },
+          {
+            "file": "api/auth.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_billing-api>spec_el_stripe",
+        "stableKey": "sk_ffc7c03b",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "S8:spec_el_receipt-worker:spec_fl_receipt-worker__sendgrid__receipt-emails:spec_el_sendgrid",
@@ -5467,7 +8428,31 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "worker/receipts.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Spoofing of the SendGrid external destination entity",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "worker/receipts.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:S8:spec_el_receipt-worker>spec_el_sendgrid",
+        "stableKey": "sk_b5b26976",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "R7:spec_el_receipt-worker:spec_fl_receipt-worker__sendgrid__receipt-emails:spec_el_sendgrid",
@@ -5493,7 +8478,31 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "worker/receipts.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "External entity SendGrid potentially denies receiving data",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "worker/receipts.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:R7:spec_el_receipt-worker>spec_el_sendgrid",
+        "stableKey": "sk_7066ef7e",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "D4:spec_el_receipt-worker:spec_fl_receipt-worker__sendgrid__receipt-emails:spec_el_sendgrid",
@@ -5519,7 +8528,31 @@
       "orphan": false,
       "changedBy": "",
       "modifiedAt": "",
-      "edited": []
+      "edited": [],
+      "signal": {
+        "score": 40,
+        "level": "medium",
+        "reasons": [
+          "source-code evidence"
+        ],
+        "evidence": [
+          "worker/receipts.py"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Data flow Receipt emails is potentially interrupted",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "worker/receipts.py"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "generic:D4:spec_el_receipt-worker>spec_el_sendgrid",
+        "stableKey": "sk_1db2480f",
+        "relatedFlows": 1
+      }
     },
     {
       "key": "user:th_7hqlh80ei5",
@@ -5547,7 +8580,39 @@
         "title",
         "description",
         "mitigation"
-      ]
+      ],
+      "signal": {
+        "score": 50,
+        "level": "high",
+        "reasons": [
+          "source-code evidence",
+          "high priority, not started"
+        ],
+        "evidence": [
+          "web/src/api.ts",
+          "docker-compose.yml",
+          "web/src/InvoiceView.tsx"
+        ]
+      },
+      "enriched": {
+        "specificTitle": "Stored XSS via invoice memo rendered as HTML",
+        "class": "generic",
+        "evidence": [
+          {
+            "file": "web/src/api.ts"
+          },
+          {
+            "file": "docker-compose.yml"
+          },
+          {
+            "file": "web/src/InvoiceView.tsx"
+          }
+        ],
+        "whyTest": "",
+        "confidence": "needs-verification",
+        "groupKey": "",
+        "stableKey": "sk_8b2db6ac"
+      }
     }
   ],
   "nextThreatId": 98,

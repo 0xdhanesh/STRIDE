@@ -4,6 +4,7 @@ export * from './kb.js';
 export * from './rules.js';
 export * from './geometry.js';
 export * from './model.js';
+export { FLOW_PALETTE, entityColor, flowColor, normalizeColor } from './route.js';
 export * from './engine.js';
 export * from './validate.js';
 export * from './report.js';

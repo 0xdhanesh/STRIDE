@@ -7,6 +7,9 @@ import {
   center,
   diagramBounds,
   elementIndex,
+  expandGroups,
+  groupElements,
+  ungroupElements,
   isNodeGeneric,
   lineGeometry,
   moveElements,
@@ -213,6 +216,16 @@ export class Canvas {
     const z = this.cam.z;
     const hs = 8 / z;
     const sel = diagram.elements.filter((e) => selection.has(e.id));
+    const groups = new Map();
+    for (const e of diagram.elements) if (e.groupId) (groups.get(e.groupId) || groups.set(e.groupId, []).get(e.groupId)).push(e);
+    for (const members of groups.values()) {
+      const rs = members.map((e) => (e.w !== undefined ? rectOf(e) : boundsOfPoints(lineGeometry(model, diagram, e).points)));
+      const x0 = Math.min(...rs.map((r) => r.x)) - 14;
+      const y0 = Math.min(...rs.map((r) => r.y)) - 14;
+      const x1 = Math.max(...rs.map((r) => r.x + r.w)) + 14;
+      const y1 = Math.max(...rs.map((r) => r.y + r.h)) + 14;
+      o.appendChild(svgEl('rect', { class: members.some((e) => selection.has(e.id)) ? 'group-outline on' : 'group-outline', x: x0, y: y0, width: x1 - x0, height: y1 - y0, rx: 10, 'stroke-width': 1 / z }));
+    }
     for (const el of sel) {
       if (el.w !== undefined) {
         o.appendChild(svgEl('rect', { class: 'sel-outline', x: el.x - 5 / z, y: el.y - 5 / z, width: el.w + 10 / z, height: el.h + 10 / z, 'stroke-width': 1 / z }));
@@ -351,8 +364,9 @@ export class Canvas {
     const id = this.hitId(e);
     if (id) {
       const sel = this.store.selection;
-      if (e.shiftKey || e.metaKey || e.ctrlKey) this.store.select([id], { toggle: true });
-      else if (!sel.has(id)) this.store.select([id]);
+      const unit = [...expandGroups(this.store.diagram, [id])];
+      if (e.shiftKey || e.metaKey || e.ctrlKey) this.store.select(unit, { toggle: true });
+      else if (!sel.has(id)) this.store.select(unit);
       if (this.store.selection.has(id)) {
         this.store.begin();
         this.startDrag(e, { kind: 'move', last: p, moved: false, alt: e.altKey });
@@ -485,7 +499,7 @@ export class Canvas {
             return rectsOverlap(b, r) && b.x >= r.x && b.y >= r.y && b.x + b.w <= r.x + r.w && b.y + b.h <= r.y + r.h;
           })
           .map((el) => el.id);
-        this.store.select(ids, { add: d.add });
+        this.store.select([...expandGroups(diagram, ids)], { add: d.add });
         break;
       }
       case 'create-flow': {
@@ -592,7 +606,7 @@ export class Canvas {
     else if (el.generic === GENERIC.BOX_BOUNDARY) rect = { x: el.x, y: el.y, w: Math.min(el.w, 240), h: 34 };
     else {
       const g = lineGeometry(model, diagram, el);
-      const m = quadPoint(g.p0, g.c, g.p1, 0.5);
+      const m = quadPoint(g.p0, g.c, g.p1, g.labelT ?? 0.5);
       rect = { x: m.x - 90, y: m.y - 18, w: 180, h: 36 };
     }
     const tl = this.toScreen({ x: rect.x, y: rect.y });
@@ -649,6 +663,8 @@ export class Canvas {
     const map = new Map();
     const copies = JSON.parse(JSON.stringify(this.clipboard));
     for (const c of copies) map.set(c.id, (c.id = uid('el')));
+    const gmap = new Map();
+    for (const c of copies) if (c.groupId) c.groupId = gmap.get(c.groupId) || gmap.set(c.groupId, uid('grp')).get(c.groupId);
     for (const c of copies) {
       if (c.w !== undefined) {
         c.x += offset;
@@ -672,6 +688,26 @@ export class Canvas {
   }
   duplicateSelection(offset = 24) {
     if (this.copySelection()) this.paste(offset);
+  }
+
+  groupSelection() {
+    const ids = [...this.store.selection];
+    if (ids.length < 2) return toast('Select at least two elements to group.');
+    let gid;
+    try {
+      this.store.commit((m) => (gid = groupElements(m, this.store.diagram.id, ids)));
+    } catch (e) {
+      return toast(e.message);
+    }
+    this.store.select([...expandGroups(this.store.diagram, ids)]);
+    toast('Grouped. They now select and move together (Ctrl/⌘+Shift+G to ungroup).');
+    return gid;
+  }
+  ungroupSelection() {
+    const ids = [...this.store.selection];
+    let n = 0;
+    this.store.commit((m) => (n = ungroupElements(m, this.store.diagram.id, ids)));
+    if (!n) toast('Nothing selected is grouped.');
   }
 
   deleteSelection() {
@@ -702,6 +738,12 @@ export class Canvas {
     if (mod && k === 'y') {
       e.preventDefault();
       this.store.redo();
+      return;
+    }
+    if (mod && k === 'g') {
+      e.preventDefault();
+      if (e.shiftKey) this.ungroupSelection();
+      else this.groupSelection();
       return;
     }
     if (mod && k === 'a') {
