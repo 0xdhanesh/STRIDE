@@ -232,6 +232,25 @@ async function main() {
     const hs = await evaluate(`(() => ({ rows: document.querySelectorAll('.table-wrap tbody tr').length, high: __stride.store.model.threats.filter(t => t.signal?.level === 'high').length, first: document.querySelector('.table-wrap tbody tr td.title')?.textContent || '' }))()`);
     check(hs.rows === hs.high && hs.rows > 0 && hs.rows < allRows && hs.first.startsWith('Command / code injection sink (shell_exec)'), `high-signal view filters and ranks threats (${allRows} → ${hs.rows}, first: ${hs.first.slice(0, 60)})`);
 
+    const pos = () => evaluate(`JSON.stringify(__stride.store.diagram.elements.filter(e => e.w !== undefined).map(e => [e.id, e.x, e.y]))`);
+    // Analyze is look-only: no floating tools, no editing, panning still works.
+    check((await evaluate(`getComputedStyle(document.querySelector('.toolbar')).display`)) === 'none', 'Analyze view hides the floating tool bar');
+    await evaluate(`(() => { const s = __stride.store; s.setModel(__stride.core.createSampleModel()); const c = __stride.ui.canvas.cam; c.x = 0; c.y = 0; c.z = 1; c.fresh = false; __stride.ui.canvas.render(); })()`);
+    const ro = await pos();
+    await drag(...S(430, 230), ...S(600, 400));
+    await key('Delete');
+    await sleep(150);
+    check((await pos()) === ro && (await evaluate('__stride.store.diagram.elements.length')) === JSON.parse(ro).length + (await evaluate('__stride.store.diagram.elements.filter(e => e.w === undefined).length')), 'Analyze view cannot move or delete elements');
+    await evaluate(`document.querySelector('.seg button:nth-child(1)').click()`);
+    await sleep(200);
+    check((await evaluate(`getComputedStyle(document.querySelector('.toolbar')).display`)) !== 'none', 'Design view shows the tool bar');
+    // The threat model panel collapses.
+    await evaluate(`document.querySelector('[aria-label="Toggle threat model panel"]').click()`);
+    await sleep(200);
+    check((await evaluate(`getComputedStyle(document.querySelector('.inspector')).display`)) === 'none', 'threat model panel collapses');
+    await evaluate(`document.querySelector('[aria-label="Toggle threat model panel"]').click()`);
+    await sleep(100);
+
     // Grouping (Ctrl+G), line colours and focus mode.
     await evaluate(`(() => { const s = __stride.store; s.setModel(__stride.core.createSampleModel()); s.clearSelection(); document.getElementById('canvas').focus(); })()`);
     await sleep(200);
@@ -248,7 +267,6 @@ async function main() {
     check((await evaluate(`document.querySelectorAll('#canvas .el[style*="--flow"]').length`)) >= 5, 'flows are drawn with per-entity colours');
     // Grouping must never move anything: real marquee select, Ctrl+G, hover and click on the group.
     await evaluate(`(() => { const s = __stride.store; s.setModel(__stride.core.createSampleModel()); const c = __stride.ui.canvas.cam; c.x = 0; c.y = 0; c.z = 1; c.fresh = false; __stride.ui.canvas.render(); })()`);
-    const pos = () => evaluate(`JSON.stringify(__stride.store.diagram.elements.filter(e => e.w !== undefined).map(e => [e.id, e.x, e.y]))`);
     const before = await pos();
     await drag(...S(10, 10), ...S(1000, 480));
     await key('g', 2);
@@ -276,9 +294,11 @@ async function main() {
     await evaluate(`document.getElementById('app').classList.add('palette-collapsed'); document.getElementById('canvas').focus()`);
     await key('/');
     await sleep(150);
+    check((await evaluate(`[...document.querySelectorAll('.quick-item span')].map(x => x.textContent).join('|')`)).includes('Web Service'), 'empty search shows most-used stencils');
     await cdp.send('Input.insertText', { text: 'data' });
     await sleep(200);
     check((await evaluate(`!document.querySelector('.quick').classList.contains('hidden') && document.querySelectorAll('.quick-item').length > 0`)), 'search lists stencils as you type in the floating box');
+    check((await evaluate(`document.querySelectorAll('.quick-item')[0].textContent.toLowerCase().includes('data')`)), 'typed query filters the list');
     check((await evaluate(`getComputedStyle(document.querySelector('.palette')).display`)) === 'none', 'stencil pane stays hidden while searching');
     await key('Enter');
     await sleep(200);
