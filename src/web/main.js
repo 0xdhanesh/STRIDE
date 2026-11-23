@@ -49,6 +49,16 @@ function applyPaletteCollapsed() {
   app.classList.toggle('palette-collapsed', !!store.prefs.paletteCollapsed);
   requestAnimationFrame(() => ui.canvas?.requestRender());
 }
+function applyInspectorCollapsed() {
+  app.classList.toggle('inspector-collapsed', !!store.prefs.inspectorCollapsed);
+  requestAnimationFrame(() => ui.canvas?.requestRender());
+}
+function toggleInspector() {
+  store.prefs.inspectorCollapsed = !store.prefs.inspectorCollapsed;
+  store.savePrefs();
+  applyInspectorCollapsed();
+  renderTopbar();
+}
 function togglePalette() {
   store.prefs.paletteCollapsed = !store.prefs.paletteCollapsed;
   store.savePrefs();
@@ -75,6 +85,7 @@ function applyTheme() {
 }
 applyTheme();
 applyPaletteCollapsed();
+applyInspectorCollapsed();
 
 // ------------------------------------------------------------ menus
 let openMenu = null;
@@ -357,6 +368,7 @@ function renderTopbar() {
     h('button', { class: 'btn', type: 'button', title: `Undo (${MOD}Z)`, 'aria-label': 'Undo', disabled: !store.undoStack.length || undefined, onClick: () => store.undo() }, icon('undo')),
     h('button', { class: 'btn', type: 'button', title: `Redo (${MOD}⇧Z)`, 'aria-label': 'Redo', disabled: !store.redoStack.length || undefined, onClick: () => store.redo() }, icon('redo')),
     reportMenu,
+    h('button', { class: 'btn hide-sm', type: 'button', title: store.prefs.inspectorCollapsed ? 'Show threat model panel' : 'Hide threat model panel', 'aria-label': 'Toggle threat model panel', 'aria-pressed': String(!store.prefs.inspectorCollapsed), onClick: toggleInspector }, icon('panel')),
     h('button', { class: 'btn hide-sm', type: 'button', title: 'Show/hide threat panel', 'aria-label': 'Toggle threat panel', onClick: () => ui.drawer.toggle() }, icon('chevron')),
     settingsMenu,
     h('button', { class: 'btn show-sm', type: 'button', 'aria-label': 'Properties', onClick: () => app.classList.toggle('show-inspector') }, icon('panel')),

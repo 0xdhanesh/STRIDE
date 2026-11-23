@@ -31,8 +31,18 @@ const FAMILIES = [
   { generic: GENERIC.LINE_BOUNDARY, label: 'Trust boundaries (arc)', glyph: 'line-boundary' },
   { generic: GENERIC.BOX_BOUNDARY, label: 'Trust boundaries (box)', glyph: 'box-boundary' },
   { generic: GENERIC.ANNOTATION, label: 'Annotations', glyph: 'annotation' },
+  { generic: GENERIC.FLOW, label: 'Data flows', glyph: 'flow' },
+  { generic: GENERIC.LINE_BOUNDARY, label: 'Trust boundaries (arc)', glyph: 'line-boundary' },
+  { generic: GENERIC.BOX_BOUNDARY, label: 'Trust boundaries (box)', glyph: 'box-boundary' },
 ];
 const FAMILY_LABEL = Object.fromEntries(FAMILIES.map((f) => [f.generic, f.label.replace(/s( \(|$)/, '$1')]));
+/** Shown first when "/" is pressed with nothing typed. */
+const MOST_USED = [
+  { id: 'GE.TB.B', glyph: 'box-boundary', label: 'Trust boundary' },
+  { id: 'GE.TB.L', glyph: 'line-boundary', label: 'Trust boundary' },
+  { id: 'SE.P.TMCore.WebSvc', glyph: 'process', label: 'Process' },
+  { id: 'GE.DS', glyph: 'store', label: 'Data store' },
+];
 const OPEN = new Set(['NotStarted', 'NeedsInvestigation']);
 const USER = 'web user';
 
@@ -52,6 +62,12 @@ export class Palette {
     store.on('quicksearch', () => this.focusSearch());
     this.buildQuick();
     this.render();
+  }
+
+  /** The most-used stencils, for an empty query. */
+  mostUsed() {
+    const kb = this.store.kb;
+    return MOST_USED.filter((m) => kb.element(m.id)).map((m) => ({ fam: { label: m.label, glyph: m.glyph, generic: kb.genericOf(m.id) }, t: kb.element(m.id) }));
   }
 
   /** Stencil types matching a query (name, id or family), grouped by family, in palette order. */
@@ -188,10 +204,12 @@ export class Palette {
     this.pick(t);
   }
   renderQuick(rebuild = true) {
-    if (rebuild) this.quickItems = this.matches(this.quickInput.value).slice(0, 12);
+    const typed = this.quickInput.value.trim();
+    if (rebuild) this.quickItems = typed ? this.matches(typed).slice(0, 12) : this.mostUsed();
     clear(this.quickList);
+    if (!typed && this.quickItems.length) this.quickList.appendChild(h('p', { class: 'quick-head' }, 'Most used — type to search all stencils'));
     this.quickItems.forEach(({ fam, t }, i) => {
-      const row = h('button', { class: `quick-item${i === this.quickIndex ? ' on' : ''}`, type: 'button', role: 'option', 'aria-selected': String(i === this.quickIndex) }, icon(fam.glyph, 20), h('span', null, t.id === fam.generic ? t.name.replace(/^Generic /, '') : t.name), h('small', null, fam.label));
+      const row = h('button', { class: `quick-item${i === this.quickIndex ? ' on' : ''}`, type: 'button', role: 'option', 'aria-selected': String(i === this.quickIndex) }, icon(fam.glyph, 20), h('span', null, t.name.replace(/^Generic /, '')), h('small', null, fam.label));
       row.addEventListener('pointerdown', (e) => {
         e.preventDefault(); // keep input focus until we pick
         this.quickPick(t);

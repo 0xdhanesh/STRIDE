@@ -57,6 +57,10 @@ export class Canvas {
     store.on('selection', () => this.requestRender());
     store.on('processed', () => this.requestRender());
     store.on('tool', () => this.syncTool());
+    store.on('view', () => {
+      this.drag = null;
+      this.syncTool();
+    });
     new ResizeObserver(() => this.requestRender()).observe(stage);
   }
 
@@ -141,6 +145,11 @@ export class Canvas {
     this.syncTool();
   }
 
+  /** Analyze view is look-only: the canvas can be panned and zoomed, nothing else. */
+  get readOnly() {
+    return this.store.view === 'analyze';
+  }
+
   get cam() {
     const id = this.store.activeDiagramId;
     let c = this.store.camera.get(id);
@@ -156,7 +165,7 @@ export class Canvas {
     const active = t.kind === 'place' ? t.typeId : t.kind;
     const generic = t.kind === 'place' ? this.store.kb.genericOf(t.typeId) : null;
     for (const b of this.toolbar.querySelectorAll('.tool')) b.setAttribute('aria-pressed', String(b.dataset.tool === active || b.dataset.tool === generic));
-    this.svg.classList.toggle('tool-hand', t.kind === 'hand' || this.spaceDown);
+    this.svg.classList.toggle('tool-hand', t.kind === 'hand' || this.spaceDown || this.readOnly);
     this.svg.classList.toggle('tool-place', t.kind === 'place');
     this.updateStatus();
   }
@@ -228,6 +237,7 @@ export class Canvas {
       const y1 = Math.max(...rs.map((r) => r.y + r.h)) + 14;
       o.appendChild(svgEl('rect', { class: members.some((e) => selection.has(e.id)) ? 'group-outline on' : 'group-outline', x: x0, y: y0, width: x1 - x0, height: y1 - y0, rx: 10, 'stroke-width': 1 / z }));
     }
+    if (this.readOnly) sel.length = 0;
     for (const el of sel) {
       if (el.w !== undefined) {
         o.appendChild(svgEl('rect', { class: 'sel-outline', x: el.x - 5 / z, y: el.y - 5 / z, width: el.w + 10 / z, height: el.h + 10 / z, 'stroke-width': 1 / z }));
@@ -334,7 +344,7 @@ export class Canvas {
     this.svg.focus({ preventScroll: true });
     const p = this.toWorld(e);
     const tool = this.store.tool;
-    if (e.button === 1 || tool.kind === 'hand' || this.spaceDown) {
+    if (e.button === 1 || tool.kind === 'hand' || this.spaceDown || this.readOnly) {
       this.startDrag(e, { kind: 'pan', sx: e.clientX, sy: e.clientY, cx: this.cam.x, cy: this.cam.y });
       this.svg.classList.add('panning');
       return;
@@ -562,6 +572,7 @@ export class Canvas {
   }
 
   onDblClick(e) {
+    if (this.readOnly) return;
     const id = this.hitId(e);
     if (id) {
       this.startInlineEdit(id);
@@ -584,6 +595,7 @@ export class Canvas {
 
   onDrop(e) {
     e.preventDefault();
+    if (this.readOnly) return;
     const typeId = e.dataTransfer?.getData('application/x-stride-type');
     if (!typeId || !this.store.kb.element(typeId)) return;
     const p = this.toWorld(e);
@@ -730,6 +742,18 @@ export class Canvas {
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.querySelector('dialog[open]')) return;
     const mod = e.metaKey || e.ctrlKey;
     const k = e.key.toLowerCase();
+    if (this.readOnly) {
+      // Pan and zoom only.
+      if (e.code === 'Space') {
+        e.preventDefault();
+        return;
+      }
+      if (mod) return;
+      if (e.key === '!' || (e.shiftKey && e.code === 'Digit1')) this.zoomToFit();
+      else if (k === '+' || k === '=') this.zoomBy(1.2);
+      else if (k === '-' || k === '_') this.zoomBy(1 / 1.2);
+      return;
+    }
     if (e.code === 'Space' && !this.spaceDown) {
       this.spaceDown = true;
       this.syncTool();
