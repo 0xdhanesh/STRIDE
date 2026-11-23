@@ -1,0 +1,106 @@
+{
+  "name": "Web application (typical)",
+  "description": "Visitors use a browser to reach a public web server. It forwards requests to the application, which reads and writes a SQL database and sends password-reset emails through an email provider.",
+  "assumptions": "TLS is used between the browser and the web server. The internal network is not reachable from the internet.",
+  "externalDependencies": "Email provider",
+  "zones": [
+    {
+      "name": "User device",
+      "type": "SE.TB.B.TMCore.Sandbox"
+    },
+    {
+      "name": "Public zone (DMZ)",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    },
+    {
+      "name": "Internal network",
+      "type": "SE.TB.B.TMCore.CorpNet"
+    }
+  ],
+  "elements": [
+    {
+      "name": "Visitor",
+      "type": "SE.EI.TMCore.User"
+    },
+    {
+      "name": "Browser",
+      "type": "SE.P.TMCore.BrowserClient",
+      "zone": "User device"
+    },
+    {
+      "name": "Web server",
+      "type": "SE.P.TMCore.WebServer",
+      "zone": "Public zone (DMZ)",
+      "custom": {
+        "software": "reverse proxy"
+      }
+    },
+    {
+      "name": "Web application",
+      "type": "SE.P.TMCore.WebApp",
+      "zone": "Internal network"
+    },
+    {
+      "name": "Database",
+      "type": "SE.DS.TMCore.SQL",
+      "zone": "Internal network",
+      "custom": {
+        "dataClass": "accounts, orders"
+      }
+    },
+    {
+      "name": "Email provider",
+      "type": "SE.EI.TMCore.WebSvc"
+    }
+  ],
+  "flows": [
+    {
+      "from": "Visitor",
+      "to": "Browser",
+      "name": "Clicks and typing",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Browser",
+      "to": "Web server",
+      "name": "Page and API requests",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Web server",
+      "to": "Browser",
+      "name": "Pages and responses",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Web server",
+      "to": "Web application",
+      "name": "Forwarded requests",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Web application",
+      "to": "Web server",
+      "name": "Rendered responses",
+      "type": "SE.DF.TMCore.HTTPS"
+    },
+    {
+      "from": "Web application",
+      "to": "Database",
+      "name": "SQL queries",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Database",
+      "to": "Web application",
+      "name": "Query results",
+      "type": "GE.DF"
+    },
+    {
+      "from": "Web application",
+      "to": "Email provider",
+      "name": "Password-reset emails",
+      "type": "SE.DF.TMCore.HTTPS"
+    }
+  ]
+}

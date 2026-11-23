@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to use STRIDE Threat Modeler · STRIDE Threat Modeler</title>
+<meta name="description" content="A practical guide for everyone who uses the tool: what each part of the screen and each building block means, how to draw a diagram, how threats are generated and how to work through them, and how to produce reports.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body>
+<header class="top"><a class="brand" href="../index.html"><img src="../assets/logo-64.png" alt="" width="28" height="28"><span>STRIDE</span></a><nav aria-label="Documentation"><a href="../index.html">Open the app</a><a href="../how-to/index.html" aria-current="page">How to use it</a><a href="../what-is/index.html">What is STRIDE</a><a href="../how-to-max/index.html">Worked examples</a></nav></header>
+<div class="wrap">
+<aside class="toc" aria-label="On this page"><b>On this page</b><ul><li><a href="#start">Start in two minutes</a></li><li><a href="#screen">The screen</a></li><li><a href="#parts">What each building block means</a></li><li><a href="#draw">Drawing a diagram</a></li><li><a href="#boundaries">Trust boundaries</a></li><li><a href="#threats">How threats are generated</a></li><li><a href="#triage">Working through threats</a></li><li><a href="#look">Colours, groups and focus mode</a></li><li><a href="#reports">Reports and fonts</a></li><li><a href="#files">Saving, opening, templates</a></li><li><a href="#auto">Building models from code (CLI and MCP)</a></li><li><a href="#keys">Keyboard shortcuts</a></li><li><a href="#trouble">If something looks wrong</a></li></ul></aside>
+<main>
+<h1>How to use STRIDE Threat Modeler</h1>
+<p class="lead">A practical guide for everyone who uses the tool: what each part of the screen and each building block means, how to draw a diagram, how threats are generated and how to work through them, and how to produce reports.</p>
+
+<section id="start"><h2>Start in two minutes</h2>
+<ol class="steps">
+<li><b>Open the example.</b> Choose <i>File → Open example model</i>. It is a small online shop, already drawn, with its threats generated.</li>
+<li><b>Look at the picture.</b> Boxes and ovals are parts of the system, arrows are information moving between them, red dashed lines are trust boundaries.</li>
+<li><b>Open the <i>Analyze</i> view</b> (top right). The threat list appears at the bottom, best findings first.</li>
+<li><b>Open a threat.</b> Read what could go wrong, where, and the suggested mitigation. Set its state and add a justification.</li>
+<li><b>Start your own</b> with <i>File → New model</i>, then follow “Drawing a diagram” below.</li>
+</ol>
+<div class="note tip">Everything runs in your browser. Nothing is uploaded. Your work is autosaved in this browser; use <i>File → Save</i> to keep a file.</div>
+</section>
+
+<section id="screen"><h2>The screen</h2>
+<div class="tw"><table><thead><tr><th>Area</th><th>What it does</th></tr></thead><tbody><tr><td><b>Top bar</b></td><td>File menu, diagram tabs, <i>Design / Analyze</i> switch, undo and redo, <i>Report</i> menu, buttons to hide the stencil pane, the threat model panel and the threat list, settings.</td></tr><tr><td><b>Stencils</b> (left)</td><td>The parts you can draw. Click one then click the canvas, or drag it in. Type in the search box, or press <kbd>/</kbd> anywhere to search; with nothing typed it lists the most used stencils (trust boundaries, Web Service, data store).</td></tr><tr><td><b>Canvas</b> (middle)</td><td>The diagram. Floating tool bar on top, zoom controls bottom-left, element and open-threat count bottom-right.</td></tr><tr><td><b>Threat model panel</b> (right)</td><td>With nothing selected it shows model details (name, owner, description, assumptions) and counts by state. Select an element and it shows that element’s properties, colour and the threats that apply to it.</td></tr><tr><td><b>Threat list</b> (bottom)</td><td>Tabs for <i>Threats</i>, <i>Messages</i> (problems with your diagram) and <i>Notes</i>.</td></tr></tbody></table></div>
+<p><b>Design</b> is for drawing and editing. <b>Analyze</b> is look-only: the tool bar is hidden and you can only pan and zoom, so you can study threats without moving anything by accident.</p>
+</section>
+
+<section id="parts"><h2>What each building block means</h2>
+<p>A diagram in this tool is a <b>data flow diagram</b>: who and what is involved, and how information moves between them.</p>
+<div class="tw"><table><thead><tr><th>Block</th><th>Drawn as</th><th>Meaning</th><th>Examples</th></tr></thead><tbody><tr><td><b>Process</b></td><td>Oval</td><td>Code that runs and handles data. It receives input, does something and sends output.</td><td>Web application, API, background worker, mobile app, IVR platform</td></tr><tr><td><b>External interactor</b></td><td>Rectangle</td><td>A person or system <i>outside</i> your control that talks to yours. You cannot fix it, only defend against it.</td><td>Customer, payment provider, partner API, phone carrier</td></tr><tr><td><b>Data store</b></td><td>Two horizontal lines</td><td>Anything that keeps data at rest.</td><td>SQL database, file share, object storage, queue, cache, log files</td></tr><tr><td><b>Data flow</b></td><td>Arrow</td><td>Information moving from one element to another. Direction matters: draw one arrow per direction if both ways carry data.</td><td>HTTPS request, SQL query, message on a queue, file upload</td></tr><tr><td><b>Trust boundary</b></td><td>Red dashed box or line</td><td>Where the level of trust changes: who controls what is on each side. Threats are generated mainly where a flow crosses one.</td><td>Internet ↔ your network, user device ↔ server, app ↔ database tier, your system ↔ a vendor</td></tr><tr><td><b>Annotation</b></td><td>Faint note box</td><td>A comment for readers. It never produces threats.</td><td>Assumptions, “payments handled by provider”</td></tr></tbody></table></div>
+<p>Each stencil has a <b>type</b> (for example <i>Web Service</i> or <i>SQL Database</i>). The type matters: it carries <b>properties</b> such as “implements authentication”, and the threat rules read those properties. Pick the most specific type you can, and fill in the properties in the right-hand panel.</p>
+</section>
+
+<section id="draw"><h2>Drawing a diagram</h2>
+<ol class="steps">
+<li><b>Place elements.</b> Press <kbd>P</kbd> (process), <kbd>E</kbd> (external), <kbd>D</kbd> (data store), click the canvas, then type a name. Names appear in the generated threats, so use real names (“Orders API”, not “Service 2”).</li>
+<li><b>Connect them.</b> Press <kbd>F</kbd> and drag from the source element to the target. The arrow snaps to both ends. Name it after what it carries (“Card payment”, “Order JSON”).</li>
+<li><b>Set types and properties.</b> Select an element, choose its <i>Type</i>, and answer its properties. Answer honestly, “unknown” is better than a guess.</li>
+<li><b>Draw trust boundaries</b> (next section).</li>
+<li><b>Check the Messages tab.</b> It tells you about unconnected flows, missing boundaries and other gaps.</li>
+</ol>
+<p>Handy: double-click a name to rename, drag corners to resize, drag the small circle on a selected arrow to bend it, hold <kbd>Alt</kbd> while dragging to duplicate, and double-click empty canvas to drop a note.</p>
+</section>
+
+<section id="boundaries"><h2>Trust boundaries</h2>
+<p>A trust boundary separates things that trust each other differently. Draw one wherever control, network, identity or privilege changes.</p>
+<ul>
+<li><b>Box boundary</b> (<kbd>B</kbd>): drag a rectangle around the elements that live together, for example “Internal network”. Any flow that goes in or out crosses it.</li>
+<li><b>Arc boundary</b> (<kbd>L</kbd>): drag a line across the flows that change trust, for example between a user device and the internet.</li>
+</ul>
+<div class="note tip">Crossing is geometric: a flow crosses a boundary if the drawn arrow actually cuts the boundary line. If an expected threat is missing, check that the arrow really crosses the boundary.</div>
+</section>
+
+<section id="threats"><h2>How threats are generated</h2>
+<p>Threats appear automatically a moment after you change the diagram (switch it off with <i>Generate threats automatically</i> in the threat model panel). For every data flow the tool looks at the source, the target, the flow type, their properties and which boundaries the flow crosses, then applies the rules of the <b>template</b> (default: <i>STRIDE Core</i>). Each match becomes a threat in one of the six STRIDE categories: Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege.</p>
+<p>So more detail gives better threats: connect every element, name every flow, set types and properties, and draw the boundaries.</p>
+<h3>High-signal threats</h3>
+<p>A big model can produce many generic threats. Each threat is scored; the <b>High signal</b> ones are backed by something concrete: source-code evidence, a dangerous call such as running a shell command, a weak control, or sensitive data. The <i>High-signal view</i> in the threat list shows only those, best first. Similar threats across many flows are collapsed into one with “Related flows: N”.</p>
+</section>
+
+<section id="triage"><h2>Working through threats</h2>
+<p>Open a threat from the list. For each one decide:</p>
+<div class="tw"><table><thead><tr><th>State</th><th>Use when</th></tr></thead><tbody><tr><td>Not Started</td><td>Nobody has looked at it yet (all new threats start here).</td></tr><tr><td>Needs Investigation</td><td>It may be real; someone has to find out.</td></tr><tr><td>Mitigation Implemented</td><td>A control already exists or has been built. Say which one in the justification.</td></tr><tr><td>Not Applicable</td><td>It cannot happen here. Write why.</td></tr></tbody></table></div>
+<p>Set a <b>priority</b> (High / Medium / Low) and write a <b>justification</b>. Your decisions are kept when threats regenerate. You can edit a threat’s title, description and mitigation, and use <i>Add threat</i> on a flow for something the rules did not find. Threats whose flow was deleted are shown as “no longer present” so your triage is never silently lost.</p>
+</section>
+
+<section id="look"><h2>Colours, groups and focus mode</h2>
+<ul>
+<li><b>Line colours.</b> Every element gets its own colour and all arrows leaving it use that colour, so arrows entering an element are told apart by where they come from. Select an element to change its <i>Egress colour</i>, or select one arrow to change just that <i>Line colour</i>. <i>Reset</i> returns to the default.</li>
+<li><b>Clean routing.</b> Arrows leaving an element share one exit point and fan out; each arrow entering an element gets its own entry point; arrows from different elements avoid running over each other.</li>
+<li><b>Groups.</b> Select several elements and press <kbd>G</kbd> (or <i>Group</i> in the panel). They now select and move as one. <kbd>Shift+G</kbd> ungroups. Groups show a faint dashed outline.</li>
+<li><b>Focus mode.</b> <kbd>Ctrl/⌘+.</kbd> hides every menu and panel so only the diagram remains; <kbd>Esc</kbd> brings them back. Press <kbd>H</kbd> for hand mode to pan around, and <kbd>/</kbd> to search stencils.</li>
+</ul>
+</section>
+
+<section id="reports"><h2>Reports and fonts</h2>
+<p>Open the <b>Report</b> menu and choose <i>Download report…</i> to pick the report type and the font, then <i>Open in new tab</i> or <i>Download</i>.</p>
+<div class="tw"><table><thead><tr><th>Report</th><th>For</th><th>What is in it</th></tr></thead><tbody><tr><td><b>Executive summary</b></td><td>Senior management, sponsors, auditors who want the answer</td><td>One page of large, plain-language text: overall status, four headline numbers, the system picture, the five risks that matter most with a recommended action, and suggested next steps. No rule names, file paths or per-flow detail.</td></tr><tr><td><b>Technical report</b></td><td>Engineers and security reviewers</td><td>Executive summary, high-signal findings table with evidence, every diagram, every threat grouped by interaction, validation messages.</td></tr><tr><td>Markdown summary</td><td>Pull requests, chat, agents</td><td>The same stakeholder-first content as plain text.</td></tr><tr><td>Threat list (CSV)</td><td>Spreadsheets and trackers</td><td>One row per threat, with spreadsheet-formula protection.</td></tr><tr><td>Diagram (SVG)</td><td>Slides and documents</td><td>The current diagram as a vector image.</td></tr></tbody></table></div>
+<p><b>Fonts.</b> HTML reports can use any font that is installed on the computer that opens them: System default, Arial, Verdana (very clear, wide letters), Tahoma, Trebuchet MS, Calibri, Georgia, Times New Roman, Monospace, or type the name of any other installed font. The report uses your choice for all text including the diagram labels. Open the report on a machine without that font and the browser falls back to a default. Use the browser’s print dialog to save a report as PDF.</p>
+</section>
+
+<section id="files"><h2>Saving, opening, templates</h2>
+<ul>
+<li><b>Save / Open</b> (<kbd>Ctrl/⌘+S</kbd>, <kbd>Ctrl/⌘+O</kbd>) work with a <code>.stride.json</code> file. The model is also autosaved in this browser, but a saved file is the only copy you control.</li>
+<li><b>Templates</b> define the element types and the threat rules. Import a Microsoft Threat Modeling Tool template (<code>.tb7</code>) from <i>File → Import template</i>, or open <i>Template &amp; rules…</i> to read and edit the rules. Threats are regenerated and your triage is kept.</li>
+<li><b>Multiple diagrams.</b> Use the <b>+</b> next to the tabs. Double-click a tab to rename it.</li>
+</ul>
+</section>
+
+<section id="auto"><h2>Building models from code (CLI and MCP)</h2>
+<p>The same engine runs without the browser, which is useful for CI and for AI agents that read a repository.</p>
+<pre><code>stride sync threatmodel/model.json threatmodel/spec.json   # build or update a model from a spec
+stride report model.json --format exec --font verdana -o summary.html   # executive report
+stride report model.json -o report.html                    # technical report
+stride mcp                                                  # Model Context Protocol server</code></pre>
+<p>A spec lists trust <i>zones</i>, <i>elements</i> and <i>flows</i>; sync lays the diagram out so every flow crosses exactly the right boundaries. See the <a href="../how-to-max/index.html">worked examples</a> for four complete specs you can run as they are.</p>
+</section>
+
+<section id="keys"><h2>Keyboard shortcuts</h2>
+<div class="tw"><table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><kbd>V</kbd> / <kbd>1</kbd></td><td>Select</td></tr><tr><td><kbd>H</kbd></td><td>Hand (pan). Space+drag also pans</td></tr><tr><td><kbd>P</kbd> <kbd>E</kbd> <kbd>D</kbd></td><td>Process, external interactor, data store (also 2, 3, 4)</td></tr><tr><td><kbd>F</kbd></td><td>Data flow: drag from source to target (5)</td></tr><tr><td><kbd>L</kbd> <kbd>B</kbd> <kbd>T</kbd></td><td>Arc boundary, box boundary, annotation (6, 7, 8)</td></tr><tr><td><kbd>G</kbd> / <kbd>Shift+G</kbd></td><td>Group / ungroup (also Ctrl/⌘+G, Ctrl/⌘+Shift+G)</td></tr><tr><td><kbd>/</kbd></td><td>Search stencils</td></tr><tr><td><kbd>Ctrl/⌘+.</kbd></td><td>Focus mode on/off (Esc leaves it)</td></tr><tr><td><kbd>Enter</kbd> / double-click</td><td>Rename</td></tr><tr><td><kbd>Delete</kbd></td><td>Delete selection</td></tr><tr><td><kbd>Ctrl/⌘+C</kbd> <kbd>V</kbd> <kbd>D</kbd></td><td>Copy, paste, duplicate</td></tr><tr><td><kbd>Ctrl/⌘+Z</kbd> / <kbd>Shift+Z</kbd></td><td>Undo / redo</td></tr><tr><td><kbd>Ctrl/⌘+A</kbd></td><td>Select all</td></tr><tr><td>Arrows (<kbd>Shift</kbd> = 20px)</td><td>Nudge</td></tr><tr><td>Wheel, <kbd>Ctrl/⌘</kbd>+wheel, <kbd>+</kbd> <kbd>−</kbd>, <kbd>Shift+1</kbd></td><td>Pan, zoom, zoom, fit to screen</td></tr><tr><td><kbd>Ctrl/⌘+S</kbd></td><td>Save</td></tr><tr><td><kbd>?</kbd></td><td>Show this list in the app</td></tr></tbody></table></div>
+<p>In the Analyze view only pan, zoom and fit work, by design.</p>
+</section>
+
+<section id="trouble"><h2>If something looks wrong</h2>
+<div class="tw"><table><thead><tr><th>You see</th><th>Try</th></tr></thead><tbody><tr><td>No threats appear</td><td>Connect elements with data flows (<kbd>F</kbd>) and check <i>Generate threats automatically</i> is on. A diagram with no flows has nothing to analyse.</td></tr><tr><td>A boundary-related threat is missing</td><td>Make sure a flow arrow truly crosses the boundary line, and that the right elements are inside the box.</td></tr><tr><td>Messages tab shows warnings</td><td>Each message names the element. The common ones: unconnected flow, flow between two external interactors (usually out of scope), no trust boundary.</td></tr><tr><td>The tool bar is missing</td><td>You are in Analyze view or focus mode. Switch to Design, or press Esc.</td></tr><tr><td>The stencil pane is hidden</td><td>Use the first button in the top bar, or press / to search without it.</td></tr><tr><td>Autosave warning</td><td>The browser blocked storage. Save to a file.</td></tr></tbody></table></div>
+</section>
+<footer>STRIDE Threat Modeler. Generated threats are a starting point for expert review, not a guarantee of security.</footer>
+</main>
+</div>
+</body>
+</html>

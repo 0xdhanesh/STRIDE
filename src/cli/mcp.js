@@ -288,13 +288,14 @@ const TOOLS = [
   },
   {
     name: 'stride_export_report',
-    description: 'Render a report (html, md, csv, json, or svg of one diagram). Writes to output when given, otherwise returns the text.',
+    description: 'Render a report (html, exec, md, csv, json, or svg of one diagram). exec is the executive report for senior management: large print, plain language, no technical detail. html and exec accept a font. Writes to output when given, otherwise returns the text.',
     inputSchema: {
       type: 'object',
       required: ['model'],
       properties: {
         model: MODEL,
-        format: str('', { enum: ['html', 'md', 'csv', 'json', 'svg'] }),
+        format: str('', { enum: ['html', 'exec', 'md', 'csv', 'json', 'svg'] }),
+        font: str('Font for html/exec reports: system, arial, verdana, tahoma, trebuchet, calibri, georgia, times, mono, or the name of any font installed on the reader\'s computer.'),
         diagram: str('Diagram for svg.'),
         signal: str('Stakeholder section (html, md, json): executive summary plus findings at or above this level, before the full register. Default high; off = classic report.', { enum: ['high', 'medium', 'all', 'off'] }),
         output: str('Output file path (relative to root).'),
@@ -374,7 +375,7 @@ function createHandlers(root) {
     stride_explain_flow: (a) => ops.opExplain(loadModelFile(modelPath(a.model)), a),
     stride_check_rule: (a) => ops.opCheckRule(loadTemplateFile(tplPath(a.template)), a.expression),
     stride_export_report: (a) => {
-      const text = ops.opReport(loadModelFile(modelPath(a.model)), { format: a.format || 'md', diagram: a.diagram, signal: a.signal });
+      const text = ops.opReport(loadModelFile(modelPath(a.model)), { format: a.format || 'md', diagram: a.diagram, signal: a.signal, font: a.font });
       if (!a.output) return text;
       writeTextAtomic(writePath(a.output), text);
       return { written: a.output, bytes: Buffer.byteLength(text) };

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What is STRIDE, and why it matters · STRIDE Threat Modeler</title>
+<meta name="description" content="An introduction for developers, IT and operations, security engineers and managers: what STRIDE is, what a threat model is, why teams do it, and what it means for your role.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="stylesheet" href="../assets/docs.css">
+</head>
+<body>
+<header class="top"><a class="brand" href="../index.html"><img src="../assets/logo-64.png" alt="" width="28" height="28"><span>STRIDE</span></a><nav aria-label="Documentation"><a href="../index.html">Open the app</a><a href="../how-to/index.html">How to use it</a><a href="../what-is/index.html" aria-current="page">What is STRIDE</a><a href="../how-to-max/index.html">Worked examples</a></nav></header>
+<div class="wrap">
+<aside class="toc" aria-label="On this page"><b>On this page</b><ul><li><a href="#short">In one minute</a></li><li><a href="#model">What a threat model is</a></li><li><a href="#stride">The six STRIDE threats</a></li><li><a href="#why">Why it matters</a></li><li><a href="#who">What it means for your role</a></li><li><a href="#when">When to do it</a></li><li><a href="#limits">What STRIDE does not do</a></li><li><a href="#words">Words you will hear</a></li></ul></aside>
+<main>
+<h1>What is STRIDE, and why it matters</h1>
+<p class="lead">An introduction for developers, IT and operations, security engineers and managers: what STRIDE is, what a threat model is, why teams do it, and what it means for your role.</p>
+
+<section id="short"><h2>In one minute</h2>
+<p><b>STRIDE</b> is a checklist for finding security problems in a design <i>before</i> the software is built (or while it is changed). It names six kinds of attack, one per letter, and you ask of every part of your system: “could this happen here?” It was created at Microsoft in the late 1990s (Loren Kohnfelder and Praerit Garg) and is now one of the most widely used threat-modeling methods.</p>
+<p>The process is: <b>draw</b> how the system works, <b>ask</b> the six questions at every place information moves or is stored, <b>decide</b> what to do about each answer, and <b>write it down</b>. This tool automates the asking and the bookkeeping so people can spend their time on the deciding.</p>
+</section>
+
+<section id="model"><h2>What a threat model is</h2>
+<p>A threat model answers four questions:</p>
+<ol class="steps">
+<li><b>What are we building?</b> A simple diagram of the parts and the information flowing between them.</li>
+<li><b>What can go wrong?</b> The six STRIDE questions, applied to each part and flow.</li>
+<li><b>What are we going to do about it?</b> Fix it, reduce it, accept it knowingly, or hand it to someone else (for example a vendor).</li>
+<li><b>Did we do a good job?</b> Review it, and revisit when the design changes.</li>
+</ol>
+<p>It is a living document, not a one-off report. Small and honest beats big and abandoned.</p>
+</section>
+
+<section id="stride"><h2>The six STRIDE threats</h2>
+<div class="tw"><table><thead><tr><th></th><th>Threat</th><th>Plain meaning</th><th>Property it breaks</th><th>Everyday example</th><th>Typical defence</th></tr></thead><tbody><tr><td><b>S</b></td><td>Spoofing</td><td>Pretending to be someone or something else</td><td>Authenticity</td><td>A caller fakes the number of a real customer; a stolen session cookie</td><td>Strong authentication, signed tokens, mutual TLS, caller verification</td></tr><tr><td><b>T</b></td><td>Tampering</td><td>Changing data or code without permission</td><td>Integrity</td><td>Editing a price in a request; altering a file in storage</td><td>Input validation, signatures, access control, checksums</td></tr><tr><td><b>R</b></td><td>Repudiation</td><td>Denying you did something, with no way to prove otherwise</td><td>Non-repudiation</td><td>A refund issued and nobody can say by whom</td><td>Audit logs that cannot be edited, signed records</td></tr><tr><td><b>I</b></td><td>Information disclosure</td><td>Exposing data to people who should not see it</td><td>Confidentiality</td><td>A database backup left public; secrets in logs; call recordings with card numbers</td><td>Encryption, least privilege, data minimisation, masking</td></tr><tr><td><b>D</b></td><td>Denial of service</td><td>Making the service slow or unavailable</td><td>Availability</td><td>Flooding a login page; one huge upload that exhausts disk</td><td>Rate limits, quotas, timeouts, scaling, queues</td></tr><tr><td><b>E</b></td><td>Elevation of privilege</td><td>Getting more power than intended</td><td>Authorization</td><td>A normal user reaching an admin function; code execution through unsafe input</td><td>Server-side authorization checks, sandboxing, least privilege</td></tr></tbody></table></div>
+<p>A quick way to remember it: <b>S</b>, <b>T</b>, <b>R</b> are about <i>who did what and whether we can trust it</i>; <b>I</b>, <b>D</b> are about <i>data and service being there for the right people</i>; <b>E</b> is about <i>how far an attacker can get</i>.</p>
+</section>
+
+<section id="why"><h2>Why it matters</h2>
+<ul>
+<li><b>Cheaper.</b> A design flaw found on a whiteboard costs a conversation. The same flaw found in production costs an incident, a fix, a release and sometimes a notification to customers.</li>
+<li><b>It finds what scanners cannot.</b> Scanners find bugs in code that exists. A threat model finds missing controls: the service that trusts any caller, the queue nobody authenticates, the recording that keeps card numbers.</li>
+<li><b>One shared language.</b> Developers, operations, security and managers can point at the same diagram and the same six words.</li>
+<li><b>Focus.</b> Not everything is equally risky. The model shows where data crosses trust boundaries, which is where attackers operate, so limited review time goes there first.</li>
+<li><b>Evidence.</b> Customers, auditors and regulators increasingly ask for one. A maintained model with decisions and reasons is that evidence.</li>
+<li><b>Fewer surprises later.</b> Third-party dependencies, new integrations and new data types get a deliberate look instead of an accidental one.</li>
+</ul>
+</section>
+
+<section id="who"><h2>What it means for your role</h2>
+<div class="cols">
+<div class="card"><h3>Developers</h3>
+<p>You know how the system really works, so you are the best person to draw it. Use the model to:</p>
+<ul><li>Decide where input must be validated and where authorization must be checked.</li><li>Turn a threat into a concrete task or test (“every endpoint rejects a user without the role”).</li><li>Attach <code>file:line</code> evidence so findings point at code.</li><li>Update it in the same pull request that changes the architecture.</li></ul></div>
+<div class="card"><h3>IT and operations</h3>
+<p>You own the network, the platform and the secrets. Use the model to:</p>
+<ul><li>Confirm that trust boundaries match reality (network segments, VPCs, accounts).</li><li>Check logging, monitoring and backups against the Repudiation and Denial-of-service threats.</li><li>Find where credentials and keys travel and who can read them.</li><li>Plan capacity and rate limits where flows are exposed to the internet.</li></ul></div>
+<div class="card"><h3>Security engineers</h3>
+<p>You review many systems. Use the model to:</p>
+<ul><li>Review a design in minutes instead of reading code for days.</li><li>Rank findings: high-signal first, generic ones for architectural review.</li><li>Spot patterns that repeat across services and fix them once.</li><li>Keep a record of decisions, accepted risks and their reasons.</li></ul></div>
+<div class="card"><h3>Product and management</h3>
+<p>You decide how much risk is acceptable. Use the model to:</p>
+<ul><li>Read the <b>executive summary</b>: status, headline numbers, the risks that matter most.</li><li>Ask for an owner and a date for each high-priority risk.</li><li>Make accept/fix decisions knowingly and have them recorded.</li></ul></div>
+</div>
+</section>
+
+<section id="when"><h2>When to do it</h2>
+<ul>
+<li>Before building a new system or a big feature, when changes are cheap.</li>
+<li>When the architecture changes: a new integration, a new data type, a move to the cloud, a new vendor.</li>
+<li>After an incident or a penetration test, to see what the model missed.</li>
+<li>On a schedule for important systems, because systems drift.</li>
+</ul>
+<p>A first pass of a typical service takes an hour or two with the people who know it. The <a href="../how-to-max/index.html">worked examples</a> show what the diagram should look like for common systems.</p>
+</section>
+
+<section id="limits"><h2>What STRIDE does not do</h2>
+<ul>
+<li><b>It does not find code bugs.</b> It tells you where to look and what to demand; it does not read your source for injection flaws.</li>
+<li><b>It does not rate business impact for you.</b> Priority here is a starting guess. People who know the business should set it.</li>
+<li><b>It is only as good as the diagram.</b> A missing flow means missing threats. Review the diagram with someone who did not draw it.</li>
+<li><b>Generated threats are prompts, not verdicts.</b> Some will not apply; some real threats will not be generated. Expert judgment stays in the loop.</li>
+<li><b>It is not a one-time certificate.</b> A model that is not kept current gives false comfort.</li>
+</ul>
+</section>
+
+<section id="words"><h2>Words you will hear</h2>
+<div class="tw"><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td>Data flow diagram (DFD)</td><td>The picture: processes, external interactors, data stores, data flows and trust boundaries.</td></tr><tr><td>Trust boundary</td><td>A line where the level of trust changes, such as internet to internal network.</td></tr><tr><td>Attack surface</td><td>Every place an attacker can reach or influence: endpoints, inputs, file uploads, integrations.</td></tr><tr><td>Mitigation</td><td>A control that reduces a threat: validation, encryption, authorization check, rate limit.</td></tr><tr><td>Residual risk</td><td>What is left after mitigation. It is accepted explicitly by someone with the authority to do so.</td></tr><tr><td>Template</td><td>The set of element types and threat rules the tool applies. The default is STRIDE Core; Microsoft’s <code>.tb7</code> templates can be imported.</td></tr><tr><td>High signal</td><td>A threat backed by concrete evidence such as a dangerous code path or sensitive data, as opposed to a generic architectural prompt.</td></tr></tbody></table></div>
+<p>Ready to try it? Read <a href="../how-to/index.html">How to use the tool</a>, or open the <a href="../index.html">app</a> and choose <i>File → Open example model</i>.</p>
+</section>
+<footer>STRIDE Threat Modeler. Generated threats are a starting point for expert review, not a guarantee of security.</footer>
+</main>
+</div>
+</body>
+</html>

@@ -251,6 +251,19 @@ async function main() {
     await evaluate(`document.querySelector('[aria-label="Toggle threat model panel"]').click()`);
     await sleep(100);
 
+    // Help menu links to the documentation endpoints; the report dialog offers type and font.
+    await evaluate(`[...document.querySelectorAll('.menu > .btn')].find(b => b.textContent.trim() === 'Help').click()`);
+    await sleep(100);
+    check((await evaluate(`[...document.querySelectorAll('.menu-list button')].map(b => b.textContent).join('|')`)).includes('What is STRIDE'), 'Help menu lists the documentation pages');
+    await evaluate(`document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))`);
+    await evaluate(`[...document.querySelectorAll('.menu > .btn')].find(b => b.textContent.trim() === 'Report').click()`);
+    await sleep(100);
+    await evaluate(`[...document.querySelectorAll('.menu-list button')].find(b => b.textContent.startsWith('Download report')).click()`);
+    await sleep(200);
+    check((await evaluate(`!!document.querySelector('dialog select[aria-label="Report type"]') && document.querySelector('dialog select[aria-label="Font"]').options.length >= 9`)), 'report dialog offers report type and fonts');
+    await evaluate(`document.querySelector('dialog [aria-label="Close"]').click()`);
+    await sleep(100);
+
     // Grouping (Ctrl+G), line colours and focus mode.
     await evaluate(`(() => { const s = __stride.store; s.setModel(__stride.core.createSampleModel()); s.clearSelection(); document.getElementById('canvas').focus(); })()`);
     await sleep(200);

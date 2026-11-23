@@ -8,6 +8,8 @@ export { FLOW_PALETTE, entityColor, flowColor, normalizeColor } from './route.js
 export * from './engine.js';
 export * from './validate.js';
 export * from './report.js';
+export * from './fonts.js';
+export * from './executive.js';
 export * from './signal.js';
 export * from './enrich/classify.js';
 export * from './enrich/dedupe.js';
